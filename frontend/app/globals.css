@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  --background: #91a6db;
   --foreground: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: red;
+    --background: rgb(0, 0, 0);
     --foreground: #ededed;
   }
 }
@@ -18,5 +18,162 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
-  padding: 1em;
+}
+
+/* Container for cards */
+.cards-container {
+  background-color: #ede8f5;
+  border-radius: 15px;
+  width: 82%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Centers elements horizontally */
+  align-items: center; /* Centers elements vertically */
+  padding: 10px; /* Optional padding for spacing */
+  text-align: center; /* Centers text inside the elements if necessary */
+}
+.nav-container {
+  z-index: 3;
+  background-color: blue;
+  position: sticky;
+  position: -webkit-sticky;
+  top: 0px;
+}
+.sidebar-container {
+  width: 17%;
+  float: left;
+  top: 0px;
+}
+
+/* Individual card styling */
+.cards {
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 5px;
+  width: 200px;
+  height: 200px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cards:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+#side-bar {
+  height: 100vh;
+  text-align: center; /* Centers text inside the elements if necessary */
+  background-color: #91a6db;
+  padding: 2.1vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+#nav-bar {
+  width: 100%;
+  background-color: #91a6db;
+  list-style: circle;
+  height: 60px;
+  padding: 0.4vh;
+  position: sticky;
+  position: -webkit-sticky;
+  top: 0px;
+  min-width: 600px;
+  overflow: hidden;
+}
+
+#icon {
+  float: left;
+}
+li {
+  float: right;
+  text-align: left;
+  list-style: none;
+}
+
+.submit {
+  background-color: #697db6;
+  padding: 10px 20px; /* Adjust padding for better proportion */
+  margin: 5px; /* Add margin for spacing between elements */
+  border-radius: 20px; /* Add rounded corners */
+  text-decoration: solid;
+  color: rgb(48, 48, 48);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer; /* Change cursor on hover to indicate interactivity */
+  /*transition: background-color 0.3s, color 0.3s; /* Add smooth transition effect */
+}
+
+.nav-bar-li,
+.side-bar-li,
+.add-picture {
+  background-color: #697db6;
+  padding: 10px 20px; /* Adjust padding for better proportion */
+  margin: 5px; /* Add margin for spacing between elements */
+  border-radius: 20px; /* Add rounded corners */
+  text-decoration: solid;
+  color: rgb(48, 48, 48);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer; /* Change cursor on hover to indicate interactivity */
+  /*transition: background-color 0.3s, color 0.3s; /* Add smooth transition effect */
+}
+
+.nav-bar-li,
+.add-picture {
+  display: block;
+}
+
+.side-bar-li {
+  width: 100%;
+}
+.nav-bar-li:active,
+.side-bar-li:active {
+  border: 1px solid #bbb;
+  background-color: rgb(124, 115, 218);
+  color: white;
+}
+.nav-bar-li:hover,
+.side-bar-li:hover {
+  background-color: rgba(124, 115, 218, 0.533);
+}
+
+.add-clothes-container {
+  background-color: #17171784;
+  width: 100%;
+  height: 100vh;
+  position: sticky;
+  position: -webkit-sticky;
+  top: 0px;
+  z-index: 10;
+}
+
+.add-clothes-form {
+  border-radius: 5px;
+  width: 400px;
+  height: 400px;
+  margin: 0 auto;
+  padding: 15px; /* Optional padding for spacing */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -200px 0 0 -200px;
+  background-color: rgb(201, 201, 214);
+  font-size: large;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-picture {
+  text-align: center;
+}
+.image-container {
+  background-color: #ffffff84;
+  width: 200px;
+  height: 200px;
+  margin: 0px 0 0 90px;
 }

@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+dist/
+
+
 # production
 /build
 
@@ -39,3 +42,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated assets
+public/*.svg
+public/*.png
+public/*.jpg
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
