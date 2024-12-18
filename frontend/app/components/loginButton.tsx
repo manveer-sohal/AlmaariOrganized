@@ -16,27 +16,63 @@ predifined endpoints which lets it load the auth0 authenticaiton page
 this is loaded into the nav bar, keeping it seperate due to "use cliet"
 */
 function LoginButton() {
-  function LoginButton() {
-    const { user } = useUser();
+  const { user } = useUser();
 
-    if (user) {
-      return (
-        <div>
-          <a className="nav-bar-li" href="/api/auth/logout">
-            Logout
-          </a>
-        </div>
-      );
+  const handleBackendSync = async () => {
+    if (!user) {
+      console.error("User is not authenticated. Cannot sync login.");
+      return;
     }
 
-    return (
-      <a className="nav-bar-li" href="/api/auth/login">
-        Login
-      </a>
-    );
-  }
+    const auth0Id = user.sub;
+    const email = user.email || "default@example.com"; // Fallback if email is missing
 
-  return <LoginButton></LoginButton>;
+    try {
+      const response = await fetch("/api/Users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auth0Id, email }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Error syncing with backend:", error);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Successfully synced login with backend:", data);
+    } catch (error) {
+      console.error("Failed to sync login with backend:", error);
+    }
+  };
+
+  return (
+    <div>
+      {user ? (
+        <a
+          className="nav-bar-li"
+          href="/api/auth/logout"
+          onClick={() => console.log("Logging out...")}
+        >
+          Logout
+        </a>
+      ) : (
+        <a
+          className="nav-bar-li"
+          href="/api/auth/login"
+          onClick={() => console.log("Redirecting to login...")}
+        >
+          Login
+        </a>
+      )}
+      {user && (
+        <button onClick={handleBackendSync} className="nav-bar-li">
+          Sync Login
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default LoginButton;

@@ -9,7 +9,7 @@ import shirt2 from "./shirt2.jpeg";
 import shirt3 from "./shirt3.jpeg";
 import NavBar from "./components/navBar";
 import SideBar from "./components/sideBar";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -400,6 +400,38 @@ export default function Home() {
     };
     setClothesCard((clothesCard) => [temp, ...clothesCard]);
   };
+
+  useEffect(() => {
+    const handleBackendSync = async () => {
+      if (!user) {
+        console.error("User is not authenticated. Cannot sync login.");
+        return;
+      }
+
+      const auth0Id = user.sub;
+      const email = user.email || "default@example.com"; // Fallback if email is missing
+
+      try {
+        const response = await fetch("/api/Users/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auth0Id, email }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error("Error syncing with backend:", error);
+          return;
+        }
+
+        const data = await response.json();
+        console.log("Successfully synced login with backend:", data);
+      } catch (error) {
+        console.error("Failed to sync login with backend:", error);
+      }
+    };
+    handleBackendSync();
+  }, [user]);
 
   if (isLoading) {
     // Optionally show a loading spinner while user authentication is being checked
