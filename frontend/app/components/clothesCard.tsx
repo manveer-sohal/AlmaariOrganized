@@ -16,7 +16,7 @@ but the component should be filled in with real data not our dummy local data
 */
 type ClothingItemProps = {
   name: string;
-  color: string;
+  color: string[];
   type: string;
   imageSrc: string;
 };

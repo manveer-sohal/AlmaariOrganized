@@ -26,84 +26,379 @@ component. Once a picture is selcted, the form will show up to gather any more d
 the form will show up ontop of everything and will be a serpate compoennt once i get it to a testable stage
 */
 //example of a dataset of clothes, the mao function will load the clothesCard component 3 times, filling in the prop variables
-const clothes = [
-  { name: "Red Jacket", color: "Red", type: "Jacket", imageSrc: pants1 },
-  { name: "Blue Shirt", color: "Blue", type: "Shirt", imageSrc: pants2 },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: shirt2,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: shirt1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: pants1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: pants1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: shirt1,
-  },
-  {
-    name: "opium",
-    color: "black",
-    type: "Shirt",
-    imageSrc: shirt3,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: pants1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: pants1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: pants1,
-  },
-  {
-    name: "Green Trousers",
-    color: "Green",
-    type: "Trousers",
-    imageSrc: shirt2,
-  },
-  {
-    name: "opium",
-    color: "black",
-    type: "Shirt",
-    imageSrc: shirt3,
-  },
-];
 
 export default function Home() {
+  const [clothesCard, setClothesCard] = useState<
+    { name: string; color: string[]; type: string; imageSrc: string }[]
+  >([
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+    {
+      name: "opium",
+      color: ["blue", "red"],
+      type: "pants",
+      imageSrc: "null",
+    },
+  ]);
+
   const { user, isLoading } = useUser();
   const [isVisible, setIsVisible] = useState(false);
 
   const toggleForm = () => {
     console.log("+ has been clicked");
     setIsVisible((prev) => !prev);
+  };
+
+  const addClothes = (file: string, type: string, colour: string[]) => {
+    console.log(file, type, colour);
+    console.log("+ has been clicked");
+    const temp = {
+      name: "opium",
+      color: colour,
+      type: type,
+      imageSrc: file,
+    };
+    setClothesCard((clothesCard) => [temp, ...clothesCard]);
   };
 
   if (isLoading) {
@@ -113,7 +408,12 @@ export default function Home() {
 
   return (
     <main>
-      {isVisible && <AddClothesUI toggleForm={toggleForm}></AddClothesUI>}
+      {isVisible && (
+        <AddClothesUI
+          toggleForm={toggleForm}
+          addClothes={addClothes}
+        ></AddClothesUI>
+      )}
       {!user && (
         <>
           <a className="nav-bar-li" href="/api/auth/login">
@@ -133,14 +433,15 @@ export default function Home() {
               <SideBar></SideBar>
             </div>
           </div>
+
           <div className="cards-container">
-            {clothes.map((item, index) => (
+            {clothesCard.map((item, index) => (
               <ClothesCard
                 key={index}
                 name={item.name}
                 color={item.color}
                 type={item.type}
-                imageSrc={item.imageSrc.src}
+                imageSrc={item.imageSrc}
               />
             ))}
           </div>
