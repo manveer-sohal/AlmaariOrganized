@@ -1,4 +1,3 @@
-import { withApiAuthRequired, getSession } from "@auth0/nextjs-auth0";
 import connectMongoDB from "@/libs/mongodb";
 import User from "@/models/Users";
 import { NextApiRequest, NextApiResponse } from "next";

@@ -1,4 +1,6 @@
 import React from "react";
+import Image from "next/image";
+
 /*
 this is a prop
 
@@ -35,7 +37,7 @@ export default function ClothesCard({
       <h3>{name}</h3>
       <p>Type: {type}</p>
       <p>Color: {color}</p>
-      <img src={imageSrc} alt="image"></img>
+      <Image src={imageSrc} alt="image"></Image>
     </div>
   );
 }

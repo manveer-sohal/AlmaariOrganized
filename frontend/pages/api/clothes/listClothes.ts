@@ -17,8 +17,10 @@ export default async function getData(
       } else {
         return response.status(500).json({ error: "User Not Found" });
       }
-    } catch (error) {
-      return response.status(500).json({ error: "Failed to fetch user data" });
+    } catch (e) {
+      return response
+        .status(500)
+        .json({ error: "Failed to fetch user data", e });
     }
   } else {
     return response.status(405).json({ error: "Method Not Allowed" });

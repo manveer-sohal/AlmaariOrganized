@@ -1,13 +1,7 @@
-import React, { useEffect, useState, useContext } from "react";
-import ClothesCard from "./clothesCard";
+import React from "react";
 
 function DisplayClothes() {
-  
-
-  return (
-    <></>
-    
-  );
+  return <></>;
 }
 
 export default DisplayClothes;

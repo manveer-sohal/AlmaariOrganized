@@ -2,14 +2,11 @@
 import ClothesCard from "./components/clothesCard";
 import AddClothesUI from "./components/addClothesUI";
 import { useUser } from "@auth0/nextjs-auth0/client";
-import pants1 from "./pants1.jpeg";
-import pants2 from "./pants2.jpeg";
-import shirt1 from "./shirt1.jpeg";
-import shirt2 from "./shirt2.jpeg";
-import shirt3 from "./shirt3.jpeg";
 import NavBar from "./components/navBar";
 import SideBar from "./components/sideBar";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -448,9 +445,9 @@ export default function Home() {
       )}
       {!user && (
         <>
-          <a className="nav-bar-li" href="/api/auth/login">
+          <Link className="nav-bar-li" href="/api/auth/login">
             Login
-          </a>
+          </Link>
           <p>
             You are not logged in. Log in to see your personalized wardrobe.
           </p>

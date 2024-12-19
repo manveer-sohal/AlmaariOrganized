@@ -24,9 +24,9 @@ export default async function POST(
 
     const newUser = await User.create({ auth0Id, email, Clothes: [] });
     return response.status(201).json({ message: "User Created", newUser });
-  } catch (error) {
+  } catch (e) {
     //this could come about if the user already exists
-    return response.status(500).json({ error: "Internal Server Error" });
+    return response.status(500).json({ error: "Internal Server Error", e });
   }
 }
 

@@ -1,5 +1,6 @@
 "use client";
-import { UserProvider, useUser } from "@auth0/nextjs-auth0/client";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import Link from "next/link";
 
 /*
 this is a login button component, we leep it seprate as interactable compoents should have the
@@ -50,21 +51,21 @@ function LoginButton() {
   return (
     <div>
       {user ? (
-        <a
+        <Link
           className="nav-bar-li"
           href="/api/auth/logout"
           onClick={() => console.log("Logging out...")}
         >
           Logout
-        </a>
+        </Link>
       ) : (
-        <a
+        <Link
           className="nav-bar-li"
           href="/api/auth/login"
           onClick={() => console.log("Redirecting to login...")}
         >
           Login
-        </a>
+        </Link>
       )}
       {user && (
         <button onClick={handleBackendSync} className="nav-bar-li">

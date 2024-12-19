@@ -18,7 +18,7 @@ export default async function uploadData(
       { new: true }
     );
     return response.status(200).json({ message: "Clothes Added", user });
-  } catch (error) {
-    return response.status(500).json({ error: "Failed to add clothes" });
+  } catch (e) {
+    return response.status(500).json({ error: "Failed to add clothes", e });
   }
 }

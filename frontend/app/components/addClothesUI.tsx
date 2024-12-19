@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 
 //promp to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
@@ -251,12 +252,12 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
       </button>
       <form className="add-clothes-form">
         <div className="image-container">
-          <img
+          <Image
             src={preview}
             alt="your pic"
             style={{ height: "200px" }}
             className="display-preview"
-          ></img>
+          ></Image>
         </div>
         <label htmlFor="input-tag">Type:</label>
         <input
@@ -268,15 +269,13 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
           id="input-tag"
           list="types"
           value={inputTypeValue}
-          onBlur={(e) => onBlur("type")}
+          onBlur={() => onBlur("type")}
           onKeyDown={handleKeyDown}
           onChange={(e) => {
             const value = e.target.value;
             filter(value, type_List, set_Filtered_type_List);
             setInputTypeValue(value);
-            validType
-              ? (e.target.className = "invalid")
-              : (e.target.className = "valid");
+            e.target.className = validType ? "invalid" : "valid";
           }}
         ></input>
         {validType == false && (
@@ -298,7 +297,7 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
             id="input-colour"
             list="colours"
             value={inputColourValue}
-            onBlur={(e) => onBlur("colour")}
+            onBlur={() => onBlur("colour")}
             onKeyDown={handleKeyDown}
             onChange={(e) => {
               const value = e.target.value;
@@ -338,9 +337,11 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
           id="input-file"
           style={{ display: "none" }}
           onChange={(e) => {
-            e.target.files && e.target.files[0]
-              ? setFile(e.target.files[0])
-              : console.log("null");
+            if (e.target.files && e.target.files[0]) {
+              setFile(e.target.files[0]);
+            } else {
+              console.log("null");
+            }
           }}
         ></input>
         <label
