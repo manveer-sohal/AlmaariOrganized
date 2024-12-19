@@ -22,7 +22,13 @@
     "paths": {
       "@/*": ["./*"],
       "@/libs/*": ["libs/*"],
-      "@/models/*": ["models/*"]
+      "@/models/*": ["models/*"],
+      "@/components/*": ["app/components/*"],
+      "@/clothes/*": ["app/clothes/*"],
+      "@/profile/*": ["app/profile/*"],
+      "@/settings/*": ["app/settings/*"],
+
+      "@/app/*": ["app/*"]
     }
   },
   "include": [
