@@ -8,6 +8,7 @@ export default async function test(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
+  console.log("activate1");
 
   try {
     // // Get the authenticated user's session from Auth0
@@ -19,11 +20,14 @@ export default async function test(req: NextApiRequest, res: NextApiResponse) {
 
     // const { sub: auth0Id, email } = session.user;
     const { auth0Id, email } = req.body;
+    console.log("activate2");
 
     await connectMongoDB();
+    console.log("activate3");
 
     // Check if the user already exists in MongoDB
     let dbUser = await User.findOne({ auth0Id });
+    console.log("activate4");
 
     if (!dbUser) {
       // Create the user if they do not exist
@@ -33,6 +37,7 @@ export default async function test(req: NextApiRequest, res: NextApiResponse) {
         Clothes: [],
       });
     }
+    console.log("activate5");
 
     return res.status(200).json({ message: "Login Successful", user: dbUser });
   } catch (error) {
