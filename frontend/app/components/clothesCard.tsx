@@ -37,7 +37,7 @@ export default function ClothesCard({
       <h3>{name}</h3>
       <p>Type: {type}</p>
       <p>Color: {color}</p>
-      <Image src={imageSrc} alt="image"></Image>
+      <Image src={imageSrc} alt="image" width="200" height="200"></Image>
     </div>
   );
 }
