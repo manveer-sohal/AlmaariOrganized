@@ -5,7 +5,7 @@ import Image from "next/image";
 this is a prop
 
 the components works like, when this component is called, it needs to also
-be passed in variables like a function, name, color, type, imageSrc
+be passed in variables like a function, name, colour, type, imageSrc
 
 then what it does is useses those variables to load up the "card" 
 
@@ -17,27 +17,28 @@ but the component should be filled in with real data not our dummy local data
 
 */
 type ClothingItemProps = {
-  name: string;
-  color: string[];
+  colour: string[];
   type: string;
   imageSrc: string;
 };
 
 export default function ClothesCard({
-  name,
-  color,
+  colour,
   type,
   imageSrc,
 }: ClothingItemProps) {
   return (
     <div
-      style={{ border: "1px solid black", margin: "10px", padding: "10px" }}
+      style={{
+        border: "1px solid black",
+        margin: "10px",
+        padding: "10px",
+      }}
       className="cards"
     >
-      <h3>{name}</h3>
       <p>Type: {type}</p>
-      <p>Color: {color}</p>
-      <Image src={imageSrc} alt="image" width="200" height="200"></Image>
+      <p>colour: {colour}</p>
+      <Image src={imageSrc} alt="image" width={200} height={200}></Image>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useUser } from "@auth0/nextjs-auth0/client";
 
 //promp to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
@@ -86,14 +87,26 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
   //file can either be of type file or type null
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
-  const [preview, setPreview] = useState<string>("null");
+  const [preview, setPreview] = useState<string | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
-  const [filtered_colours_List, set_Filtered_colours_List] =
-    useState(colours_List);
+  const [filtered_colours_List, set_Filtered_colours_List] = useState(
+    colours_List
+  );
   //a filtered list of clothes which will change depedending on the user input for filtered results
   const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
 
+  const { user } = useUser();
+
   const formatInput = (value: string) => {
+    const spaceValue = value.indexOf(" ");
+    if (spaceValue > 0) {
+      return (
+        value.substring(0, 1).toUpperCase() +
+        value.substring(1, spaceValue).toLowerCase() +
+        value.substring(spaceValue, spaceValue + 2).toUpperCase() +
+        value.substring(spaceValue + 2).toLowerCase()
+      );
+    }
     return (
       value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()
     );
@@ -204,15 +217,48 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
     setState(filtered);
   };
 
+  const pushDB = async () => {
+    if (!user) {
+      console.error("User is not authenticated. Cannot upload a real picture.");
+      return;
+    }
+
+    const toBase64 = (file: File) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+
+    const base64File = await toBase64(file!);
+
+    const auth0Id = user.sub;
+
+    const Data = {
+      type: usersClothType,
+      imageSrc: base64File,
+      favourite: null,
+      createdAt: null,
+      colour: usersColours,
+    };
+
+    const response = await fetch("/api/clothes/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auth0Id: auth0Id,
+        Clothes: Data,
+      }),
+    });
+    console.log(response);
+  };
   //If submit is clicked
   const handleSubmit = () => {
     validateType();
 
     if (validateColour() && validateType() && file) {
-      console.log("submit");
-      console.log(usersClothType);
-      console.log(usersColours);
-      console.log(usersColours);
+      pushDB();
       addClothes(URL.createObjectURL(file), usersClothType, usersColours);
       toggleForm();
     } else {
@@ -239,6 +285,8 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
   //maybe refractor this to a const function
   useEffect(() => {
     if (file) {
+      console.log(file);
+
       setValidFile(true);
       const objectUrl = URL.createObjectURL(file);
       setPreview(objectUrl);
@@ -252,12 +300,15 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
       </button>
       <form className="add-clothes-form">
         <div className="image-container">
-          <Image
-            src={preview}
-            alt="your pic"
-            style={{ height: "200px" }}
-            className="display-preview"
-          ></Image>
+          {preview && (
+            <Image
+              src={preview}
+              alt="your pic"
+              width={100}
+              height={100}
+              className="display-preview"
+            ></Image>
+          )}
         </div>
         <label htmlFor="input-tag">Type:</label>
         <input

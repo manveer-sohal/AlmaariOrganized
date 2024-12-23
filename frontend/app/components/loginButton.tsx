@@ -19,35 +19,6 @@ this is loaded into the nav bar, keeping it seperate due to "use cliet"
 function LoginButton() {
   const { user } = useUser();
 
-  const handleBackendSync = async () => {
-    if (!user) {
-      console.error("User is not authenticated. Cannot sync login.");
-      return;
-    }
-
-    const auth0Id = user.sub;
-    const email = user.email || "default@example.com"; // Fallback if email is missing
-
-    try {
-      const response = await fetch("/api/Users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id, email }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error("Error syncing with backend:", error);
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Successfully synced login with backend:", data);
-    } catch (error) {
-      console.error("Failed to sync login with backend:", error);
-    }
-  };
-
   return (
     <div>
       {user ? (
@@ -66,11 +37,6 @@ function LoginButton() {
         >
           Login
         </Link>
-      )}
-      {user && (
-        <button onClick={handleBackendSync} className="nav-bar-li">
-          Sync Login
-        </button>
       )}
     </div>
   );

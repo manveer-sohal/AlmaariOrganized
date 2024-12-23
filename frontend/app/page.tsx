@@ -26,23 +26,19 @@ the form will show up ontop of everything and will be a serpate compoennt once i
 
 export default function Home() {
   const [clothesCard, setClothesCard] = useState<
-    { name: string; color: string[]; type: string; imageSrc: string }[]
+    { colour: string[]; type: string; imageSrc: string }[]
   >([]);
 
   const { user, isLoading } = useUser();
   const [isVisible, setIsVisible] = useState(false);
 
   const toggleForm = () => {
-    console.log("+ has been clicked");
     setIsVisible((prev) => !prev);
   };
 
   const addClothes = (file: string, type: string, colour: string[]) => {
-    console.log(file, type, colour);
-    console.log("+ has been clicked");
     const temp = {
-      name: "opium",
-      color: colour,
+      colour: colour,
       type: type,
       imageSrc: file,
     };
@@ -50,31 +46,31 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const handleBackendSync = async () => {
-      // if (!user) {
-      //   console.error("User is not authenticated. Cannot sync login.");
-      //   return;
-      // }
-      // const auth0Id = user.sub;
-      // const email = user.email || "default@example.com"; // Fallback if email is missing
-      // try {
-      //   const response = await fetch("/api/Users/login", {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ auth0Id, email }),
-      //   });
-      //   if (!response.ok) {
-      //     const error = await response.json();
-      //     console.error("Error syncing with backend:", error);
-      //     return;
-      //   }
-      //   const data = await response.json();
-      //   console.log("Successfully synced login with backend:", data);
-      // } catch (error) {
-      //   console.error("Failed to sync login with backend:", error);
-      // }
+    const load = async () => {
+      if (!user) {
+        console.error(
+          "User is not authenticated. Cannot upload a real picture."
+        );
+        return;
+      }
+      const auth0Id = user.sub;
+      const response = await fetch("/api/clothes/listClothes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth0Id: auth0Id,
+        }),
+      });
+      const data = await response.json();
+      console.log("Fetched user data:", data);
+      const list = data.Clothes;
+      list.map((item: { colour: string[]; type: string; imageSrc: string }) =>
+        setClothesCard((clothesCard) => [...clothesCard, item])
+      );
     };
-    handleBackendSync();
+    if (user) {
+      load();
+    }
   }, [user]);
 
   if (isLoading) {
@@ -114,8 +110,7 @@ export default function Home() {
             {clothesCard.map((item, index) => (
               <ClothesCard
                 key={index}
-                name={item.name}
-                color={item.color}
+                colour={item.colour}
                 type={item.type}
                 imageSrc={item.imageSrc}
               />

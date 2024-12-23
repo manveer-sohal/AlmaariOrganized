@@ -1,15 +1,17 @@
 import connectMongoDB from "@/libs/mongodb";
 import User from "@/models/Users";
+
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function uploadData(
   request: NextApiRequest,
   response: NextApiResponse
 ) {
+  console.log("Uploading");
+
   try {
     const { auth0Id, Clothes } = request.body;
 
-    console.log(Clothes);
     await connectMongoDB();
 
     const user = await User.findOneAndUpdate(
