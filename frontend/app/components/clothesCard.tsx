@@ -1,4 +1,3 @@
-import React from "react";
 import Image from "next/image";
 
 /*
@@ -11,9 +10,7 @@ then what it does is useses those variables to load up the "card"
 
 this is called in the main page layout, and only when the user is authenticated
 
-future:
-not for this file
-but the component should be filled in with real data not our dummy local data
+
 
 */
 type ClothingItemProps = {

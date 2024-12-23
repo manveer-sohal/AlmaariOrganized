@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
+import Link from "next/link";
 
 //promp to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
 //is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
 type addClothesUIProm = {
-  toggleForm: () => void;
   addClothes: (file: string, type: string, colour: string[]) => void;
 };
-
-function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
+function AddClothesUI({ addClothes }: addClothesUIProm) {
   //list of colours for clothes
   const colours_List = [
     "Black",
@@ -202,10 +201,6 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
     }
   };
 
-  // useEffect(() => {
-  //   console.log(usersColours);
-  // }, [usersColours]);
-  //filters the colours/type based on the users input
   const filter = (
     input: string,
     list: string[],
@@ -254,15 +249,19 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
     console.log(response);
   };
   //If submit is clicked
-  const handleSubmit = () => {
+  const handleSubmit = (
+    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
+  ) => {
     validateType();
 
     if (validateColour() && validateType() && file) {
       pushDB();
       addClothes(URL.createObjectURL(file), usersClothType, usersColours);
-      toggleForm();
     } else {
-      setValidFile(false);
+      event.preventDefault();
+      if (file == null) {
+        setValidFile(false);
+      }
       console.log("form not filled in properly");
     }
 
@@ -295,9 +294,9 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
 
   return (
     <div className="add-clothes-background">
-      <button onClick={toggleForm} className="nav-bar-li">
+      <Link href="/" className="nav-bar-li">
         Go back
-      </button>
+      </Link>
       <form className="add-clothes-form">
         <div className="image-container">
           {preview && (
@@ -403,9 +402,14 @@ function AddClothesUI({ toggleForm, addClothes }: addClothesUIProm) {
           Add Picture
         </label>
         {validFile == false && <span className="error">Enter a Picture</span>}
-        <button type="button" onClick={handleSubmit} className="add-picture">
+        <Link
+          href="/"
+          type="button"
+          onClick={(event) => handleSubmit(event)}
+          className="add-picture"
+        >
           Submit
-        </button>
+        </Link>
       </form>
     </div>
   );

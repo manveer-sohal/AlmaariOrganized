@@ -1,6 +1,5 @@
 "use client";
 import ClothesCard from "./components/clothesCard";
-import AddClothesUI from "./components/addClothesUI";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import NavBar from "./components/navBar";
 import SideBar from "./components/sideBar";
@@ -30,48 +29,35 @@ export default function Home() {
   >([]);
 
   const { user, isLoading } = useUser();
-  const [isVisible, setIsVisible] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
 
-  const toggleForm = () => {
-    setIsVisible((prev) => !prev);
-  };
-
-  const addClothes = (file: string, type: string, colour: string[]) => {
-    const temp = {
-      colour: colour,
-      type: type,
-      imageSrc: file,
-    };
-    setClothesCard((clothesCard) => [temp, ...clothesCard]);
-  };
+  // if (user) {
+  //   load();
+  // }
 
   useEffect(() => {
+    if (!user || hasLoaded) return;
     const load = async () => {
-      if (!user) {
-        console.error(
-          "User is not authenticated. Cannot upload a real picture."
-        );
-        return;
+      if (!user || hasLoaded) return; // Prevent fetching multiple times
+      try {
+        const auth0Id = user.sub;
+        const response = await fetch("/api/clothes/listClothes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auth0Id }),
+        });
+        const data = await response.json();
+        console.log("Fetched user data:", data);
+        const clothesList = data.Clothes.reverse();
+        setClothesCard(clothesList);
+        setHasLoaded(true);
+      } catch (error) {
+        console.error("Error fetching clothes:", error);
       }
-      const auth0Id = user.sub;
-      const response = await fetch("/api/clothes/listClothes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auth0Id: auth0Id,
-        }),
-      });
-      const data = await response.json();
-      console.log("Fetched user data:", data);
-      const list = data.Clothes;
-      list.map((item: { colour: string[]; type: string; imageSrc: string }) =>
-        setClothesCard((clothesCard) => [...clothesCard, item])
-      );
     };
-    if (user) {
-      load();
-    }
-  }, [user]);
+
+    load();
+  }, [user, hasLoaded]);
 
   if (isLoading) {
     // Optionally show a loading spinner while user authentication is being checked
@@ -80,12 +66,6 @@ export default function Home() {
 
   return (
     <main>
-      {isVisible && (
-        <AddClothesUI
-          toggleForm={toggleForm}
-          addClothes={addClothes}
-        ></AddClothesUI>
-      )}
       {!user && (
         <>
           <Link className="nav-bar-li" href="/api/auth/login">
@@ -100,13 +80,23 @@ export default function Home() {
       {user && (
         <div>
           <div className="nav-container">
-            <NavBar toggleForm={toggleForm}></NavBar>
+            <NavBar></NavBar>
             <div className="sidebar-container">
               <SideBar></SideBar>
             </div>
           </div>
 
           <div className="cards-container">
+            {!hasLoaded && (
+              <h1
+                style={{
+                  fontSize: 120,
+                  textAlign: "center",
+                }}
+              >
+                pictures are loading...
+              </h1>
+            )}
             {clothesCard.map((item, index) => (
               <ClothesCard
                 key={index}

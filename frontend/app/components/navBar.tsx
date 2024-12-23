@@ -1,12 +1,9 @@
 import LoginButton from "./loginButton";
 import temp from "../pants2.jpeg";
 import Image from "next/image";
+import Link from "next/link";
 
-type NavBarProps = {
-  toggleForm: () => void; // Function with no arguments that returns void
-};
-
-function NavBar({ toggleForm }: NavBarProps) {
+function NavBar() {
   return (
     <>
       <ul id="nav-bar">
@@ -14,9 +11,9 @@ function NavBar({ toggleForm }: NavBarProps) {
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
         </li>
         <li>
-          <button onClick={toggleForm} className="nav-bar-li">
+          <Link href="/addClothes" className="nav-bar-li">
             +
-          </button>
+          </Link>
         </li>
         <li>
           <LoginButton></LoginButton>
