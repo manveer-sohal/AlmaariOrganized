@@ -56,7 +56,7 @@ export const test = async (req, res) => {
 
     // const { sub: auth0Id, email } = session.user;
     const { auth0Id, email } = req.body;
-
+    console.log(auth0Id);
     console.log("activate2");
 
     await connectMongoDB();
