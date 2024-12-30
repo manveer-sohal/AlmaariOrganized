@@ -28,6 +28,8 @@ export default function Home() {
     { colour: string[]; type: string; imageSrc: string }[]
   >([]);
 
+  const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
 
@@ -41,11 +43,14 @@ export default function Home() {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
       try {
         const auth0Id = user.sub;
-        const response = await fetch("/api/clothes/listClothes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auth0Id }),
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/api/clothes/listClothes`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ auth0Id }),
+          }
+        );
         const data = await response.json();
         console.log("Fetched user data:", data);
         const clothesList = data.Clothes.reverse();
