@@ -28,7 +28,7 @@ export default function Home() {
     { colour: string[]; type: string; imageSrc: string }[]
   >([]);
 
-  const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded

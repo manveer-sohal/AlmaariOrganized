@@ -10,7 +10,8 @@ type addClothesUIProm = {
   addClothes: (file: string, type: string, colour: string[]) => void;
 };
 function AddClothesUI({ addClothes }: addClothesUIProm) {
-  const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
   //list of colours for clothes
   const colours_List = [
