@@ -1,11 +1,10 @@
 "use client";
-import ClothesCard from "./components/clothesCard";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import NavBar from "./components/navBar";
 import SideBar from "./components/sideBar";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-
+import DisplayClothes from "./components/displayClothes";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -24,43 +23,25 @@ the form will show up ontop of everything and will be a serpate compoennt once i
 //example of a dataset of clothes, the mao function will load the clothesCard component 3 times, filling in the prop variables
 
 export default function Home() {
-  const [clothesCard, setClothesCard] = useState<
-    { colour: string[]; type: string; imageSrc: string }[]
-  >([]);
-
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
-
-  // if (user) {
-  //   load();
-  // }
+  const [query, setQuery] = useState<
+    | { colour: string[] | null | undefined; type: string[] | null | undefined }
+    | undefined
+  >();
 
   useEffect(() => {
     if (!user || hasLoaded) return;
     const load = async () => {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
-      try {
-        const auth0Id = user.sub;
-        const response = await fetch("/api/clothes/listClothes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auth0Id }),
-        });
-        const data = await response.json();
-        console.log("Fetched user data:", data);
-        const clothesList = data.Clothes.reverse();
-        setClothesCard(clothesList);
-        setHasLoaded(true);
-      } catch (error) {
-        console.error("Error fetching clothes:", error);
-      }
+
+      setHasLoaded(true);
     };
 
     load();
   }, [user, hasLoaded]);
 
   if (isLoading) {
-    // Optionally show a loading spinner while user authentication is being checked
     return <p>Loading...</p>;
   }
 
@@ -82,30 +63,21 @@ export default function Home() {
           <div className="nav-container">
             <NavBar></NavBar>
             <div className="sidebar-container">
-              <SideBar></SideBar>
+              <SideBar onQuery={setQuery}></SideBar>
             </div>
           </div>
 
-          <div className="cards-container">
-            {!hasLoaded && (
-              <h1
-                style={{
-                  fontSize: 120,
-                  textAlign: "center",
-                }}
-              >
-                pictures are loading...
-              </h1>
-            )}
-            {clothesCard.map((item, index) => (
-              <ClothesCard
-                key={index}
-                colour={item.colour}
-                type={item.type}
-                imageSrc={item.imageSrc}
-              />
-            ))}
-          </div>
+          {!hasLoaded && (
+            <h1
+              style={{
+                fontSize: 120,
+                textAlign: "center",
+              }}
+            >
+              pictures are loading...
+            </h1>
+          )}
+          <DisplayClothes query={query}></DisplayClothes>
         </div>
       )}
     </main>

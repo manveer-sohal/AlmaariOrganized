@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 /*
 
 In a serverless enviorment (like next,js API routes on Vercel AWS Lambda, or similar platforms)
@@ -33,18 +35,9 @@ MongoDB (or its drivers) does not cache connections across processes because:
 
 */
 
-//the '!' is added since it will NEVER be null since it comes from the .env
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
+console.log(`THIS IS THE THING:   \n\n\n\n${MONGODB_URI}\n\n\n`);
 
-declare global {
-  var mongooseCache: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  };
-}
-
-//store the connection globaly, allow reuse across serverlesse enviorments
-//global is a node.js, allowing variables to persist across function calls within same process
 let cached = global.mongooseCache;
 
 //check if cach exsits, otherwise create an object

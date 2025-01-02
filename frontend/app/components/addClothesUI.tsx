@@ -10,6 +10,9 @@ type addClothesUIProm = {
   addClothes: (file: string, type: string, colour: string[]) => void;
 };
 function AddClothesUI({ addClothes }: addClothesUIProm) {
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+
   //list of colours for clothes
   const colours_List = [
     "Black",
@@ -170,7 +173,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
 
   function setUserType() {
     //type list is not even formatted
-    const formatted = inputTypeValue.toLowerCase();
+    const formatted = formatInput(inputTypeValue);
     const valid = validateType();
     if (valid) {
       console.log("valid type");
@@ -238,7 +241,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
       colour: usersColours,
     };
 
-    const response = await fetch("/api/clothes/upload", {
+    const response = await fetch(`${API_BASE_URL}/api/clothes/upload`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
