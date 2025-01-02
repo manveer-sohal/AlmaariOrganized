@@ -20,6 +20,7 @@ function SideBar({ onQuery }: SideBarProp) {
   const [type, setType] = useState<string[] | null | undefined>([]);
 
   const onClickFilter = () => {
+    console.log("click");
     if (displayFilterType == "none") {
       setDisplayFilterType("block");
     } else {
