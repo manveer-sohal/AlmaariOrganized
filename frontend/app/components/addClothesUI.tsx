@@ -173,7 +173,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
 
   function setUserType() {
     //type list is not even formatted
-    const formatted = inputTypeValue.toLowerCase();
+    const formatted = formatInput(inputTypeValue);
     const valid = validateType();
     if (valid) {
       console.log("valid type");
