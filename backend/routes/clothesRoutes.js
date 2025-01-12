@@ -7,4 +7,5 @@ const router = express.Router();
 
 router.post("/listClothes", getData);
 router.post("/upload", uploadData);
+
 export default router;
