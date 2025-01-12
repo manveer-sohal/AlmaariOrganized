@@ -33,7 +33,7 @@ export default function WeatherCheck() {
           const location = { lat, long };
 
           const response = await fetch(
-            `${API_BASE_URL}/api/weather/getWeater` ||
+            `${API_BASE_URL}/api/weather/getWeather` ||
               "http://localhost:3001/api",
             {
               method: "POST",

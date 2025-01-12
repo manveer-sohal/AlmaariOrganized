@@ -89,7 +89,7 @@ function interperateData(data) {
     return 5;
   }
 }
-export const test = async (req, res) => {
+export const getWeather = async (req, res) => {
   console.log(req.body);
 
   const long = req.long;

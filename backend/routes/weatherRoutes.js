@@ -4,6 +4,6 @@ const router = express.Router();
 
 // Define routes
 
-router.post("/getWeater", getWeather);
+router.post("/getWeather", getWeather);
 
 export default router;
