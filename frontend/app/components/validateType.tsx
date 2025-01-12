@@ -171,7 +171,11 @@ function ValidateType({ type }: ValidateTypeProp) {
             e.target.className = validType ? "invalid" : "valid";
           }}
         ></input>
-        <button type="button" className="add-picture" onClick={setUserType}>
+        <button
+          type="button"
+          className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+          onClick={setUserType}
+        >
           +
         </button>
       </div>

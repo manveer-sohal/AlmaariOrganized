@@ -125,7 +125,7 @@ function DisplayClothes({ query }: DisplayClothes) {
   }
 
   return (
-    <div className="cards-container">
+    <div className="rounded-[15px] w-[83%] h-full grid grid-cols-[repeat(auto-fill,_200px)] justify-center p-2 text-center order-first">
       {!hasLoaded && (
         <h1
           style={{

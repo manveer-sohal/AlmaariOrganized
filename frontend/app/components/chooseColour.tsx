@@ -123,11 +123,13 @@ function ChooseColour({ colour }: ChooseColourProps) {
       setValidColour(false);
     }
   };
-
+  // height: 100%;
+  //   display: inline-flex;
+  //   align-items: center;
   return (
     <>
       <label htmlFor="input-colour">Colour:</label>
-      <div className="colour-input-container">
+      <div className="h-full inline-flex items-center">
         <input
           placeholder="Enter multiple colours ie. red"
           enterKeyHint="next"
@@ -143,7 +145,11 @@ function ChooseColour({ colour }: ChooseColourProps) {
             setInputColourValue(value);
           }}
         ></input>
-        <button type="button" className="add-picture" onClick={setUserColour}>
+        <button
+          type="button"
+          className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+          onClick={setUserColour}
+        >
           +
         </button>
       </div>

@@ -17,6 +17,73 @@ export const getData = async (request, response) => {
   }
 };
 
+function addData() {
+  const cold = [
+    "Jeans",
+    "Sweater",
+    "Jacket",
+    "Trousers",
+    "Hoodie",
+    "Coat",
+    "Cardigan",
+    "Pajamas",
+    "Scarf",
+    "Hat",
+    "Gloves",
+    "Cargos",
+    "Jeans",
+    "Leggings",
+    "Vest",
+    "Overalls",
+    "Jumper",
+    "Pants",
+    "Tunic",
+    "Poncho",
+    "Robe",
+  ];
+  const warm = [
+    "Shirt",
+    "Jeans",
+    "T-shirt",
+    "Shorts",
+    "Skirt",
+    "Dress",
+    "Blouse",
+    "Trousers",
+    "Cardigan",
+    "Tank Top",
+    "Pajamas",
+    "Socks",
+    "Cargos",
+    "Jeans",
+    "Leggings",
+    "Swimsuit",
+    "Crop Top",
+    "Pants",
+    "Capri Pants",
+  ];
+
+  const rain = [
+    "Sweater",
+    "Jacket",
+    "Hoodie",
+    "Coat",
+    "Hat",
+    "Swimsuit",
+    "Raincoat",
+    "Jumper",
+    "Poncho",
+  ];
+
+  console.log(Clothes.type);
+  if (cold.includes(Clothes.type)) {
+    console.log("this is good for the cold");
+  } else if (rain.includes(Clothes.type)) {
+    console.log("this is good for the cold");
+  } else if (warm.includes(Clothes.type)) {
+    console.log("this is good for the cold");
+  }
+}
 export const uploadData = async (request, response) => {
   console.log("Uploading");
 
@@ -24,6 +91,7 @@ export const uploadData = async (request, response) => {
     const { auth0Id, Clothes } = request.body;
 
     await connectMongoDB();
+    addData(Clothes);
 
     const user = await User.findOneAndUpdate(
       { auth0Id: auth0Id },

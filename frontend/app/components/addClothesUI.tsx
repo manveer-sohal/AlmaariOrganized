@@ -251,14 +251,15 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
     });
     console.log(response);
   };
+
   //If submit is clicked
-  const handleSubmit = (
+  const handleSubmit = async (
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
   ) => {
     validateType();
 
     if (validateColour() && validateType() && file) {
-      pushDB();
+      await pushDB();
       addClothes(URL.createObjectURL(file), usersClothType, usersColours);
     } else {
       event.preventDefault();
@@ -295,13 +296,22 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
     }
   }, [file]);
 
+  //  .image-container {
+  //   background-color: #ffffff84;
+  //   width: 200px;
+  //   height: 300px;
+  //   margin: 0px 0 0 90px;
+  // }
   return (
-    <div className="add-clothes-background">
-      <Link href="/" className="nav-bar-li">
+    <div className="bg-indigo-200 w-full h-screen sticky top-0 z-10">
+      <Link
+        href="/"
+        className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+      >
         Go back
       </Link>
-      <form className="add-clothes-form">
-        <div className="image-container">
+      <form className="rounded-2xl w-[400px] h-auto mx-auto p-4 relative top-1/2 left-48 -translate-x-1/2 -translate-y-1/2 bg-indigo-300 text-lg flex flex-col">
+        <div className="bg-indigo-200 w-[200px] h-[300px] mx-20">
           {preview && (
             <Image
               src={preview}
@@ -358,7 +368,11 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
               setInputColourValue(value);
             }}
           ></input>
-          <button type="button" className="add-picture" onClick={setUserColour}>
+          <button
+            type="button"
+            className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+            onClick={setUserColour}
+          >
             +
           </button>
         </div>
@@ -400,7 +414,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
         <label
           htmlFor="input-file"
           id="input-file-label"
-          className="add-picture"
+          className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
         >
           Add Picture
         </label>
@@ -409,7 +423,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
           href="/"
           type="button"
           onClick={(event) => handleSubmit(event)}
-          className="add-picture"
+          className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
         >
           Submit
         </Link>

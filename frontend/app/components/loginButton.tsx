@@ -23,7 +23,7 @@ function LoginButton() {
     <div>
       {user ? (
         <Link
-          className="nav-bar-li"
+          className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
           href="/api/auth/logout"
           onClick={() => console.log("Logging out...")}
         >
@@ -31,7 +31,7 @@ function LoginButton() {
         </Link>
       ) : (
         <Link
-          className="nav-bar-li"
+          className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
           href="/api/auth/login"
           onClick={() => console.log("Redirecting to login...")}
         >
