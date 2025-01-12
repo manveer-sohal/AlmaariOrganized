@@ -19,23 +19,16 @@ type ClothingItemProps = {
   imageSrc: string;
 };
 
-export default function ClothesCard({
-  colour,
-  type,
-  imageSrc,
-}: ClothingItemProps) {
+export default function ClothesCard({ imageSrc }: ClothingItemProps) {
   return (
-    <div
-      style={{
-        border: "1px solid black",
-        margin: "10px",
-        padding: "10px",
-      }}
-      className="cards"
-    >
-      <p>Type: {type}</p>
-      <p>colour: {colour}</p>
-      <Image src={imageSrc} alt="image" width={200} height={200}></Image>
+    <div className="border border-indigo-300 m-2 p-2 bg-slate-100 rounded-md w-[200px] h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl">
+      <Image
+        src={imageSrc}
+        alt="image"
+        width={200}
+        height={200}
+        className="object-contain w-full h-full absolute inset-0"
+      />
     </div>
   );
 }

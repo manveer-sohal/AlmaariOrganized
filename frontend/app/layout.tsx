@@ -12,7 +12,7 @@ export default function RootLayout({
   return (
     <UserProvider>
       <html lang="en">
-        <body>{children}</body>
+        <body className="text-gray-900 button-">{children}</body>
       </html>
     </UserProvider>
   );

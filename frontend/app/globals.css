@@ -50,7 +50,7 @@ body {
   top: 0px;
 }
 
-/* Individual card styling */
+/* Individual card styling 
 .cards {
   background-color: rgba(0, 0, 0, 0.7);
   border-radius: 5px;
@@ -67,6 +67,7 @@ body {
   transform: translateY(-10px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
+*/
 
 #side-bar {
   height: 100vh;
