@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import queryString from "query-string";
 import moment from "moment";
 
-async function getWeather(long, lat) {
+async function getWeatherData(long, lat) {
   // set the Timelines GET endpoint as the target URL
   const getTimelineURL = "https://api.tomorrow.io/v4/timelines";
 
@@ -94,7 +94,7 @@ export const getWeather = async (req, res) => {
 
   const long = req.long;
   const lat = req.lat;
-  const data = await getWeather(long, lat);
+  const data = await getWeatherData(long, lat);
   const value = interperateData(data.data.timelines[0].intervals[0].values);
   console.log(value);
   res.json(value);
