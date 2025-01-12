@@ -7,7 +7,7 @@ async function getWeatherData(long, lat) {
   const getTimelineURL = "https://api.tomorrow.io/v4/timelines";
 
   // get your key from app.tomorrow.io/development/keys
-  const apikey = "jIcjwGgCBmJQFWdvQRIiEwWwV7OitwbY";
+  const apikey = process.env.TOMORROW_API_KEY;
 
   // pick the location, as a latlong pair
   //let location = [long, lat];
