@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const ClothesSchema = new mongoose.Schema({
+  uniqueId: { type: String, required: true, unique: true },
   type: { type: String, required: true },
   imageSrc: { type: String, required: true },
   favourite: { type: Boolean, default: false },
