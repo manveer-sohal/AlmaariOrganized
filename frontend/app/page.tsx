@@ -3,8 +3,9 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import NavBar from "./components/navBar";
 import SideBar from "./components/sideBar";
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import DisplayClothes from "./components/displayClothes";
+import Login from "./components/login";
+
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -49,12 +50,7 @@ export default function Home() {
     <main>
       {!user && (
         <>
-          <Link className="nav-bar-li" href="/api/auth/login">
-            Login
-          </Link>
-          <p>
-            You are not logged in. Log in to see your personalized wardrobe.
-          </p>
+          <Login></Login>
         </>
       )}
 

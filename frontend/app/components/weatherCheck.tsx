@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 export default function WeatherCheck() {
   const [weather, setWeather] = useState<string>("bg-slate-300");
@@ -71,9 +72,9 @@ export default function WeatherCheck() {
   return (
     <>
       <div
-        className={`w-full h-96 flex items-center justify-center ${weather}`}
+        className={`w-full h-96 flex items-center justify-center ${weather} transition-all duration-500 ease-in-out`}
       >
-        <div className="text-xl font-semibold p-4 text-center">
+        <div className="text-xl animations-semibold p-4 text-center ">
           {error && <p className="text-red-500">{error}</p>}
           {loading ? (
             <p>Loading weather information...</p>
@@ -83,7 +84,10 @@ export default function WeatherCheck() {
                 <p>Check the Weather in your Location!</p>
               )}
               {weather === "bg-blue-400" && (
-                <p>It’s cold, wear something warm!</p>
+                <>
+                  <DotLottieReact src="/animations/cold.lottie" loop autoplay />
+                  <p>It’s cold, wear something warm!</p>
+                </>
               )}
               {weather === "bg-yellow-400" && (
                 <p>It’s hot, wear something light!</p>
@@ -91,7 +95,12 @@ export default function WeatherCheck() {
               {weather === "bg-blue-300" && (
                 <p>It’s windy, wear something warm!</p>
               )}
-              {weather === "bg-slate-200" && <p>It’s rainy, wear a hoodie!</p>}
+              {weather === "bg-slate-200" && (
+                <>
+                  <DotLottieReact src="/animations/rain.lottie" loop autoplay />
+                  <p>It’s rainy, wear a hoodie!</p>
+                </>
+              )}
               {weather === "bg-blue-100" && (
                 <p>It’s nice out! Wear whatever!</p>
               )}

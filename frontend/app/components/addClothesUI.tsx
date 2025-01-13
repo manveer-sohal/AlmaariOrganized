@@ -221,34 +221,25 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
       return;
     }
 
-    const toBase64 = (file: File) =>
-      new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-      });
-
-    const base64File = await toBase64(file!);
-
     const auth0Id = user.sub;
+    const formData = new FormData();
 
-    const Data = {
-      type: usersClothType,
-      imageSrc: base64File,
-      favourite: null,
-      createdAt: null,
-      colour: usersColours,
-    };
+    formData.append("auth0Id", auth0Id ?? "");
+    formData.append("type", usersClothType);
+    formData.append("colour", JSON.stringify(usersColours));
+    if (file) {
+      formData.append("image", file);
+    } else {
+      console.error("No file selected");
+      return;
+    }
 
+    console.log(formData);
     const response = await fetch(`${API_BASE_URL}/api/clothes/upload`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth0Id: auth0Id,
-        Clothes: Data,
-      }),
+      body: formData,
     });
+
     console.log(response);
   };
 
