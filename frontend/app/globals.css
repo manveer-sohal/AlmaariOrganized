@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --background: #ededed;
+  --foreground: #ededed;
+}
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #ededed;
