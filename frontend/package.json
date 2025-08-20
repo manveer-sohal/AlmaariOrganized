@@ -1,7 +1,6 @@
 {
   "name": "frontend",
   "version": "0.1.0",
-  "proxy": "http://localhost:3001",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -10,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^3.5.0",
+    "@auth0/nextjs-auth0": "^2.4.0",
     "@lottiefiles/dotlottie-react": "^0.12.1",
     "dotenv": "^16.4.7",
     "fs": "^0.0.1-security",
@@ -26,6 +25,7 @@
     "@types/node": "^20",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@types/url-join": "^4.0.3",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.0",
     "postcss": "^8",
