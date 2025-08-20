@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 const ClothesSchema = new mongoose.Schema({
   uniqueId: { type: String, required: true, unique: true },
-  type: { type: String, required: true },
+  type: { type: String, required: true, index: true },
   imageSrc: { type: String, required: true },
   favourite: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
@@ -10,7 +10,7 @@ const ClothesSchema = new mongoose.Schema({
 });
 
 const usersSchema = new mongoose.Schema({
-  auth0Id: { type: String, required: true, unique: true }, // Link to Auth0 user ID
+  auth0Id: { type: String, required: true, unique: true, index: true }, // Link to Auth0 user ID
   email: { type: String, required: true },
   Clothes: { type: [ClothesSchema], default: [] },
 });
