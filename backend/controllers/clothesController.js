@@ -29,19 +29,54 @@ export const removeData = async (request, response) => {
   }
 };
 
+import redis from "redis";
+//pass in url after for production
+const client = redis.createClient();
+
+client.connect().catch(console.error); // Connect to Redis
+
 export const getData = async (request, response) => {
   try {
     const { auth0Id } = request.body;
+
+    if (!auth0Id) {
+      return response.status(400).json({ error: "auth0Id is required" });
+    }
+
+    // Redis cache key
+    const redisKey = `userData:${auth0Id}`;
+
+    // Check cache for the data
+    const cachedData = await client.get(redisKey);
+    if (cachedData) {
+      console.log("Cache hit: Returning cached data");
+      return response.status(200).json(JSON.parse(cachedData)); // Send cached data
+    }
+
     await connectMongoDB();
 
+    // Measure MongoDB query time
+    const startTime = Date.now();
     const userData = await User.findOne({ auth0Id }, { Clothes: 1, _id: 0 });
-    if (userData) {
-      return response.json(userData);
-    } else {
-      return response.status(500).json({ error: "User Not Found" });
+    const endTime = Date.now();
+    console.log(`Query took ${endTime - startTime} ms`);
+
+    if (!userData) {
+      return response.status(404).json({ error: "User Not Found" });
     }
+
+    // Store the data in Redis cache with a TTL (e.g., 600 seconds = 10 minutes)
+    await client.set(redisKey, JSON.stringify(userData), {
+      EX: 600, // 10-minute expiry time
+    });
+
+    console.log("Cache miss: Queried MongoDB and cached the result");
+    return response.status(200).json(userData);
   } catch (e) {
-    return response.status(500).json({ error: "Failed to fetch user data", e });
+    console.error(e);
+    return response
+      .status(500)
+      .json({ error: "Failed to fetch user data", details: e.message });
   }
 };
 

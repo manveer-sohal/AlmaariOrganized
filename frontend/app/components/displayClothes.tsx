@@ -17,6 +17,7 @@ function DisplayClothes({ query }: DisplayClothesProps) {
   >([]);
   const [hasLoaded, setHasLoaded] = useState(false); // Track if data is loaded
 
+  //change this
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
@@ -91,9 +92,9 @@ function DisplayClothes({ query }: DisplayClothesProps) {
   return (
     <div className="rounded-[15px] w-[83%] h-full grid grid-cols-[repeat(auto-fill,_200px)] justify-center p-2 text-center order-first">
       {!hasLoaded ? (
-        <h1 className="text-center text-4xl font-semibold">
-          Loading clothes...
-        </h1>
+        <div className="flex justify-center items-center w-full h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
+        </div>
       ) : filteredClothesCard.length === 0 ? (
         <p className="text-xl">No clothes match the selected filters.</p>
       ) : (
