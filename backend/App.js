@@ -22,7 +22,7 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 
-app.get("/healthz", (_req, res) => res.send("ok!"));
+app.get("/healthz", (_req, res) => res.send("ok!! All systems go!!"));
 app.get("/", (_req, res) => res.send("Go to /healthz for health check"));
 
 //rip it
