@@ -6,7 +6,7 @@ services:
   api:
     build:
       context: ./backend # relative path to backend directory (where Dockerfile and package.json are located)
-      dockerfile: Dockerfile/Dockerfile.dev # This is the path and file name for your backend Dockerfile
+      dockerfile: Dockerfile-dev/Dockerfile.dev # This is the path and file name for your backend Dockerfile
     restart: unless-stopped # Restart policy
     env_file: ./backend/.env # Location of you .env file
     volumes: # Copies any changes made on the host machine to the container
