@@ -1,7 +1,4 @@
-name: almaari_dev
-networks:
-  default:
-    name: almaari_dev
+name: almaari_development
 services:
   # nginx:
   #   restart: always
@@ -10,40 +7,42 @@ services:
     build:
       context: ./backend # relative path to backend directory (where Dockerfile and package.json are located)
       dockerfile: Dockerfile/Dockerfile.dev # This is the path and file name for your backend Dockerfile
-    # command: npm run dev
     restart: unless-stopped # Restart policy
-    env_file: ./backend/.env
+    env_file: ./backend/.env # Location of you .env file
     volumes: # Copies any changes made on the host machine to the container
       - ./backend:/app # Mount the backend directory to /app in the container
       - /app/node_modules # Ignore node_modules on host machine and use the one in the container
     ports:
       - "3001:3001" # Where backend port is exposed: map to container port
-    # depends_on:
-    #   - mongo
+    networks:
+      - almaari-app
+    depends_on: # Uncomment this if you want to use local mongoDB container
+      - mongo
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev # This is the file name for your backend Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: ./frontend/.env.local
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+  mongo:
+    image: mongo:6.0 # Specify mongo image version
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db # This is a named volume, volume persists when container is shut down or restarts. "/data/db" path in the container
+    profiles: ["local-db"] # Since I have a mongoDB Atlas cluster, I don't always need to run a local mongo container. This profile allows me to only run it when I need it.
+    networks:
+      - almaari-app
 volumes:
-  api_node_modules:
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile.dev # This is the file name for your backend Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - AUTH0_SECRET=c6e64e8d8420087adea937f0079724b69c9d17f1b31520ff78b69191d7cf4a27
-  #     - AUTH0_BASE_URL=http://localhost:3000
-  #     - AUTH0_ISSUER_BASE_URL=https://dev-bfpm2z1zzzxfl2d6.us.auth0.com
-  #     - AUTH0_CLIENT_ID=W94HjwgfzR5b3ZHHkcQwE3SGphprZZYx
-  #     - AUTH0_CLIENT_SECRET=7PaEHnsyGPtFUI1crY_1M0ISxgLfL3L5QGjf4woR3AbRr1VlRwKheLkCK_h2bKcJ
-  #     - MONGODB_URI=mongodb+srv://marzveer123:PLwnGldtAXvSTQp7@users.y3oq1.mongodb.net/AlmaariOrganized
-  #     - TOMORROW_API_KEY=jIcjwGgCBmJQFWdvQRIiEwWwV7OitwbY
-  #   depends_on:
-  #     - backend
-  #   volumes:
-  #     - ./frontend:/app
-  # mongo:
-  #   image: mongo:6.0
-  #   container_name: mongo
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongo-data:/data/db
+  mongo-data: # Named volume for persisting mongo data, name set in the mongo services "mongo-data"
+networks:
+  almaari-app:
+    driver: bridge
