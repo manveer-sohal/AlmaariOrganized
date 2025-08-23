@@ -9,7 +9,7 @@ export const removeData = async (request, response) => {
   console.log("delete");
   try {
     const { auth0Id, uniqueId } = request.body;
-    // await connectMongoDB();
+    await connectMongoDB();
 
     const user = await User.findOneAndUpdate(
       { auth0Id },
@@ -56,7 +56,7 @@ export const getData = async (request, response) => {
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
     }
 
-    // await connectMongoDB();
+    await connectMongoDB();
 
     // Measure MongoDB query time
     const startTime = Date.now();
@@ -178,7 +178,7 @@ export const uploadData = async (request, response) => {
     const imageSrc = await toBase64(file);
     console.log("next move");
 
-    // await connectMongoDB();
+    await connectMongoDB();
 
     const newClothingItem = {
       type,
