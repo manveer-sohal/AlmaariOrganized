@@ -1,12 +1,15 @@
 import User from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
+import { Redis } from "@upstash/redis";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const removeData = async (request, response) => {
   console.log("delete");
   try {
     const { auth0Id, uniqueId } = request.body;
-    await connectMongoDB();
+    // await connectMongoDB();
 
     const user = await User.findOneAndUpdate(
       { auth0Id },
@@ -29,11 +32,11 @@ export const removeData = async (request, response) => {
   }
 };
 
-import redis from "redis";
 //pass in url after for production
-const client = redis.createClient();
-
-client.connect().catch(console.error); // Connect to Redis
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 export const getData = async (request, response) => {
   try {
@@ -47,13 +50,13 @@ export const getData = async (request, response) => {
     const redisKey = `userData:${auth0Id}`;
 
     // Check cache for the data
-    const cachedData = await client.get(redisKey);
+    const cachedData = await redis.get(redisKey);
     if (cachedData) {
       console.log("Cache hit: Returning cached data");
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
     }
 
-    await connectMongoDB();
+    // await connectMongoDB();
 
     // Measure MongoDB query time
     const startTime = Date.now();
@@ -66,8 +69,8 @@ export const getData = async (request, response) => {
     }
 
     // Store the data in Redis cache with a TTL (e.g., 600 seconds = 10 minutes)
-    await client.set(redisKey, JSON.stringify(userData), {
-      EX: 600, // 10-minute expiry time
+    await redis.set(redisKey, JSON.stringify(userData), {
+      ex: 600, // 10-minute expiry time (Upstash REST uses lowercase 'ex')
     });
 
     console.log("Cache miss: Queried MongoDB and cached the result");
@@ -175,7 +178,7 @@ export const uploadData = async (request, response) => {
     const imageSrc = await toBase64(file);
     console.log("next move");
 
-    await connectMongoDB();
+    // await connectMongoDB();
 
     const newClothingItem = {
       type,
