@@ -3,7 +3,7 @@ services:
   # nginx:
   #   restart: always
   #   image: nginx:latest
-  backend:
+  api:
     build:
       context: ./backend # relative path to backend directory (where Dockerfile and package.json are located)
       dockerfile: Dockerfile/Dockerfile.dev # This is the path and file name for your backend Dockerfile
@@ -16,8 +16,8 @@ services:
       - "3001:3001" # Where backend port is exposed: map to container port
     networks:
       - almaari-app
-    depends_on: # Uncomment this if you want to use local mongoDB container
-      - mongo
+    # depends_on: # Uncomment this if you want to use local mongoDB container
+    #   - mongo
   frontend:
     build:
       context: ./frontend
@@ -30,7 +30,9 @@ services:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - backend
+      - api
+    networks:
+      - almaari-app
   mongo:
     image: mongo:6.0 # Specify mongo image version
     container_name: mongo
