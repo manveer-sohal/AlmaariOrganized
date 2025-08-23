@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-indigo-300">
@@ -15,12 +13,15 @@ export default function Login() {
 
         {/* Centering the button */}
         <div className="flex justify-center">
-          <Link
-            href="/api/auth/login"
+          <button
+            type="button"
+            onClick={() => {
+              window.location.assign("/api/auth/login");
+            }}
             className="w-3/4 bg-indigo-500 text-white text-center font-semibold py-3 px-4 rounded-lg hover:bg-indigo-600 focus:ring-2 focus:ring-indigo-300 focus:outline-none"
           >
             Log In with Auth0
-          </Link>
+          </button>
         </div>
       </div>
     </div>
