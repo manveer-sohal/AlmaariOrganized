@@ -22,8 +22,13 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 
-app.get("/healthz", (_req, res) => res.send("ok!! All systems go!!"));
-app.get("/", (_req, res) => res.send("Go to /healthz for health check"));
+app.get("/healthz", (_req, res) =>
+  res.status(200).send("ok! All systems go!!")
+);
+app.get("/health", (_req, res) => res.status(200).send("ok"));
+app.head("/health", (_req, res) => res.sendStatus(200));
+
+app.get("/", (_req, res) => res.send("Go to /health for health check"));
 
 //rip it
 app.listen(port, () => {
