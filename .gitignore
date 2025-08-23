@@ -1,2 +1,8 @@
 node_modules
 DS_Store
+build/
+.env
+gcloud.md
+changes.txt
+.gitignore
+env.yaml
