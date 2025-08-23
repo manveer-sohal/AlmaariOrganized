@@ -6,10 +6,13 @@ import cors from "cors";
 
 //!!! unistall mongoose from front end !!!!
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
+app.set("trust proxy", 1); // so req.ip works behind Cloudflare
 
 //middleware
-app.use(cors());
+app.use(
+  cors({ origin: process.env.CORS_ORIGIN?.split(","), credentials: true })
+);
 app.use(express.json());
 
 // app.use(bodyParser.json({ limit: "5mb" }));
@@ -18,6 +21,8 @@ app.use(express.json());
 app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
+
+app.get("/healthz", (_req, res) => res.send("ok"));
 
 //rip it
 app.listen(port, () => {
