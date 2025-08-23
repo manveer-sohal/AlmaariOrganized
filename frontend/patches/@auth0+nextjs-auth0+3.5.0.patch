@@ -1,0 +1,740 @@
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/client/abstract-client.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/client/abstract-client.d.ts
+index 1352bdb..d8f60c5 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/client/abstract-client.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/client/abstract-client.d.ts
+@@ -1,5 +1,5 @@
+-import { Config } from '../config';
+-import { Auth0Request } from '../http';
++import { Config } from '../../../src/auth0-session/config';
++import { Auth0Request } from '../../../src/auth0-session/http';
+ export type Telemetry = {
+     name: string;
+     version: string;
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/config.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/config.d.ts
+index 86aeddf..633fd63 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/config.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/config.d.ts
+@@ -1,8 +1,8 @@
+ /// <reference types="node" />
+-import type { AuthorizationParameters as OidcAuthorizationParameters, ClientAuthMethod } from './client/abstract-client';
++import type { AuthorizationParameters as OidcAuthorizationParameters, ClientAuthMethod } from '../../src/auth0-session/client/abstract-client';
+ import type { Agent } from 'https';
+-import { SessionStore } from './session/stateful-session';
+-import { Auth0RequestCookies } from './http';
++import { SessionStore } from '../../src/auth0-session/session/stateful-session';
++import { Auth0RequestCookies } from '../../src/auth0-session/http';
+ /**
+  * Configuration properties.
+  */
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/get-config.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/get-config.d.ts
+index 16680fe..ec4e6de 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/get-config.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/get-config.d.ts
+@@ -1,4 +1,4 @@
+-import { Config } from './config';
++import { Config } from '../../src/auth0-session/config';
+ export type DeepPartial<T> = {
+     [P in keyof T]?: T[P] extends Array<infer I> ? Array<DeepPartial<I>> : DeepPartial<T[P]>;
+ };
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/backchannel-logout.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/backchannel-logout.d.ts
+index 0e8b443..0e394a0 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/backchannel-logout.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/backchannel-logout.d.ts
+@@ -1,6 +1,6 @@
+-import { Auth0Request, Auth0Response } from '../http';
+-import { Config, GetConfig } from '../config';
+-import { GetClient } from '../client/abstract-client';
++import { Auth0Request, Auth0Response } from '../../../src/auth0-session/http';
++import { Config, GetConfig } from '../../../src/auth0-session/config';
++import { GetClient } from '../../../src/auth0-session/client/abstract-client';
+ export type HandleBackchannelLogout = (req: Auth0Request, res: Auth0Response) => Promise<void>;
+ export default function backchannelLogoutHandlerFactory(getConfig: GetConfig, getClient: GetClient): HandleBackchannelLogout;
+ export type IsLoggedOut = (user: {
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/callback.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/callback.d.ts
+index ca85a5f..81fe442 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/callback.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/callback.d.ts
+@@ -1,8 +1,8 @@
+-import { AuthorizationParameters, GetConfig } from '../config';
+-import TransientStore from '../transient-store';
+-import { SessionCache } from '../session-cache';
+-import { Auth0Request, Auth0Response } from '../http';
+-import { GetClient } from '../client/abstract-client';
++import { AuthorizationParameters, GetConfig } from '../../../src/auth0-session/config';
++import TransientStore from '../../../src/auth0-session/transient-store';
++import { SessionCache } from '../../../src/auth0-session/session-cache';
++import { Auth0Request, Auth0Response } from '../../../src/auth0-session/http';
++import { GetClient } from '../../../src/auth0-session/client/abstract-client';
+ export type AfterCallback = (session: any, state?: Record<string, any>) => Promise<any> | any | undefined;
+ export type CallbackOptions = {
+     afterCallback?: AfterCallback;
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/login.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/login.d.ts
+index 348c44f..38315bf 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/login.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/login.d.ts
+@@ -1,7 +1,7 @@
+-import { GetConfig, LoginOptions } from '../config';
+-import TransientStore from '../transient-store';
+-import { Auth0Request, Auth0Response } from '../http';
+-import { GetClient } from '../client/abstract-client';
++import { GetConfig, LoginOptions } from '../../../src/auth0-session/config';
++import TransientStore from '../../../src/auth0-session/transient-store';
++import { Auth0Request, Auth0Response } from '../../../src/auth0-session/http';
++import { GetClient } from '../../../src/auth0-session/client/abstract-client';
+ export type HandleLogin = (req: Auth0Request, res: Auth0Response, options?: LoginOptions) => Promise<void>;
+ export type AuthVerification = {
+     nonce: string;
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/logout.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/logout.d.ts
+index a393232..3eb2b10 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/logout.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/handlers/logout.d.ts
+@@ -1,7 +1,7 @@
+-import { GetConfig, LogoutOptions } from '../config';
+-import { SessionCache } from '../session-cache';
+-import { Auth0Request, Auth0Response } from '../http';
+-import { GetClient } from '../client/abstract-client';
++import { GetConfig, LogoutOptions } from '../../../src/auth0-session/config';
++import { SessionCache } from '../../../src/auth0-session/session-cache';
++import { Auth0Request, Auth0Response } from '../../../src/auth0-session/http';
++import { GetClient } from '../../../src/auth0-session/client/abstract-client';
+ export type HandleLogout = (req: Auth0Request, res: Auth0Response, options?: LogoutOptions) => Promise<void>;
+ export default function logoutHandlerFactory(getConfig: GetConfig, getClient: GetClient, sessionCache: SessionCache): HandleLogout;
+ //# sourceMappingURL=logout.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-request.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-request.d.ts
+index 6715b8a..c6e4901 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-request.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-request.d.ts
+@@ -1,4 +1,4 @@
+-import Auth0RequestCookies from './auth0-request-cookies';
++import Auth0RequestCookies from '../../../src/auth0-session/http/auth0-request-cookies';
+ export default abstract class Auth0Request<Req = any> extends Auth0RequestCookies {
+     req: Req;
+     protected constructor(req: Req);
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-response.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-response.d.ts
+index 5573628..7f2b1a2 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-response.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/auth0-response.d.ts
+@@ -1,4 +1,4 @@
+-import Auth0ResponseCookies from './auth0-response-cookies';
++import Auth0ResponseCookies from '../../../src/auth0-session/http/auth0-response-cookies';
+ export default abstract class Auth0Response<Res = any> extends Auth0ResponseCookies {
+     res: Res;
+     protected constructor(res: Res);
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/index.d.ts
+index 1273167..5e6c2b9 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/index.d.ts
+@@ -1,7 +1,7 @@
+-export { default as Auth0Request } from './auth0-request';
+-export { default as Auth0Response } from './auth0-response';
+-export { default as Auth0RequestCookies } from './auth0-request-cookies';
+-export { default as Auth0ResponseCookies } from './auth0-response-cookies';
+-export { default as NodeRequest } from './node-request';
+-export { default as NodeResponse } from './node-response';
++export { default as Auth0Request } from '../../../src/auth0-session/http/auth0-request';
++export { default as Auth0Response } from '../../../src/auth0-session/http/auth0-response';
++export { default as Auth0RequestCookies } from '../../../src/auth0-session/http/auth0-request-cookies';
++export { default as Auth0ResponseCookies } from '../../../src/auth0-session/http/auth0-response-cookies';
++export { default as NodeRequest } from '../../../src/auth0-session/http/node-request';
++export { default as NodeResponse } from '../../../src/auth0-session/http/node-response';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-request.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-request.d.ts
+index 59206f2..174b9a1 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-request.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-request.d.ts
+@@ -1,6 +1,6 @@
+ /// <reference types="node" />
+ import { IncomingMessage } from 'http';
+-import Auth0Request from './auth0-request';
++import Auth0Request from '../../../src/auth0-session/http/auth0-request';
+ export default class NodeRequest extends Auth0Request<IncomingMessage> {
+     req: IncomingMessage;
+     constructor(req: IncomingMessage);
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-response.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-response.d.ts
+index ab956cf..f0791b7 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-response.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/http/node-response.d.ts
+@@ -1,7 +1,7 @@
+ /// <reference types="node" />
+ import { ServerResponse } from 'http';
+ import { CookieSerializeOptions } from 'cookie';
+-import Auth0Response from './auth0-response';
++import Auth0Response from '../../../src/auth0-session/http/auth0-response';
+ export default class NodeResponse<T extends ServerResponse = ServerResponse> extends Auth0Response<ServerResponse> {
+     res: T;
+     constructor(res: T);
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/index.d.ts
+index e73c2c7..81c617b 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/index.d.ts
+@@ -1,14 +1,14 @@
+-export { MissingStateParamError, MissingStateCookieError, MalformedStateCookieError, IdentityProviderError, ApplicationError } from './utils/errors';
+-export { StatelessSession } from './session/stateless-session';
+-export { AbstractSession, SessionPayload } from './session/abstract-session';
+-export { StatefulSession, SessionStore } from './session/stateful-session';
+-export { default as TransientStore } from './transient-store';
+-export { Config, GetConfig, SessionConfig, CookieConfig, LoginOptions, LogoutOptions, AuthorizationParameters } from './config';
+-export { get as getConfig, ConfigParameters, DeepPartial } from './get-config';
+-export { default as loginHandler, HandleLogin } from './handlers/login';
+-export { default as logoutHandler, HandleLogout } from './handlers/logout';
+-export { default as callbackHandler, CallbackOptions, AfterCallback, HandleCallback } from './handlers/callback';
+-export { default as backchannelLogoutHandler, HandleBackchannelLogout, isLoggedOut, IsLoggedOut, DeleteSub, deleteSub } from './handlers/backchannel-logout';
+-export { TokenEndpointResponse, AbstractClient, Telemetry } from './client/abstract-client';
+-export { SessionCache } from './session-cache';
++export { MissingStateParamError, MissingStateCookieError, MalformedStateCookieError, IdentityProviderError, ApplicationError } from '../../src/auth0-session/utils/errors';
++export { StatelessSession } from '../../src/auth0-session/session/stateless-session';
++export { AbstractSession, SessionPayload } from '../../src/auth0-session/session/abstract-session';
++export { StatefulSession, SessionStore } from '../../src/auth0-session/session/stateful-session';
++export { default as TransientStore } from '../../src/auth0-session/transient-store';
++export { Config, GetConfig, SessionConfig, CookieConfig, LoginOptions, LogoutOptions, AuthorizationParameters } from '../../src/auth0-session/config';
++export { get as getConfig, ConfigParameters, DeepPartial } from '../../src/auth0-session/get-config';
++export { default as loginHandler, HandleLogin } from '../../src/auth0-session/handlers/login';
++export { default as logoutHandler, HandleLogout } from '../../src/auth0-session/handlers/logout';
++export { default as callbackHandler, CallbackOptions, AfterCallback, HandleCallback } from '../../src/auth0-session/handlers/callback';
++export { default as backchannelLogoutHandler, HandleBackchannelLogout, isLoggedOut, IsLoggedOut, DeleteSub, deleteSub } from '../../src/auth0-session/handlers/backchannel-logout';
++export { TokenEndpointResponse, AbstractClient, Telemetry } from '../../src/auth0-session/client/abstract-client';
++export { SessionCache } from '../../src/auth0-session/session-cache';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session-cache.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session-cache.d.ts
+index f8f930e..5204759 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session-cache.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session-cache.d.ts
+@@ -1,4 +1,4 @@
+-import { TokenEndpointResponse } from './client/abstract-client';
++import { TokenEndpointResponse } from '../../src/auth0-session/client/abstract-client';
+ export interface SessionCache<Req = any, Res = any, Session = {
+     [key: string]: any;
+ }> {
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/abstract-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/abstract-session.d.ts
+index a1fa7e1..7c706b3 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/abstract-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/abstract-session.d.ts
+@@ -1,6 +1,6 @@
+ import { CookieSerializeOptions } from 'cookie';
+-import { Config, GetConfig } from '../config';
+-import { Auth0RequestCookies, Auth0ResponseCookies } from '../http';
++import { Config, GetConfig } from '../../../src/auth0-session/config';
++import { Auth0RequestCookies, Auth0ResponseCookies } from '../../../src/auth0-session/http';
+ export interface SessionPayload<Session> {
+     header: {
+         /**
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateful-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateful-session.d.ts
+index 1fe8873..4f3f4b8 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateful-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateful-session.d.ts
+@@ -1,6 +1,6 @@
+ import { CookieSerializeOptions } from 'cookie';
+-import { AbstractSession, SessionPayload } from './abstract-session';
+-import { Auth0RequestCookies, Auth0ResponseCookies } from '../http';
++import { AbstractSession, SessionPayload } from '../../../src/auth0-session/session/abstract-session';
++import { Auth0RequestCookies, Auth0ResponseCookies } from '../../../src/auth0-session/http';
+ export interface SessionStore<Session> {
+     /**
+      * Gets the session from the store given a session ID.
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateless-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateless-session.d.ts
+index 66262b2..8c55414 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateless-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/session/stateless-session.d.ts
+@@ -1,8 +1,8 @@
+ import * as jose from 'jose';
+ import { CookieSerializeOptions } from 'cookie';
+-import { Config } from '../config';
+-import { AbstractSession, Header, SessionPayload } from './abstract-session';
+-import { Auth0RequestCookies, Auth0ResponseCookies } from '../http';
++import { Config } from '../../../src/auth0-session/config';
++import { AbstractSession, Header, SessionPayload } from '../../../src/auth0-session/session/abstract-session';
++import { Auth0RequestCookies, Auth0ResponseCookies } from '../../../src/auth0-session/http';
+ export declare class StatelessSession<Session extends {
+     [key: string]: any;
+ } = {
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/transient-store.d.ts b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/transient-store.d.ts
+index 36a87a5..7f7833a 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/auth0-session/transient-store.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/auth0-session/transient-store.d.ts
+@@ -1,5 +1,5 @@
+-import { Config, GetConfig } from './config';
+-import { Auth0Request, Auth0RequestCookies, Auth0Response } from './http';
++import { Config, GetConfig } from '../../src/auth0-session/config';
++import { Auth0Request, Auth0RequestCookies, Auth0Response } from '../../src/auth0-session/http';
+ export interface StoreOptions {
+     sameSite?: boolean | 'lax' | 'strict' | 'none';
+     value: string;
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/client/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/client/index.d.ts
+index 8a618cc..33f68c5 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/client/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/client/index.d.ts
+@@ -1,5 +1,5 @@
+-import { default as UserProvider, UserProviderProps, UserProfile, UserContext, RequestError, useUser } from './use-user';
+-import { default as withPageAuthRequired, WithPageAuthRequired, WithPageAuthRequiredOptions } from './with-page-auth-required';
++import { default as UserProvider, UserProviderProps, UserProfile, UserContext, RequestError, useUser } from '../../src/client/use-user';
++import { default as withPageAuthRequired, WithPageAuthRequired, WithPageAuthRequiredOptions } from '../../src/client/with-page-auth-required';
+ export { UserProvider, UserProviderProps, UserProfile, UserContext, RequestError, useUser };
+ export { withPageAuthRequired, WithPageAuthRequired, WithPageAuthRequiredOptions };
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/client/use-user.d.ts b/node_modules/@auth0/nextjs-auth0/dist/client/use-user.d.ts
+index df66801..d72ebfc 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/client/use-user.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/client/use-user.d.ts
+@@ -1,5 +1,5 @@
+ import React, { ReactElement } from 'react';
+-import { ConfigContext } from './use-config';
++import { ConfigContext } from '../../src/client/use-config';
+ /**
+  * The user claims returned from the {@link useUser} hook.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/client/with-page-auth-required.d.ts b/node_modules/@auth0/nextjs-auth0/dist/client/with-page-auth-required.d.ts
+index eeb295e..9e91ca7 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/client/with-page-auth-required.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/client/with-page-auth-required.d.ts
+@@ -1,5 +1,5 @@
+ import React, { ComponentType } from 'react';
+-import { UserProfile } from './use-user';
++import { UserProfile } from '../../src/client/use-user';
+ /**
+  * Options to customize the withPageAuthRequired higher order component.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/config.d.ts b/node_modules/@auth0/nextjs-auth0/dist/config.d.ts
+index dceaa6b..a603ae5 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/config.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/config.d.ts
+@@ -1,6 +1,6 @@
+-import type { Config as BaseConfig } from './auth0-session/config';
+-import { DeepPartial } from './auth0-session/get-config';
+-import type { Auth0Request, Auth0RequestCookies } from './auth0-session/http';
++import type { Config as BaseConfig } from '../src/auth0-session/config';
++import { DeepPartial } from '../src/auth0-session/get-config';
++import type { Auth0Request, Auth0RequestCookies } from '../src/auth0-session/http';
+ /**
+  * @category server
+  */
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/auth.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/auth.d.ts
+index c6bc8a1..c29998d 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/auth.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/auth.d.ts
+@@ -1,12 +1,12 @@
+ import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest } from 'next/server';
+-import { HandleLogin } from './login';
+-import { HandleLogout } from './logout';
+-import { HandleCallback } from './callback';
+-import { HandleBackchannelLogout } from './backchannel-logout';
+-import { HandleProfile } from './profile';
+-import { HandlerError } from '../utils/errors';
+-import { AppRouteHandlerFn, NextAppRouterHandler, NextPageRouterHandler } from './router-helpers';
++import { HandleLogin } from '../../src/handlers/login';
++import { HandleLogout } from '../../src/handlers/logout';
++import { HandleCallback } from '../../src/handlers/callback';
++import { HandleBackchannelLogout } from '../../src/handlers/backchannel-logout';
++import { HandleProfile } from '../../src/handlers/profile';
++import { HandlerError } from '../../src/utils/errors';
++import { AppRouteHandlerFn, NextAppRouterHandler, NextPageRouterHandler } from '../../src/handlers/router-helpers';
+ /**
+  * If you want to add some custom behavior to the default auth handlers, you can pass in custom handlers for
+  * `login`, `logout`, `callback`, and `profile`. For example:
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/backchannel-logout.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/backchannel-logout.d.ts
+index 82ec435..1ee4ef2 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/backchannel-logout.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/backchannel-logout.d.ts
+@@ -1,6 +1,6 @@
+-import { HandleBackchannelLogout as BaseHandleBackchannelLogout } from '../auth0-session';
+-import { Handler } from './router-helpers';
+-import { GetConfig } from '../config';
++import { HandleBackchannelLogout as BaseHandleBackchannelLogout } from '../../src/auth0-session';
++import { Handler } from '../../src/handlers/router-helpers';
++import { GetConfig } from '../../src/config';
+ /**
+  * The handler for the POST `/api/auth/backchannel-logout` API route.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/callback.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/callback.d.ts
+index 63a9358..ef2f066 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/callback.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/callback.d.ts
+@@ -1,9 +1,9 @@
+ import { NextApiResponse, NextApiRequest } from 'next';
+ import { NextRequest } from 'next/server';
+-import { AuthorizationParameters, HandleCallback as BaseHandleCallback } from '../auth0-session';
+-import { Session } from '../session';
+-import { GetConfig } from '../config';
+-import { AuthHandler, Handler, OptionsProvider } from './router-helpers';
++import { AuthorizationParameters, HandleCallback as BaseHandleCallback } from '../../src/auth0-session';
++import { Session } from '../../src/session';
++import { GetConfig } from '../../src/config';
++import { AuthHandler, Handler, OptionsProvider } from '../../src/handlers/router-helpers';
+ /**
+  * afterCallback hook for page router {@link AfterCallbackPageRoute} and app router {@link AfterCallbackAppRoute}
+  */
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/index.d.ts
+index fc68bb6..bce72f0 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/index.d.ts
+@@ -1,8 +1,8 @@
+-export { default as callbackHandler, HandleCallback, CallbackOptions, AfterCallback, AfterCallbackPageRoute, AfterCallbackAppRoute } from './callback';
+-export { default as loginHandler, HandleLogin, LoginOptions, GetLoginState, GetLoginStatePageRoute, GetLoginStateAppRoute } from './login';
+-export { default as logoutHandler, HandleLogout, LogoutOptions } from './logout';
+-export { default as backchannelLogoutHandler, HandleBackchannelLogout } from './backchannel-logout';
+-export { default as profileHandler, HandleProfile, ProfileOptions, AfterRefetch, AfterRefetchPageRoute, AfterRefetchAppRoute } from './profile';
+-export { default as handlerFactory, Handlers, HandleAuth, AppRouterOnError, PageRouterOnError } from './auth';
+-export { AppRouteHandlerFnContext, PageRouterHandler, AppRouterHandler, NextPageRouterHandler, NextAppRouterHandler } from './router-helpers';
++export { default as callbackHandler, HandleCallback, CallbackOptions, AfterCallback, AfterCallbackPageRoute, AfterCallbackAppRoute } from '../../src/handlers/callback';
++export { default as loginHandler, HandleLogin, LoginOptions, GetLoginState, GetLoginStatePageRoute, GetLoginStateAppRoute } from '../../src/handlers/login';
++export { default as logoutHandler, HandleLogout, LogoutOptions } from '../../src/handlers/logout';
++export { default as backchannelLogoutHandler, HandleBackchannelLogout } from '../../src/handlers/backchannel-logout';
++export { default as profileHandler, HandleProfile, ProfileOptions, AfterRefetch, AfterRefetchPageRoute, AfterRefetchAppRoute } from '../../src/handlers/profile';
++export { default as handlerFactory, Handlers, HandleAuth, AppRouterOnError, PageRouterOnError } from '../../src/handlers/auth';
++export { AppRouteHandlerFnContext, PageRouterHandler, AppRouterHandler, NextPageRouterHandler, NextAppRouterHandler } from '../../src/handlers/router-helpers';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/login.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/login.d.ts
+index 9399ec7..094544c 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/login.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/login.d.ts
+@@ -1,8 +1,8 @@
+ import { NextApiRequest } from 'next';
+ import { NextRequest } from 'next/server';
+-import { AuthorizationParameters, HandleLogin as BaseHandleLogin } from '../auth0-session';
+-import { GetConfig } from '../config';
+-import { OptionsProvider, Handler, AuthHandler } from './router-helpers';
++import { AuthorizationParameters, HandleLogin as BaseHandleLogin } from '../../src/auth0-session';
++import { GetConfig } from '../../src/config';
++import { OptionsProvider, Handler, AuthHandler } from '../../src/handlers/router-helpers';
+ /**
+  * Get login state hook for page router {@link GetLoginStatePageRoute} and app router {@link GetLoginStateAppRoute}.
+  */
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/logout.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/logout.d.ts
+index 73a81b9..728a4c3 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/logout.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/logout.d.ts
+@@ -1,5 +1,5 @@
+-import { HandleLogout as BaseHandleLogout } from '../auth0-session';
+-import { AuthHandler, Handler, OptionsProvider } from './router-helpers';
++import { HandleLogout as BaseHandleLogout } from '../../src/auth0-session';
++import { AuthHandler, Handler, OptionsProvider } from '../../src/handlers/router-helpers';
+ /**
+  * Options to customize the logout handler.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/handlers/profile.d.ts b/node_modules/@auth0/nextjs-auth0/dist/handlers/profile.d.ts
+index 5c8199e..f213480 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/handlers/profile.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/handlers/profile.d.ts
+@@ -1,9 +1,9 @@
+ import { NextApiResponse, NextApiRequest } from 'next';
+ import { NextRequest } from 'next/server';
+-import { SessionCache, Session, GetAccessToken } from '../session';
+-import { AuthHandler, Handler, OptionsProvider } from './router-helpers';
+-import { GetClient } from '../auth0-session/client/abstract-client';
+-import { GetConfig } from '../config';
++import { SessionCache, Session, GetAccessToken } from '../../src/session';
++import { AuthHandler, Handler, OptionsProvider } from '../../src/handlers/router-helpers';
++import { GetClient } from '../../src/auth0-session/client/abstract-client';
++import { GetConfig } from '../../src/config';
+ /**
+  * After refetch handler for page router {@link AfterRefetchPageRoute} and app router {@link AfterRefetchAppRoute}.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/helpers/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/helpers/index.d.ts
+index baff733..c468a23 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/helpers/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/helpers/index.d.ts
+@@ -1,3 +1,3 @@
+-export { default as withApiAuthRequiredFactory, WithApiAuthRequired, AppRouteHandlerFn, WithApiAuthRequiredAppRoute, WithApiAuthRequiredPageRoute } from './with-api-auth-required';
+-export { default as withPageAuthRequiredFactory, GetServerSidePropsResultWithSession, WithPageAuthRequired, WithPageAuthRequiredPageRouterOptions, WithPageAuthRequiredAppRouterOptions, PageRoute, AppRouterPageRouteOpts, AppRouterPageRoute, WithPageAuthRequiredPageRouter, WithPageAuthRequiredAppRouter } from './with-page-auth-required';
++export { default as withApiAuthRequiredFactory, WithApiAuthRequired, AppRouteHandlerFn, WithApiAuthRequiredAppRoute, WithApiAuthRequiredPageRoute } from '../../src/helpers/with-api-auth-required';
++export { default as withPageAuthRequiredFactory, GetServerSidePropsResultWithSession, WithPageAuthRequired, WithPageAuthRequiredPageRouterOptions, WithPageAuthRequiredAppRouterOptions, PageRoute, AppRouterPageRouteOpts, AppRouterPageRoute, WithPageAuthRequiredPageRouter, WithPageAuthRequiredAppRouter } from '../../src/helpers/with-page-auth-required';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-api-auth-required.d.ts b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-api-auth-required.d.ts
+index e2162ab..5569813 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-api-auth-required.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-api-auth-required.d.ts
+@@ -1,6 +1,6 @@
+ import { NextApiHandler } from 'next';
+ import { NextRequest } from 'next/server';
+-import { SessionCache } from '../session';
++import { SessionCache } from '../../src/session';
+ /**
+  * This contains `param`s, which is an object containing the dynamic route parameters for the current route.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-middleware-auth-required.d.ts b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-middleware-auth-required.d.ts
+index 47b1acb..a39fa5c 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-middleware-auth-required.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-middleware-auth-required.d.ts
+@@ -1,6 +1,6 @@
+ import { NextMiddleware, NextRequest } from 'next/server';
+-import { SessionCache } from '../session';
+-import { GetConfig } from '../config';
++import { SessionCache } from '../../src/session';
++import { GetConfig } from '../../src/config';
+ /**
+  * Pass custom options to {@link WithMiddlewareAuthRequired}.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-page-auth-required.d.ts b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-page-auth-required.d.ts
+index 46f3684..667bdb3 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/helpers/with-page-auth-required.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/helpers/with-page-auth-required.d.ts
+@@ -1,9 +1,9 @@
+ /// <reference types="node" />
+ import type React from 'react';
+ import { GetServerSideProps, GetServerSidePropsContext, GetServerSidePropsResult } from 'next';
+-import { Claims, SessionCache } from '../session';
++import { Claims, SessionCache } from '../../src/session';
+ import { ParsedUrlQuery } from 'querystring';
+-import { GetConfig } from '../config';
++import { GetConfig } from '../../src/config';
+ /**
+  * If you wrap your `getServerSideProps` with {@link WithPageAuthRequired} your props object will be augmented with
+  * the user property, which will be the user's {@link Claims}.
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/index.d.ts
+index d9d584a..e2c5d4c 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/index.d.ts
+@@ -1,4 +1,4 @@
+-import { Auth0Server as Auth0ServerShared, ConfigParameters, GetAccessToken, GetSession, HandleAuth, HandleCallback, HandleLogin, HandleLogout, HandleProfile, TouchSession, UpdateSession, WithApiAuthRequired, WithPageAuthRequired } from './shared';
++import { Auth0Server as Auth0ServerShared, ConfigParameters, GetAccessToken, GetSession, HandleAuth, HandleCallback, HandleLogin, HandleLogout, HandleProfile, TouchSession, UpdateSession, WithApiAuthRequired, WithPageAuthRequired } from '../src/shared';
+ export type Auth0Server = Omit<Auth0ServerShared, 'withMiddlewareAuthRequired'>;
+ /**
+  * Initialise your own instance of the SDK.
+@@ -20,5 +20,5 @@ export declare const handleLogout: HandleLogout;
+ export declare const handleCallback: HandleCallback;
+ export declare const handleProfile: HandleProfile;
+ export declare const handleAuth: HandleAuth;
+-export * from './shared';
++export * from '../src/shared';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/cache.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/cache.d.ts
+index 1370b3e..deb8f3b 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/cache.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/cache.d.ts
+@@ -2,11 +2,11 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import type { TokenEndpointResponse } from '../auth0-session';
+-import { SessionCache as ISessionCache, AbstractSession } from '../auth0-session';
+-import Session from './session';
+-import { Auth0Request, Auth0Response } from '../auth0-session/http';
+-import { GetConfig, NextConfig } from '../config';
++import type { TokenEndpointResponse } from '../../src/auth0-session';
++import { SessionCache as ISessionCache, AbstractSession } from '../../src/auth0-session';
++import Session from '../../src/session/session';
++import { Auth0Request, Auth0Response } from '../../src/auth0-session/http';
++import { GetConfig, NextConfig } from '../../src/config';
+ type Req = IncomingMessage | NextRequest | NextApiRequest;
+ type Res = ServerResponse | NextResponse | NextApiResponse;
+ export declare const getAuth0ReqRes: (req: Req, res: Res) => [Auth0Request, Auth0Response];
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/get-access-token.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/get-access-token.d.ts
+index 848d188..cce41e7 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/get-access-token.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/get-access-token.d.ts
+@@ -2,10 +2,10 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { AuthorizationParameters } from '../auth0-session';
+-import { Session, SessionCache } from '../session';
+-import { GetClient } from '../auth0-session/client/abstract-client';
+-import { GetConfig } from '../config';
++import { AuthorizationParameters } from '../../src/auth0-session';
++import { Session, SessionCache } from '../../src/session';
++import { GetClient } from '../../src/auth0-session/client/abstract-client';
++import { GetConfig } from '../../src/config';
+ /**
+  * After refresh handler for page router {@link AfterRefreshPageRoute} and app router {@link AfterRefreshAppRoute}.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/get-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/get-session.d.ts
+index 2472f54..1ac9aba 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/get-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/get-session.d.ts
+@@ -2,7 +2,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { SessionCache, Session } from '../session';
++import { SessionCache, Session } from '../../src/session';
+ /**
+  * Get the user's session from the server.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/index.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/index.d.ts
+index 7483a85..2cfd1f2 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/index.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/index.d.ts
+@@ -1,7 +1,7 @@
+-export { default as Session, Claims, fromJson, fromTokenEndpointResponse } from './session';
+-export { default as sessionFactory, GetSession } from './get-session';
+-export { default as accessTokenFactory, GetAccessToken, AccessTokenRequest, GetAccessTokenResult, AfterRefresh, AfterRefreshPageRoute, AfterRefreshAppRoute } from './get-access-token';
+-export { default as SessionCache, get, set } from './cache';
+-export { default as touchSessionFactory, TouchSession } from './touch-session';
+-export { default as updateSessionFactory, UpdateSession } from './update-session';
++export { default as Session, Claims, fromJson, fromTokenEndpointResponse } from '../../src/session/session';
++export { default as sessionFactory, GetSession } from '../../src/session/get-session';
++export { default as accessTokenFactory, GetAccessToken, AccessTokenRequest, GetAccessTokenResult, AfterRefresh, AfterRefreshPageRoute, AfterRefreshAppRoute } from '../../src/session/get-access-token';
++export { default as SessionCache, get, set } from '../../src/session/cache';
++export { default as touchSessionFactory, TouchSession } from '../../src/session/touch-session';
++export { default as updateSessionFactory, UpdateSession } from '../../src/session/update-session';
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/session.d.ts
+index c3fa51c..b6247d3 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/session.d.ts
+@@ -1,5 +1,5 @@
+-import type { TokenEndpointResponse } from '../auth0-session/client/abstract-client';
+-import { NextConfig } from '../config';
++import type { TokenEndpointResponse } from '../../src/auth0-session/client/abstract-client';
++import { NextConfig } from '../../src/config';
+ /**
+  * Key-value store for the user's claims.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/touch-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/touch-session.d.ts
+index e556ffe..598a852 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/touch-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/touch-session.d.ts
+@@ -2,7 +2,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { SessionCache } from '../session';
++import { SessionCache } from '../../src/session';
+ /**
+  * Touch the session object. If rolling sessions are enabled and autoSave is disabled, you will need
+  * to call this method to update the session expiry.
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/session/update-session.d.ts b/node_modules/@auth0/nextjs-auth0/dist/session/update-session.d.ts
+index f2429ab..a723d2c 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/session/update-session.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/session/update-session.d.ts
+@@ -2,7 +2,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { Session, SessionCache } from '../session';
++import { Session, SessionCache } from '../../src/session';
+ /**
+  * Update the session object. The provided `session` object will replace the existing session.
+  *
+diff --git a/node_modules/@auth0/nextjs-auth0/dist/shared.d.ts b/node_modules/@auth0/nextjs-auth0/dist/shared.d.ts
+index d3dcb1f..fdc59dd 100644
+--- a/node_modules/@auth0/nextjs-auth0/dist/shared.d.ts
++++ b/node_modules/@auth0/nextjs-auth0/dist/shared.d.ts
+@@ -1,9 +1,9 @@
+-import { SessionStore as GenericSessionStore, SessionPayload } from './auth0-session';
+-import { HandleAuth, HandleLogin, HandleProfile, HandleLogout, HandleCallback, HandleBackchannelLogout } from './handlers';
+-import { SessionCache, GetSession, GetAccessToken, Session, TouchSession, UpdateSession } from './session/';
+-import { WithApiAuthRequired, WithPageAuthRequired } from './helpers';
+-import { ConfigParameters } from './config';
+-import { WithMiddlewareAuthRequired } from './helpers/with-middleware-auth-required';
++import { SessionStore as GenericSessionStore, SessionPayload } from '../src/auth0-session';
++import { HandleAuth, HandleLogin, HandleProfile, HandleLogout, HandleCallback, HandleBackchannelLogout } from '../src/handlers';
++import { SessionCache, GetSession, GetAccessToken, Session, TouchSession, UpdateSession } from '../src/session';
++import { WithApiAuthRequired, WithPageAuthRequired } from '../src/helpers';
++import { ConfigParameters } from '../src/config';
++import { WithMiddlewareAuthRequired } from '../src/helpers/with-middleware-auth-required';
+ export declare const telemetry: {
+     name: string;
+     version: string;
+@@ -71,11 +71,11 @@ export interface Auth0Server {
+      */
+     withMiddlewareAuthRequired: WithMiddlewareAuthRequired;
+ }
+-export { AuthError, AccessTokenErrorCode, AccessTokenError, HandlerError, CallbackHandlerError, LoginHandlerError, LogoutHandlerError, ProfileHandlerError } from './utils/errors';
+-export { Handlers, LoginOptions, LogoutOptions, GetLoginState, GetLoginStatePageRoute, GetLoginStateAppRoute, ProfileOptions, CallbackOptions, AfterCallback, AfterCallbackPageRoute, AfterCallbackAppRoute, AfterRefetch, AfterRefetchPageRoute, AfterRefetchAppRoute, AppRouterOnError, PageRouterOnError, AppRouteHandlerFnContext, NextAppRouterHandler, NextPageRouterHandler, AppRouterHandler, PageRouterHandler } from './handlers';
+-export { AppRouterPageRouteOpts, AppRouterPageRoute, WithPageAuthRequiredPageRouter, WithPageAuthRequiredAppRouter, GetServerSidePropsResultWithSession, WithPageAuthRequiredPageRouterOptions, WithPageAuthRequiredAppRouterOptions, PageRoute, AppRouteHandlerFn, WithApiAuthRequiredAppRoute, WithApiAuthRequiredPageRoute } from './helpers';
+-export { AccessTokenRequest, GetAccessTokenResult, Claims, AfterRefresh, AfterRefreshPageRoute, AfterRefreshAppRoute } from './session';
+-export { MissingStateCookieError, MalformedStateCookieError, MissingStateParamError, IdentityProviderError, ApplicationError } from './auth0-session';
++export { AuthError, AccessTokenErrorCode, AccessTokenError, HandlerError, CallbackHandlerError, LoginHandlerError, LogoutHandlerError, ProfileHandlerError } from '../src/utils/errors';
++export { Handlers, LoginOptions, LogoutOptions, GetLoginState, GetLoginStatePageRoute, GetLoginStateAppRoute, ProfileOptions, CallbackOptions, AfterCallback, AfterCallbackPageRoute, AfterCallbackAppRoute, AfterRefetch, AfterRefetchPageRoute, AfterRefetchAppRoute, AppRouterOnError, PageRouterOnError, AppRouteHandlerFnContext, NextAppRouterHandler, NextPageRouterHandler, AppRouterHandler, PageRouterHandler } from '../src/handlers';
++export { AppRouterPageRouteOpts, AppRouterPageRoute, WithPageAuthRequiredPageRouter, WithPageAuthRequiredAppRouter, GetServerSidePropsResultWithSession, WithPageAuthRequiredPageRouterOptions, WithPageAuthRequiredAppRouterOptions, PageRoute, AppRouteHandlerFn, WithApiAuthRequiredAppRoute, WithApiAuthRequiredPageRoute } from '../src/helpers';
++export { AccessTokenRequest, GetAccessTokenResult, Claims, AfterRefresh, AfterRefreshPageRoute, AfterRefreshAppRoute } from '../src/session';
++export { MissingStateCookieError, MalformedStateCookieError, MissingStateParamError, IdentityProviderError, ApplicationError } from '../src/auth0-session';
+ export { ConfigParameters, HandleAuth, HandleLogin, HandleProfile, HandleLogout, HandleCallback, HandleBackchannelLogout, WithApiAuthRequired, WithPageAuthRequired, SessionCache, GetSession, TouchSession, UpdateSession, GetAccessToken, Session };
+ export type SessionStore = GenericSessionStore<Session>;
+ export type SessionStorePayload = SessionPayload<Session>;
+diff --git a/node_modules/@auth0/nextjs-auth0/src/auth0-session/handlers/backchannel-logout.ts b/node_modules/@auth0/nextjs-auth0/src/auth0-session/handlers/backchannel-logout.ts
+index 873cc82..0afdafb 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/auth0-session/handlers/backchannel-logout.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/auth0-session/handlers/backchannel-logout.ts
+@@ -33,7 +33,7 @@ export default function backchannelLogoutHandlerFactory(
+     let token: JWTPayload;
+     try {
+       token = await verifyLogoutToken(logoutToken, config, await client.getIssuerMetadata());
+-    } catch (e) {
++    } catch (e:any) {
+       throw new BackchannelLogoutError('invalid_request', e.message);
+     }
+     const {
+@@ -56,7 +56,7 @@ export default function backchannelLogoutHandlerFactory(
+         sid && store.set(`sid|${clientID}|${sid}`, payload),
+         sub && store.set(`sub|${clientID}|${sub}`, payload)
+       ]);
+-    } catch (e) {
++    } catch (e:any) {
+       throw new BackchannelLogoutError('application_error', e.message);
+     }
+     res.send204();
+diff --git a/node_modules/@auth0/nextjs-auth0/src/session/get-access-token.ts b/node_modules/@auth0/nextjs-auth0/src/session/get-access-token.ts
+index ac9a884..b24880c 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/session/get-access-token.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/session/get-access-token.ts
+@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
+ import { AuthorizationParameters } from '../auth0-session';
+ import { AccessTokenError, AccessTokenErrorCode } from '../utils/errors';
+ import { intersect, match } from '../utils/array';
+-import { Session, SessionCache, fromTokenEndpointResponse, get, set } from '../session';
++import { Session, SessionCache, fromTokenEndpointResponse, get, set } from '.';
+ import { GetClient } from '../auth0-session/client/abstract-client';
+ import { GetConfig } from '../config';
+ import { getAuth0ReqRes } from './cache';
+diff --git a/node_modules/@auth0/nextjs-auth0/src/session/get-session.ts b/node_modules/@auth0/nextjs-auth0/src/session/get-session.ts
+index c08e991..9a2a1fb 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/session/get-session.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/session/get-session.ts
+@@ -1,7 +1,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { SessionCache, Session, get } from '../session';
++import { SessionCache, Session, get } from '.';
+ 
+ /**
+  * Get the user's session from the server.
+diff --git a/node_modules/@auth0/nextjs-auth0/src/session/touch-session.ts b/node_modules/@auth0/nextjs-auth0/src/session/touch-session.ts
+index 6be4f7c..4eb5d97 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/session/touch-session.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/session/touch-session.ts
+@@ -1,7 +1,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { get, set, SessionCache } from '../session';
++import { get, set, SessionCache } from '.';
+ 
+ /**
+  * Touch the session object. If rolling sessions are enabled and autoSave is disabled, you will need
+diff --git a/node_modules/@auth0/nextjs-auth0/src/session/update-session.ts b/node_modules/@auth0/nextjs-auth0/src/session/update-session.ts
+index 2edb8ff..ef06758 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/session/update-session.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/session/update-session.ts
+@@ -1,7 +1,7 @@
+ import { IncomingMessage, ServerResponse } from 'http';
+ import { NextApiRequest, NextApiResponse } from 'next';
+ import { NextRequest, NextResponse } from 'next/server';
+-import { get, set, Session, SessionCache } from '../session';
++import { get, set, Session, SessionCache } from '.';
+ 
+ /**
+  * Update the session object. The provided `session` object will replace the existing session.
+diff --git a/node_modules/@auth0/nextjs-auth0/src/shared.ts b/node_modules/@auth0/nextjs-auth0/src/shared.ts
+index ec4ef37..2844bfd 100644
+--- a/node_modules/@auth0/nextjs-auth0/src/shared.ts
++++ b/node_modules/@auth0/nextjs-auth0/src/shared.ts
+@@ -7,7 +7,7 @@ import {
+   HandleCallback,
+   HandleBackchannelLogout
+ } from './handlers';
+-import { SessionCache, GetSession, GetAccessToken, Session, TouchSession, UpdateSession } from './session/';
++import { SessionCache, GetSession, GetAccessToken, Session, TouchSession, UpdateSession } from './session';
+ import { WithApiAuthRequired, WithPageAuthRequired } from './helpers';
+ import { ConfigParameters } from './config';
+ import { WithMiddlewareAuthRequired } from './helpers/with-middleware-auth-required';
