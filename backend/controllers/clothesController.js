@@ -1,9 +1,32 @@
 import User from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
-import { Redis } from "@upstash/redis";
+import { createClient } from "redis";
 import dotenv from "dotenv";
 dotenv.config();
+
+const redisUrl = process.env.UPSTASH_REDIS_URL;
+if (!redisUrl) {
+  console.error(
+    "Missing UPSTASH_REDIS_URL. Set it to your Upstash rediss URL, e.g. rediss://default:<password>@<host>.upstash.io:6379"
+  );
+  process.exit(1);
+}
+
+export const redis = createClient({
+  url: redisUrl, // validated rediss URL
+  socket: {
+    reconnectStrategy: (retries) => Math.min(retries * 500, 5000),
+  },
+});
+
+redis.on("error", (err) => console.error("Redis client error:", err));
+
+if (!redis.isOpen) {
+  await redis.connect(); // top-level await is fine in ESM
+  await redis.ping();
+  console.log("✅ Redis (socket) connected");
+}
 
 export const removeData = async (request, response) => {
   console.log("delete");
@@ -31,12 +54,6 @@ export const removeData = async (request, response) => {
       .json({ error: "Failed to remove clothing item", details: e.message });
   }
 };
-
-//pass in url after for production
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
 
 export const getData = async (request, response) => {
   try {
@@ -70,7 +87,7 @@ export const getData = async (request, response) => {
 
     // Store the data in Redis cache with a TTL (e.g., 600 seconds = 10 minutes)
     await redis.set(redisKey, JSON.stringify(userData), {
-      ex: 600, // 10-minute expiry time (Upstash REST uses lowercase 'ex')
+      EX: 600, // 10-minute expiry time (Upstash REST uses lowercase 'ex')
     });
 
     console.log("Cache miss: Queried MongoDB and cached the result");
