@@ -35,8 +35,13 @@ MongoDB (or its drivers) does not cache connections across processes because:
 
 */
 
+console.log("Connecting to MongoDB...");
+
 const MONGODB_URI = process.env.MONGODB_URI;
-console.log(`THIS IS THE THING:   \n\n\n\n${MONGODB_URI}\n\n\n`);
+
+if (!MONGODB_URI) {
+  throw new Error("Their is an issue with the MONGODB_URI");
+}
 
 let cached = global.mongooseCache;
 

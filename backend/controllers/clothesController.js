@@ -1,6 +1,32 @@
 import User from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
+import { createClient } from "redis";
+import dotenv from "dotenv";
+dotenv.config();
+
+const redisUrl = process.env.UPSTASH_REDIS_URL;
+if (!redisUrl) {
+  console.error(
+    "Missing UPSTASH_REDIS_URL. Set it to your Upstash rediss URL, e.g. rediss://default:<password>@<host>.upstash.io:6379"
+  );
+  process.exit(1);
+}
+
+export const redis = createClient({
+  url: redisUrl, // validated rediss URL
+  socket: {
+    reconnectStrategy: (retries) => Math.min(retries * 500, 5000),
+  },
+});
+
+redis.on("error", (err) => console.error("Redis client error:", err));
+
+if (!redis.isOpen) {
+  await redis.connect(); // top-level await is fine in ESM
+  await redis.ping();
+  console.log("✅ Redis (socket) connected");
+}
 
 export const removeData = async (request, response) => {
   console.log("delete");
@@ -29,12 +55,6 @@ export const removeData = async (request, response) => {
   }
 };
 
-import redis from "redis";
-//pass in url after for production
-const client = redis.createClient();
-
-client.connect().catch(console.error); // Connect to Redis
-
 export const getData = async (request, response) => {
   try {
     const { auth0Id } = request.body;
@@ -47,7 +67,7 @@ export const getData = async (request, response) => {
     const redisKey = `userData:${auth0Id}`;
 
     // Check cache for the data
-    const cachedData = await client.get(redisKey);
+    const cachedData = await redis.get(redisKey);
     if (cachedData) {
       console.log("Cache hit: Returning cached data");
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
@@ -66,8 +86,8 @@ export const getData = async (request, response) => {
     }
 
     // Store the data in Redis cache with a TTL (e.g., 600 seconds = 10 minutes)
-    await client.set(redisKey, JSON.stringify(userData), {
-      EX: 600, // 10-minute expiry time
+    await redis.set(redisKey, JSON.stringify(userData), {
+      EX: 600, // 10-minute expiry time (Upstash REST uses lowercase 'ex')
     });
 
     console.log("Cache miss: Queried MongoDB and cached the result");

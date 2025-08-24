@@ -1,0 +1,50 @@
+name: almaari_development
+services:
+  # nginx:
+  #   restart: always
+  #   image: nginx:latest
+  api:
+    build:
+      context: ./backend # relative path to backend directory (where Dockerfile and package.json are located)
+      dockerfile: Dockerfile-dev/Dockerfile.dev # This is the path and file name for your backend Dockerfile
+    restart: unless-stopped # Restart policy
+    env_file: ./backend/.env # Location of you .env file
+    volumes: # Copies any changes made on the host machine to the container
+      - ./backend:/app # Mount the backend directory to /app in the container
+      - /app/node_modules # Ignore node_modules on host machine and use the one in the container
+    ports:
+      - "3001:3001" # Where backend port is exposed: map to container port
+    networks:
+      - almaari-app
+    # depends_on: # Uncomment this if you want to use local mongoDB container
+    #   - mongo
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev # This is the file name for your backend Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: ./frontend/.env.local
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - almaari-app
+  mongo:
+    image: mongo:6.0 # Specify mongo image version
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db # This is a named volume, volume persists when container is shut down or restarts. "/data/db" path in the container
+    profiles: ["local-db"] # Since I have a mongoDB Atlas cluster, I don't always need to run a local mongo container. This profile allows me to only run it when I need it.
+    networks:
+      - almaari-app
+volumes:
+  mongo-data: # Named volume for persisting mongo data, name set in the mongo services "mongo-data"
+networks:
+  almaari-app:
+    driver: bridge

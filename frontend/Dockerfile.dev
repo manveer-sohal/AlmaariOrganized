@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci && npm cache clean --force
+
+COPY . .
+
+EXPOSE 3000
+
+# MOVED THIS TO docker-compose.yml
+# The --host flag allows for hot reloading inside the Docker container
+CMD ["npm", "run", "dev"] 

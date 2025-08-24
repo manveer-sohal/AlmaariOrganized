@@ -33,6 +33,7 @@ function LoginButton() {
         <Link
           className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
           href="/api/auth/login"
+          prefetch={false}
           onClick={() => console.log("Redirecting to login...")}
         >
           Login

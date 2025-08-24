@@ -21,8 +21,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@/libs/*": ["libs/*"],
-      "@/models/*": ["models/*"],
+      "@/libs/*": ["../backend/libs/*"],
+      "@/models/*": ["../backend/models/*"],
       "@/components/*": ["app/components/*"],
       "@/clothes/*": ["app/clothes/*"],
       "@/profile/*": ["app/profile/*"],
@@ -36,7 +36,12 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../deleteModule/addClothes.tsx"
+    "../deleteModule/addClothes.tsx",
+    "../backend/routes/login.ts",
+    "../backend/routes/get.ts",
+    "../backend/routes/create.ts",
+    "../backend/routes/upload.ts",
+    "../backend/routes/listClothes.ts"
   ],
   "exclude": ["node_modules"]
 }
