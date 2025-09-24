@@ -1,4 +1,5 @@
 import User from "../models/Users.js";
+import mongoose from "mongoose";
 import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
 import { createClient } from "redis";
@@ -54,10 +55,7 @@ if (!redisUrl) {
       console.log("✅ Redis connected");
     }
   } catch (err) {
-    console.error(
-      "❌ Failed to connect to Redis. Continuing without cache:",
-      err
-    );
+    console.error("Failed to connect to Redis. Continuing without cache:", err);
     // Stop the real client and remove listeners to prevent further error spam
     try {
       await realClient.quit();
@@ -251,16 +249,59 @@ export const createOutfit = async (request, response) => {
   console.log("Creating Outfit");
   try {
     const { auth0Id, name, colour, season, waterproof, outfit_items } =
-      request.body; // Other clothing data
+      request.body;
+
+    if (!auth0Id) {
+      return response.status(400).json({ error: "auth0Id is required" });
+    }
+
+    const parsedItems = (() => {
+      try {
+        return JSON.parse(outfit_items || "[]");
+      } catch (_) {
+        return [];
+      }
+    })();
+
+    const parsedColour = (() => {
+      try {
+        return JSON.parse(colour || "[]");
+      } catch (_) {
+        return [];
+      }
+    })();
+
+    const parsedSeason = (() => {
+      try {
+        return JSON.parse(season || "[]");
+      } catch (_) {
+        return [];
+      }
+    })();
+
+    // Normalize items to align with ClothesSchema fields
+    const normalizedItems = parsedItems.map((item) => ({
+      uniqueId: String(
+        item.uniqueId || item._id || new mongoose.Types.ObjectId()
+      ),
+      type: item.type,
+      imageSrc: item.imageSrc,
+      favourite: Boolean(item.favourite) || false,
+      colour: Array.isArray(item.colour) ? item.colour : [],
+      seaon: Array.isArray(item.seaon) ? item.seaon : [],
+      waterproof: Boolean(item.waterproof) || false,
+    }));
 
     await connectMongoDB();
 
     const newOutfit = {
-      name,
-      colour: JSON.parse(colour), // Convert stringified array to array
-      season: JSON.parse(season),
-      waterproof: waterproof === "true", // Convert string to boolean
-      outfit_items: JSON.parse(outfit_items), // Expecting an array of clothing item IDs
+      uniqueId: new mongoose.Types.ObjectId().toString(),
+      name: name || "",
+      favourite: false,
+      colour: parsedColour,
+      seaon: parsedSeason, // Match schema's current field name
+      waterproof: waterproof === "true" || Boolean(waterproof),
+      outfit_items: normalizedItems,
     };
 
     const user = await User.findOneAndUpdate(
@@ -275,7 +316,7 @@ export const createOutfit = async (request, response) => {
 
     return response
       .status(200)
-      .json({ message: "Outfit created successfully", user });
+      .json({ message: "Outfit created successfully", outfits: user.outfits });
   } catch (e) {
     console.error(e);
     return response
