@@ -21,7 +21,7 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
     onSearchTermChange?.(search);
   };
   return (
-    <nav className=" border-indigo-300  border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 min-w-[600px] overflow-hidden">
+    <nav className=" border-indigo-300  border-solid border-s-4 w-full bg-indigo-400/90 h-16 p-2 sticky top-0 min-w-[600px] overflow-hidden">
       <ul className="flex items-center justify-between gap-2 h-full">
         <li id="icon" className="shrink-0">
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
@@ -86,9 +86,24 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
         <li className="shrink-0">
           <Link
             href="/addClothes"
-            className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
+            title="Add Clothes"
+            className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
           >
-            +
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Add Clothes</span>
           </Link>
         </li>
         <li className="shrink-0">
