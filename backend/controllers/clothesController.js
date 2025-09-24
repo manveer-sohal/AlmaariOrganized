@@ -6,27 +6,86 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const redisUrl = process.env.UPSTASH_REDIS_URL;
+
+let redis;
+let _redisDnsErrorLogged = false; // dedupe DNS error logs
+
 if (!redisUrl) {
-  console.error(
-    "Missing UPSTASH_REDIS_URL. Set it to your Upstash rediss URL, e.g. rediss://default:<password>@<host>.upstash.io:6379"
+  console.warn(
+    "UPSTASH_REDIS_URL is missing. Caching will be disabled and the app will fall back to MongoDB."
   );
-  process.exit(1);
+  redis = {
+    isOpen: false,
+    on: () => {},
+    connect: async () => {},
+    ping: async () => {},
+    get: async () => null,
+    set: async () => {},
+  };
+} else {
+  // Real Redis client
+  const realClient = createClient({
+    url: redisUrl,
+    socket: {
+      reconnectStrategy: (retries) => {
+        // backoff a bit, but stop trying after 3 attempts
+        if (retries > 3) return new Error("Stop reconnecting to Redis");
+        return Math.min(retries * 500, 2000);
+      },
+    },
+  });
+
+  realClient.on("error", (err) => {
+    // Avoid spamming logs on DNS failures
+    if (err && err.code === "ENOTFOUND") {
+      if (!_redisDnsErrorLogged) {
+        console.error("Redis client DNS error (once):", err);
+        _redisDnsErrorLogged = true;
+      }
+      return; // swallow further repeats
+    }
+    console.error("Redis client error:", err);
+  });
+
+  try {
+    if (!realClient.isOpen) {
+      await realClient.connect();
+      await realClient.ping();
+      console.log("✅ Redis connected");
+    }
+  } catch (err) {
+    console.error(
+      "❌ Failed to connect to Redis. Continuing without cache:",
+      err
+    );
+    // Stop the real client and remove listeners to prevent further error spam
+    try {
+      await realClient.quit();
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      realClient.removeAllListeners && realClient.removeAllListeners();
+    } catch (_) {
+      /* ignore */
+    }
+    // Swap in a no-op shim so subsequent calls don't throw
+    redis = {
+      isOpen: false,
+      on: () => {},
+      connect: async () => {},
+      ping: async () => {},
+      get: async () => null,
+      set: async () => {},
+    };
+  }
+  if (!redis) {
+    // if connect succeeded, use the real client
+    redis = realClient;
+  }
 }
 
-export const redis = createClient({
-  url: redisUrl, // validated rediss URL
-  socket: {
-    reconnectStrategy: (retries) => Math.min(retries * 500, 5000),
-  },
-});
-
-redis.on("error", (err) => console.error("Redis client error:", err));
-
-if (!redis.isOpen) {
-  await redis.connect(); // top-level await is fine in ESM
-  await redis.ping();
-  console.log("✅ Redis (socket) connected");
-}
+export { redis };
 
 export const removeData = async (request, response) => {
   console.log("delete");
@@ -56,6 +115,7 @@ export const removeData = async (request, response) => {
 };
 
 export const getData = async (request, response) => {
+  console.log("List clothes");
   try {
     const { auth0Id } = request.body;
 
@@ -66,8 +126,13 @@ export const getData = async (request, response) => {
     // Redis cache key
     const redisKey = `userData:${auth0Id}`;
 
-    // Check cache for the data
-    const cachedData = await redis.get(redisKey);
+    // Check cache for the data (safe fallback if Redis unavailable)
+    let cachedData = null;
+    try {
+      cachedData = await redis.get(redisKey);
+    } catch (err) {
+      console.warn("Redis get failed, continuing without cache:", err);
+    }
     if (cachedData) {
       console.log("Cache hit: Returning cached data");
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
@@ -85,12 +150,16 @@ export const getData = async (request, response) => {
       return response.status(404).json({ error: "User Not Found" });
     }
 
-    // Store the data in Redis cache with a TTL (e.g., 600 seconds = 10 minutes)
-    await redis.set(redisKey, JSON.stringify(userData), {
-      EX: 600, // 10-minute expiry time (Upstash REST uses lowercase 'ex')
-    });
-
-    console.log("Cache miss: Queried MongoDB and cached the result");
+    // Store the data in Redis cache with a TTL (best-effort)
+    try {
+      await redis.set(redisKey, JSON.stringify(userData), { EX: 600 });
+      console.log("Cache miss: Queried MongoDB and cached the result");
+    } catch (err) {
+      console.warn(
+        "Redis set failed, returning Mongo result without caching:",
+        err
+      );
+    }
     return response.status(200).json(userData);
   } catch (e) {
     console.error(e);
@@ -177,6 +246,43 @@ const toBase64 = (file) => {
 
 // Middleware for handling file upload route
 export const uploadMiddleware = upload.single("image");
+
+export const createOutfit = async (request, response) => {
+  console.log("Creating Outfit");
+  try {
+    const { auth0Id, name, colour, season, waterproof, outfit_items } =
+      request.body; // Other clothing data
+
+    await connectMongoDB();
+
+    const newOutfit = {
+      name,
+      colour: JSON.parse(colour), // Convert stringified array to array
+      season: JSON.parse(season),
+      waterproof: waterproof === "true", // Convert string to boolean
+      outfit_items: JSON.parse(outfit_items), // Expecting an array of clothing item IDs
+    };
+
+    const user = await User.findOneAndUpdate(
+      { auth0Id },
+      { $push: { outfits: newOutfit } },
+      { new: true }
+    );
+
+    if (!user) {
+      return response.status(404).json({ error: "User not found" });
+    }
+
+    return response
+      .status(200)
+      .json({ message: "Outfit created successfully", user });
+  } catch (e) {
+    console.error(e);
+    return response
+      .status(500)
+      .json({ error: "Failed to create outfit", details: e.message });
+  }
+};
 
 export const uploadData = async (request, response) => {
   console.log("Uploading");
