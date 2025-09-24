@@ -9,10 +9,14 @@ type DisplayClothesProps = {
         type: string[] | null | undefined;
       }
     | undefined;
+  searchTerm?: string;
 };
 
-function DisplayClothes({ query }: DisplayClothesProps) {
+function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
   const [filteredClothesCard, setFilteredClothesCard] = useState<
+    { _id: string; colour: string[]; type: string; imageSrc: string }[]
+  >([]);
+  const [allClothes, setAllClothes] = useState<
     { _id: string; colour: string[]; type: string; imageSrc: string }[]
   >([]);
   const [hasLoaded, setHasLoaded] = useState(false); // Track if data is loaded
@@ -34,6 +38,7 @@ function DisplayClothes({ query }: DisplayClothesProps) {
     ) => {
       const colourList = query?.colour ?? [];
       const typeList = query?.type ?? [];
+      const term = searchTerm.trim().toLowerCase();
 
       const filteredList = clothesList.filter((item) => {
         const matchesColour =
@@ -41,18 +46,23 @@ function DisplayClothes({ query }: DisplayClothesProps) {
           item.colour.some((c) => colourList.includes(c));
         const matchesType =
           typeList.length === 0 || typeList.includes(item.type);
-        return matchesColour && matchesType;
+        const matchesSearch =
+          term.length === 0 ||
+          item.type.toLowerCase().includes(term) ||
+          item.colour.some((c) => c.toLowerCase().includes(term));
+        return matchesColour && matchesType && matchesSearch;
       });
 
       setFilteredClothesCard(filteredList);
     },
-    [query]
+    [query, searchTerm]
   );
 
   const loadClothes = useCallback(async () => {
     if (!user) return;
 
     try {
+      console.log("attempting to list clothes");
       const auth0Id = user.sub;
       const response = await fetch(`${API_BASE_URL}/api/clothes/listClothes`, {
         method: "POST",
@@ -66,13 +76,7 @@ function DisplayClothes({ query }: DisplayClothesProps) {
 
       const data = await response.json();
       const clothesList = data.Clothes.reverse(); // Latest clothes first
-
-      if (!query || (!query.colour?.length && !query.type?.length)) {
-        setFilteredClothesCard(clothesList); // Show all if no filters
-      } else {
-        display(clothesList); // Filtered display
-      }
-
+      setAllClothes(clothesList);
       setHasLoaded(true);
     } catch (error) {
       console.error("Error fetching clothes:", error);
@@ -84,6 +88,11 @@ function DisplayClothes({ query }: DisplayClothesProps) {
 
     loadClothes();
   }, [user, hasLoaded, query, loadClothes]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    display(allClothes);
+  }, [allClothes, display, hasLoaded]);
 
   if (isLoading) {
     return <p>Loading...</p>;

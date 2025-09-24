@@ -91,9 +91,8 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
   //file can either be of type string or type null
   const [preview, setPreview] = useState<string | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
-  const [filtered_colours_List, set_Filtered_colours_List] = useState(
-    colours_List
-  );
+  const [filtered_colours_List, set_Filtered_colours_List] =
+    useState(colours_List);
   //a filtered list of clothes which will change depedending on the user input for filtered results
   const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
 

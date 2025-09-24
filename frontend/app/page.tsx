@@ -26,6 +26,7 @@ the form will show up ontop of everything and will be a serpate compoennt once i
 export default function Home() {
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
+  const [searchTerm, setSearchTerm] = useState("");
   const [query, setQuery] = useState<
     | { colour: string[] | null | undefined; type: string[] | null | undefined }
     | undefined
@@ -57,7 +58,7 @@ export default function Home() {
       {user && (
         <div>
           <div className="nav-container">
-            <NavBar></NavBar>
+            <NavBar onSearchTermChange={setSearchTerm}></NavBar>
             <div className="sidebar-container">
               <SideBar onQuery={setQuery}></SideBar>
             </div>
@@ -73,7 +74,10 @@ export default function Home() {
               pictures are loading...
             </h1>
           )}
-          <DisplayClothes query={query}></DisplayClothes>
+          <DisplayClothes
+            query={query}
+            searchTerm={searchTerm}
+          ></DisplayClothes>
         </div>
       )}
     </main>
