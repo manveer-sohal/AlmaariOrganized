@@ -3,9 +3,9 @@
 import AddClothesUI from "@/components/addClothesUI";
 const AddClothes = () => {
   return (
-    <div>
+    <main className="p-4">
       <AddClothesUI addClothes={AddClothes}></AddClothesUI>
-    </div>
+    </main>
   );
 };
 

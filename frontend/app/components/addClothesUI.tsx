@@ -293,31 +293,47 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
   //   margin: 0px 0 0 90px;
   // }
   return (
-    <div className="bg-indigo-200 w-full h-screen sticky top-0 z-10">
-      <Link
-        href="/"
-        className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
-      >
-        Go back
-      </Link>
-      <form className="rounded-2xl w-[400px] h-auto mx-auto p-4 relative top-1/2 left-48 -translate-x-1/2 -translate-y-1/2 bg-indigo-300 text-lg flex flex-col">
-        <div className="bg-indigo-200 w-[200px] h-[300px] mx-20">
-          {preview && (
-            <Image
-              src={preview}
-              alt="your pic"
-              width={100}
-              height={100}
-              className="display-preview"
-            ></Image>
-          )}
+    <div className="bg-indigo-200 min-h-screen w-full sticky top-0 z-10 p-4">
+      <div className="max-w-2xl mx-auto mb-3 flex items-center justify-between">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+        >
+          ← Back
+        </Link>
+      </div>
+      <form className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4">
+        <div className="w-full">
+          <label className="block text-sm font-medium text-indigo-900 mb-1">
+            Preview
+          </label>
+          <div className="bg-white border border-indigo-200 rounded-lg w-full aspect-[6/4] flex items-center justify-center overflow-hidden">
+            {preview ? (
+              <Image
+                src={preview}
+                alt="your pic"
+                width={600}
+                height={600}
+                className="object-contain h-full w-full"
+              />
+            ) : (
+              <div className="text-indigo-900/60 text-sm">
+                No image selected
+              </div>
+            )}
+          </div>
         </div>
-        <label htmlFor="input-tag">Type:</label>
+        <label
+          htmlFor="input-tag"
+          className="text-sm font-medium text-indigo-900"
+        >
+          Type
+        </label>
         <input
           placeholder="Enter clothes type ie. pants"
           autoComplete="on"
           required
-          className="valid"
+          className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           type="text"
           id="input-tag"
           list="types"
@@ -328,11 +344,15 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
             const value = e.target.value;
             filter(value, type_List, set_Filtered_type_List);
             setInputTypeValue(value);
-            e.target.className = validType ? "invalid" : "valid";
+            e.target.className = validType
+              ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+              : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
           }}
         ></input>
         {validType == false && (
-          <span className="error">Enter a valid Clothes type</span>
+          <span className="text-sm text-red-600">
+            Enter a valid Clothes type
+          </span>
         )}
 
         <datalist id="types">
@@ -341,7 +361,12 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
           ))}{" "}
         </datalist>
 
-        <label htmlFor="input-colour">Colour:</label>
+        <label
+          htmlFor="input-colour"
+          className="text-sm font-medium text-indigo-900"
+        >
+          Colour
+        </label>
         <div className="colour-input-container">
           <input
             placeholder="Enter multiple colours ie. red"
@@ -357,27 +382,33 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
               filter(value, colours_List, set_Filtered_colours_List);
               setInputColourValue(value);
             }}
+            className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           ></input>
           <button
             type="button"
-            className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
             onClick={setUserColour}
           >
-            +
+            Add
           </button>
         </div>
         {validColour == false && (
-          <span className="error">Enter a valid Colour</span>
+          <span className="text-sm text-red-600">Enter a valid Colour</span>
         )}
-        <div className="selected-colours-container">
+        <div className="flex flex-wrap gap-2">
           {usersColours.map((colour, index) => (
             <div
-              className="selected-colours"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
               key={index}
               id={colour}
               onClick={(e) => handleClick(e.currentTarget.id)}
             >
-              {colour}
+              <span
+                className="h-3 w-3 rounded-full border border-indigo-200"
+                style={{ backgroundColor: colour }}
+                aria-hidden="true"
+              />
+              <span>{colour}</span>
             </div>
           ))}
         </div>
@@ -404,19 +435,23 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
         <label
           htmlFor="input-file"
           id="input-file-label"
-          className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+          className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
         >
           Add Picture
         </label>
-        {validFile == false && <span className="error">Enter a Picture</span>}
-        <Link
-          href="/"
-          type="button"
-          onClick={(event) => handleSubmit(event)}
-          className="w-full block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer  bg-indigo-500 hover:bg-indigo-500 hover:text-white transition-colors duration-300"
-        >
-          Submit
-        </Link>
+        {validFile == false && (
+          <span className="text-sm text-red-600">Enter a Picture</span>
+        )}
+        <div className="mt-2 flex items-center gap-2">
+          <Link
+            href="/"
+            type="button"
+            onClick={(event) => handleSubmit(event)}
+            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Submit
+          </Link>
+        </div>
       </form>
     </div>
   );
