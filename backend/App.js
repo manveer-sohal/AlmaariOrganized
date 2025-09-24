@@ -1,5 +1,8 @@
 import express from "express";
 import cors from "cors";
+import clothesRoutes from "./routes/clothesRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import weatherRoutes from "./routes/weatherRoutes.js";
 
 //!!! unistall mongoose from front end !!!!
 const app = express();
@@ -30,24 +33,12 @@ app.use(express.json());
 // app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
 
 //rip it
+// Mount routes BEFORE starting the server to avoid cold-start race conditions
+app.use("/api/clothes", clothesRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/weather", weatherRoutes);
+
 app.listen(port, "0.0.0.0", async () => {
   console.log(`App listening  on port ${port}`);
-
-  try {
-    const { default: clothesRoutes } = await import(
-      "./routes/clothesRoutes.js"
-    );
-    const { default: userRoutes } = await import("./routes/userRoutes.js");
-    const { default: weatherRoutes } = await import(
-      "./routes/weatherRoutes.js"
-    );
-
-    app.use("/api/clothes", clothesRoutes);
-    app.use("/api/users", userRoutes);
-    app.use("/api/weather", weatherRoutes);
-
-    console.log("Routes mounted");
-  } catch (e) {
-    console.error("Failed to mount routes:", e);
-  }
+  console.log("Routes mounted");
 });
