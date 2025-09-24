@@ -9,9 +9,8 @@ async function getWeatherData(long, lat) {
   // get your key from app.tomorrow.io/development/keys
   const apikey = process.env.TOMORROW_API_KEY;
 
-  // pick the location, as a latlong pair
-  //let location = [long, lat];
-  let location = [40.758, -73.9855];
+  // pick the location, as a latlong pair (longitude, latitude)
+  const location = [long, lat];
 
   // list the fields
   const fields = [
@@ -84,12 +83,23 @@ function interperateData(data) {
   }
 }
 export const getWeather = async (req, res) => {
-  console.log(req.body);
+  try {
+    const { long, lat } = req.body || {};
 
-  const long = req.long;
-  const lat = req.lat;
-  const data = await getWeatherData(long, lat);
-  const value = interperateData(data.data.timelines[0].intervals[0].values);
-  console.log(value);
-  res.json(value);
+    if (
+      typeof long === "undefined" ||
+      typeof lat === "undefined" ||
+      Number.isNaN(Number(long)) ||
+      Number.isNaN(Number(lat))
+    ) {
+      return res.status(400).json({ error: "Missing or invalid long/lat" });
+    }
+
+    const data = await getWeatherData(Number(long), Number(lat));
+    const value = interperateData(data.data.timelines[0].intervals[0].values);
+    return res.json(value);
+  } catch (e) {
+    console.error("getWeather error:", e);
+    return res.status(500).json({ error: "Failed to get weather" });
+  }
 };
