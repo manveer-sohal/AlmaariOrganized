@@ -3,14 +3,18 @@ import queryString from "query-string";
 import moment from "moment";
 
 async function getWeatherData(long, lat) {
+  console.log("getWeatherData", long, lat);
   // set the Timelines GET endpoint as the target URL
   const getTimelineURL = "https://api.tomorrow.io/v4/timelines";
 
   // get your key from app.tomorrow.io/development/keys
   const apikey = process.env.TOMORROW_API_KEY;
+  if (!apikey) {
+    throw new Error("MISSING_TOMORROW_API_KEY");
+  }
 
-  // pick the location, as a latlong pair (longitude, latitude)
-  const location = [long, lat];
+  // pick the location as a string "lat,lon" (common format expected by APIs)
+  const location = `${lat},${long}`;
 
   // list the fields
   const fields = [
@@ -58,8 +62,29 @@ async function getWeatherData(long, lat) {
 
   const result = await fetch(getTimelineURL + "?" + getTimelineParameters, {
     method: "GET",
+    headers: {
+      // Some Tomorrow.io setups accept the key in either query or header; send both to be safe
+      apikey,
+      Accept: "application/json",
+    },
     compress: true,
   });
+
+  if (!result.ok) {
+    let errBody = null;
+    try {
+      errBody = await result.json();
+    } catch (_) {
+      /* ignore */
+    }
+    const details = errBody ? JSON.stringify(errBody) : result.statusText;
+    const upstreamError = new Error(
+      `TOMORROW_API_ERROR ${result.status} ${details}`
+    );
+    // @ts-ignore augment error with status
+    upstreamError.status = result.status;
+    throw upstreamError;
+  }
 
   return result.json();
 }
@@ -96,9 +121,32 @@ export const getWeather = async (req, res) => {
     }
 
     const data = await getWeatherData(Number(long), Number(lat));
-    const value = interperateData(data.data.timelines[0].intervals[0].values);
+    console.log("data", data);
+    const values = data?.data?.timelines?.[0]?.intervals?.[0]?.values || null;
+    if (!values) {
+      return res
+        .status(502)
+        .json({ error: "Upstream weather data unavailable" });
+    }
+    const value = interperateData(values);
     return res.json(value);
   } catch (e) {
+    if (e && e.message === "MISSING_TOMORROW_API_KEY") {
+      console.error("getWeather error: Missing TOMORROW_API_KEY env var");
+      return res
+        .status(500)
+        .json({ error: "Server not configured: TOMORROW_API_KEY missing" });
+    }
+    if (
+      e &&
+      typeof e.message === "string" &&
+      e.message.startsWith("TOMORROW_API_ERROR")
+    ) {
+      console.error("getWeather upstream error:", e.message);
+      return res
+        .status(502)
+        .json({ error: "Upstream weather API error", details: e.message });
+    }
     console.error("getWeather error:", e);
     return res.status(500).json({ error: "Failed to get weather" });
   }
