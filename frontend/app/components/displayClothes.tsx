@@ -76,12 +76,13 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
 
       const data = await response.json();
       const clothesList = data.Clothes.reverse(); // Latest clothes first
+      console.log(clothesList);
       setAllClothes(clothesList);
       setHasLoaded(true);
     } catch (error) {
       console.error("Error fetching clothes:", error);
     }
-  }, [user, API_BASE_URL, query, display]);
+  }, [user, API_BASE_URL]);
 
   useEffect(() => {
     if (!user || (hasLoaded && !query)) return;
@@ -105,7 +106,7 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
         </div>
       ) : filteredClothesCard.length === 0 ? (
-        <p className="text-xl">No clothes match the selected filters.</p>
+        <p className="text-xl">Add Some Clothes!</p>
       ) : (
         filteredClothesCard.map((item) => (
           <ClothesCard
