@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
 
 const ClothesSchema = new mongoose.Schema({
   uniqueId: { type: String, required: true, unique: true },
@@ -7,9 +7,12 @@ const ClothesSchema = new mongoose.Schema({
   favourite: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   colour: { type: [String], required: true },
-  seaon: { type: [String], default: [] },
+  season: { type: [String], default: [] },
   waterproof: { type: Boolean, default: false },
 });
+
+const Clothes =
+  mongoose.models.Clothes || mongoose.model("Clothes", ClothesSchema);
 
 const OutfitsSchema = new mongoose.Schema({
   uniqueId: { type: String, required: true, unique: true },
@@ -17,18 +20,21 @@ const OutfitsSchema = new mongoose.Schema({
   favourite: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   colour: { type: [String], required: true },
-  seaon: { type: [String], default: [] },
+  season: { type: [String], default: [] },
   waterproof: { type: Boolean, default: false },
-  outfit_items: { type: [ClothesSchema], default: [] },
+  outfit_items: [{ type: mongoose.Schema.Types.ObjectId, ref: "Clothes" }],
 });
 
+const Outfits =
+  mongoose.models.Outfits || mongoose.model("Outfits", OutfitsSchema);
+
 const usersSchema = new mongoose.Schema({
-  auth0Id: { type: String, required: true, unique: true, index: true }, // Link to Auth0 user ID
+  auth0Id: { type: String, required: true, unique: true, index: true },
   email: { type: String, required: true },
-  Clothes: { type: [ClothesSchema], default: [] },
-  outfits: { type: [OutfitsSchema], default: [] },
+  clothes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Clothes" }],
+  outfits: [{ type: mongoose.Schema.Types.ObjectId, ref: "Outfits" }],
 });
 
 const User = mongoose.models.User || mongoose.model("User", usersSchema);
 
-export default User;
+export { Clothes, Outfits, User };
