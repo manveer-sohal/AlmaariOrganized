@@ -1,4 +1,4 @@
-import User from "../models/Users.js";
+import { User } from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 
 // export const POST = async (request, response) => {
