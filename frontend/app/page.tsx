@@ -5,7 +5,8 @@ import SideBar from "./components/sideBar";
 import React, { useEffect, useState } from "react";
 import DisplayClothes from "./components/displayClothes";
 import Login from "./components/login";
-
+import CreateOutfitUI from "./components/createOutfitUI";
+import ViewOutfits from "./components/viewOutfits";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -27,6 +28,11 @@ export default function Home() {
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [searchTerm, setSearchTerm] = useState("");
+  const [displayOutfits, setDisplayOutfits] = useState<boolean>(false);
+  const [displayCreateOutfits, setDisplayCreateOutfits] =
+    useState<boolean>(false);
+  const [displayHome, setDisplayHome] = useState<boolean>(true);
+
   const [query, setQuery] = useState<
     | { colour: string[] | null | undefined; type: string[] | null | undefined }
     | undefined
@@ -60,7 +66,12 @@ export default function Home() {
           <div className="nav-container">
             <NavBar onSearchTermChange={setSearchTerm}></NavBar>
             <div className="sidebar-container">
-              <SideBar onQuery={setQuery}></SideBar>
+              <SideBar
+                onQuery={setQuery}
+                displayOutfits={setDisplayOutfits}
+                displayCreateOutfits={setDisplayCreateOutfits}
+                displayHome={setDisplayHome}
+              ></SideBar>
             </div>
           </div>
 
@@ -74,10 +85,14 @@ export default function Home() {
               pictures are loading...
             </h1>
           )}
-          <DisplayClothes
-            query={query}
-            searchTerm={searchTerm}
-          ></DisplayClothes>
+          {displayCreateOutfits && <CreateOutfitUI></CreateOutfitUI>}
+          {displayOutfits && <ViewOutfits></ViewOutfits>}
+          {displayHome && (
+            <DisplayClothes
+              query={query}
+              searchTerm={searchTerm}
+            ></DisplayClothes>
+          )}
         </div>
       )}
     </main>

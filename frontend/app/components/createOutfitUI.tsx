@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
-import Link from "next/link";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
 type ClothingItem = {
@@ -30,13 +29,18 @@ function CreateOutfitUI() {
   useEffect(() => {
     const load = async () => {
       if (!user) return;
+      const auth0Id = user.sub;
       const response = await fetch(`${API_BASE_URL}/api/clothes/listClothes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id: user.sub }),
+        body: JSON.stringify({ auth0Id }),
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        throw new Error("Failed to fetch clothes data.");
+      }
+
       const data = await response.json();
+      console.log(data);
       setClothes(data.Clothes || []);
     };
     load();
@@ -123,14 +127,9 @@ function CreateOutfitUI() {
         colour: JSON.stringify([]),
         season: JSON.stringify([]),
         waterproof: false,
-        outfit_items: JSON.stringify(
-          selectedItems.map((i) => ({
-            uniqueId: i._id,
-            type: i.type,
-            imageSrc: i.imageSrc,
-            colour: i.colour,
-          }))
-        ),
+        outfit_items: selectedItems.map((i) => ({
+          _id: i._id,
+        })),
       };
       const response = await fetch(`${API_BASE_URL}/api/clothes/createOutfit`, {
         method: "POST",
@@ -178,21 +177,15 @@ function CreateOutfitUI() {
   }, [selectedItems]);
 
   return (
-    <div className="bg-indigo-200 w-full min-h-screen top-0 z-10 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
-        >
-          ← Back
-        </Link>
-        <div className="inline-flex items-center gap-2">
+    <div className="bg-indigo-200 w-full min-h-screen top-0 z-10 p-4 h-full">
+      <div className="flex items-center justify-between mb-4 mr-40">
+        <div className="flex justify-end w-full gap-2">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Outfit name (optional)"
-            className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className=" w-1/2 rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
           <button
             disabled={saving || selectedItems.length === 0}
@@ -204,10 +197,10 @@ function CreateOutfitUI() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
         <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
           <h3 className="font-medium text-indigo-900 mb-2">Your Clothes</h3>
-          <div className="grid grid-cols-[repeat(auto-fill,_120px)] gap-3 justify-center">
+          <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
             {clothes.map((item) => {
               const isSelected = selectedItems.some((s) => s._id === item._id);
               const slot = mapTypeToSlot(item.type);
@@ -241,7 +234,7 @@ function CreateOutfitUI() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
+        <div className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
           <h3 className="font-medium text-indigo-900 mb-2">Outfit Preview</h3>
           <div className="flex flex-col gap-3">
             {slots.map((slot) => {
@@ -249,7 +242,7 @@ function CreateOutfitUI() {
               return (
                 <div
                   key={slot}
-                  className="border border-indigo-200 w-1/2 rounded-lg p-3 min-h-[140px] flex items-center justify-between"
+                  className="border border-indigo-200 w-full rounded-lg p-3 min-h-[140px] flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-sm text-indigo-900 capitalize w-16 shrink-0">
