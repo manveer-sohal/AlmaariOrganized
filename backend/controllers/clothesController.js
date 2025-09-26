@@ -1,4 +1,4 @@
-import User from "../models/Users.js";
+import { User, Clothes, Outfits } from "../models/Users.js";
 import mongoose from "mongoose";
 import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
@@ -88,22 +88,52 @@ export { redis };
 export const removeData = async (request, response) => {
   console.log("delete");
   try {
-    const { auth0Id, uniqueId } = request.body;
+    const { auth0Id, uniqueId, clothingId } = request.body;
     await connectMongoDB();
 
-    const user = await User.findOneAndUpdate(
-      { auth0Id },
-      { $pull: { Clothes: { _id: uniqueId } } },
-      { new: true }
-    );
-
-    if (!user) {
-      return response.status(404).json({ error: "User not found" });
+    if (!auth0Id) {
+      return response.status(400).json({ error: "auth0Id is required" });
     }
+
+    let clothingDoc = null;
+    if (clothingId) {
+      clothingDoc = await Clothes.findById(clothingId);
+    } else if (uniqueId) {
+      const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
+      if (objectIdLike.test(String(uniqueId))) {
+        clothingDoc = await Clothes.findById(uniqueId);
+      }
+      if (!clothingDoc) {
+        clothingDoc = await Clothes.findOne({ uniqueId: String(uniqueId) });
+      }
+    }
+
+    if (!clothingDoc) {
+      return response.status(404).json({ error: "Clothing item not found" });
+    }
+
+    // Remove clothing reference from user and any outfits, then delete the doc
+    await Promise.all([
+      User.findOneAndUpdate(
+        { auth0Id },
+        { $pull: { clothes: clothingDoc._id } },
+        { new: true }
+      ),
+      Outfits.updateMany(
+        { outfit_items: clothingDoc._id },
+        { $pull: { outfit_items: clothingDoc._id } }
+      ),
+      Clothes.deleteOne({ _id: clothingDoc._id }),
+    ]);
+
+    const updatedUser = await User.findOne(
+      { auth0Id },
+      { _id: 0, clothes: 1 }
+    ).populate("clothes");
 
     return response.json({
       message: "Clothing item removed successfully",
-      clothes: user.Clothes,
+      Clothes: updatedUser?.clothes || [],
     });
   } catch (e) {
     return response
@@ -111,9 +141,8 @@ export const removeData = async (request, response) => {
       .json({ error: "Failed to remove clothing item", details: e.message });
   }
 };
-
-export const getData = async (request, response) => {
-  console.log("List clothes");
+export const getOutfits = async (request, response) => {
+  console.log("List outfits");
   try {
     const { auth0Id } = request.body;
 
@@ -122,7 +151,7 @@ export const getData = async (request, response) => {
     }
 
     // Redis cache key
-    const redisKey = `userData:${auth0Id}`;
+    const redisKey = `userOutfits:${auth0Id}`;
 
     // Check cache for the data (safe fallback if Redis unavailable)
     let cachedData = null;
@@ -140,7 +169,13 @@ export const getData = async (request, response) => {
 
     // Measure MongoDB query time
     const startTime = Date.now();
-    const userData = await User.findOne({ auth0Id }, { Clothes: 1, _id: 0 });
+    const userData = await User.findOne(
+      { auth0Id },
+      { outfits: 1, _id: 0 }
+    ).populate({
+      path: "outfits",
+      populate: { path: "outfit_items", model: "Clothes" },
+    });
     const endTime = Date.now();
     console.log(`Query took ${endTime - startTime} ms`);
 
@@ -159,6 +194,69 @@ export const getData = async (request, response) => {
       );
     }
     return response.status(200).json(userData);
+  } catch (e) {
+    console.error(e);
+    return response
+      .status(500)
+      .json({ error: "Failed to fetch user data", details: e.message });
+  }
+};
+
+export const getData = async (request, response) => {
+  console.log("List clothes");
+  try {
+    const { auth0Id } = request.body;
+
+    if (!auth0Id) {
+      return response.status(400).json({ error: "auth0Id is required" });
+    }
+    console.log(auth0Id);
+
+    // Redis cache key
+    const redisKey = `userClothes:${auth0Id}`;
+
+    // Check cache for the data (safe fallback if Redis unavailable)
+    let cachedData = null;
+    try {
+      cachedData = await redis.get(redisKey);
+    } catch (err) {
+      console.warn("Redis get failed, continuing without cache:", err);
+    }
+    if (cachedData) {
+      console.log("Cache hit: Returning cached data");
+      return response.status(200).json(JSON.parse(cachedData)); // Send cached data
+    }
+
+    await connectMongoDB();
+
+    // Measure MongoDB query time
+    const startTime = Date.now();
+    const userData = await User.findOne(
+      { auth0Id },
+      { clothes: 1, _id: 0 }
+    ).populate("clothes");
+    const endTime = Date.now();
+    console.log(`Query took ${endTime - startTime} ms`);
+
+    if (!userData) {
+      return response.status(404).json({ error: "User Not Found" });
+    }
+
+    // Store the data in Redis cache with a TTL (best-effort)
+    try {
+      await redis.set(
+        redisKey,
+        JSON.stringify({ Clothes: userData.clothes || [] }),
+        { EX: 600 }
+      );
+      console.log("Cache miss: Queried MongoDB and cached the result");
+    } catch (err) {
+      console.warn(
+        "Redis set failed, returning Mongo result without caching:",
+        err
+      );
+    }
+    return response.status(200).json({ Clothes: userData.clothes || [] });
   } catch (e) {
     console.error(e);
     return response
@@ -259,7 +357,7 @@ export const createOutfit = async (request, response) => {
       try {
         return JSON.parse(outfit_items || "[]");
       } catch (_) {
-        return [];
+        return Array.isArray(outfit_items) ? outfit_items : [];
       }
     })();
 
@@ -267,7 +365,7 @@ export const createOutfit = async (request, response) => {
       try {
         return JSON.parse(colour || "[]");
       } catch (_) {
-        return [];
+        return Array.isArray(colour) ? colour : [];
       }
     })();
 
@@ -275,38 +373,59 @@ export const createOutfit = async (request, response) => {
       try {
         return JSON.parse(season || "[]");
       } catch (_) {
-        return [];
+        return Array.isArray(season) ? season : [];
       }
     })();
 
-    // Normalize items to align with ClothesSchema fields
-    const normalizedItems = parsedItems.map((item) => ({
-      uniqueId: String(
-        item.uniqueId || item._id || new mongoose.Types.ObjectId()
-      ),
-      type: item.type,
-      imageSrc: item.imageSrc,
-      favourite: Boolean(item.favourite) || false,
-      colour: Array.isArray(item.colour) ? item.colour : [],
-      seaon: Array.isArray(item.seaon) ? item.seaon : [],
-      waterproof: Boolean(item.waterproof) || false,
-    }));
+    // Extract clothing ObjectIds from provided items (supports _id or uniqueId)
+    const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
+    const stringOrObjectItems = Array.isArray(parsedItems) ? parsedItems : [];
+    const candidateObjectIds = [];
+    const candidateUniqueIds = [];
+    for (const it of stringOrObjectItems) {
+      if (typeof it === "string") {
+        if (objectIdLike.test(it)) candidateObjectIds.push(it);
+        else candidateUniqueIds.push(it);
+      } else if (it && typeof it === "object") {
+        if (it._id && objectIdLike.test(String(it._id))) {
+          candidateObjectIds.push(String(it._id));
+        } else if (it.uniqueId) {
+          candidateUniqueIds.push(String(it.uniqueId));
+        }
+      }
+    }
 
     await connectMongoDB();
 
-    const newOutfit = {
+    let uniqueIdToObjectId = {};
+    if (candidateUniqueIds.length) {
+      const clothesFound = await Clothes.find(
+        { uniqueId: { $in: candidateUniqueIds } },
+        { _id: 1, uniqueId: 1 }
+      );
+      for (const c of clothesFound) {
+        uniqueIdToObjectId[c.uniqueId] = c._id.toString();
+      }
+    }
+
+    const outfitClothesIds = [
+      ...candidateObjectIds,
+      ...candidateUniqueIds.map((u) => uniqueIdToObjectId[u]).filter(Boolean),
+    ];
+
+    const createdOutfit = await Outfits.create({
       uniqueId: new mongoose.Types.ObjectId().toString(),
       name: name || "",
       favourite: false,
       colour: parsedColour,
-      seaon: parsedSeason, // Match schema's current field name
+      season: parsedSeason,
       waterproof: waterproof === "true" || Boolean(waterproof),
-      outfit_items: normalizedItems,
-    };
+      outfit_items: outfitClothesIds,
+    });
 
     const user = await User.findOneAndUpdate(
       { auth0Id },
-      { $push: { outfits: newOutfit } },
+      { $push: { outfits: createdOutfit._id } },
       { new: true }
     );
 
@@ -314,9 +433,10 @@ export const createOutfit = async (request, response) => {
       return response.status(404).json({ error: "User not found" });
     }
 
-    return response
-      .status(200)
-      .json({ message: "Outfit created successfully", outfits: user.outfits });
+    return response.status(200).json({
+      message: "Outfit created successfully",
+      outfit: createdOutfit,
+    });
   } catch (e) {
     console.error(e);
     return response
@@ -330,7 +450,8 @@ export const uploadData = async (request, response) => {
   console.log(request.body);
 
   try {
-    const { auth0Id, type, colour } = request.body; // Other clothing data
+    const { auth0Id, type, colour, season, waterproof, favourite } =
+      request.body; // Other clothing data
     const file = request.file; // Multer adds the uploaded file in request.file
     console.log(type);
     if (!file) {
@@ -344,14 +465,35 @@ export const uploadData = async (request, response) => {
 
     await connectMongoDB();
 
-    const newClothingItem = {
+    const parsedColour = (() => {
+      try {
+        return JSON.parse(colour || "[]");
+      } catch (_) {
+        return Array.isArray(colour) ? colour : [];
+      }
+    })();
+
+    const parsedSeason = (() => {
+      try {
+        return JSON.parse(season || "[]");
+      } catch (_) {
+        return Array.isArray(season) ? season : [];
+      }
+    })();
+
+    const clothingDoc = await Clothes.create({
+      uniqueId: new mongoose.Types.ObjectId().toString(),
       type,
       imageSrc,
-      colour: JSON.parse(colour), // Convert stringified array to array
-    };
+      favourite: favourite === "true" || Boolean(favourite),
+      colour: parsedColour,
+      season: parsedSeason,
+      waterproof: waterproof === "true" || Boolean(waterproof),
+    });
+
     const user = await User.findOneAndUpdate(
       { auth0Id },
-      { $push: { Clothes: newClothingItem } },
+      { $push: { clothes: clothingDoc._id } },
       { new: true }
     );
 
@@ -359,9 +501,10 @@ export const uploadData = async (request, response) => {
       return response.status(404).json({ error: "User not found" });
     }
 
-    return response
-      .status(200)
-      .json({ message: "Clothes added successfully", user });
+    return response.status(200).json({
+      message: "Clothes added successfully",
+      clothing: clothingDoc,
+    });
   } catch (e) {
     console.error(e);
     return response
@@ -369,47 +512,3 @@ export const uploadData = async (request, response) => {
       .json({ error: "Failed to add clothes", details: e.message });
   }
 };
-
-// const toBase64 = (file) =>
-//   new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.readAsDataURL(file);
-//     reader.onload = () => resolve(reader.result);
-//     reader.onerror = (error) => reject(error);
-//   });
-
-// export const uploadData = async (request, response) => {
-//   console.log("Uploading");
-
-//   try {
-//     const { auth0Id, Clothes } = request.body;
-
-//     console.log(Clothes);
-//     const file = Clothes.imageSrc;
-//     console.log(file);
-//     console.log(" ");
-//     console.log(" ");
-//     console.log(" ");
-//     console.log(" below   ??");
-//     console.log(" ");
-
-//     const base64File = await toBase64(file);
-//     console.log(base64File);
-//     console.log(" ");
-//     console.log(" ");
-//     console.log("above");
-
-//     Clothes.imageSrc = base64File;
-//     await connectMongoDB();
-//     addData(Clothes);
-
-//     const user = await User.findOneAndUpdate(
-//       { auth0Id: auth0Id },
-//       { $push: { Clothes: Clothes } },
-//       { new: true }
-//     );
-//     return response.status(200).json({ message: "Clothes Added", user });
-//   } catch (e) {
-//     return response.status(500).json({ error: "Failed to add clothes", e });
-//   }
-// };
