@@ -103,9 +103,18 @@ function SideBar({
               aria-hidden="true"
             >
               <path
-                d="M4 4h4v4H4zM16 4h4v4h-4zM10 10h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4z"
+                d="M3 10L12 3l9 7"
                 stroke="currentColor"
                 strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 10v10h5v-6h4v6h5V10"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
             <span>Home</span>
@@ -203,10 +212,18 @@ function SideBar({
             aria-hidden="true"
           >
             <path
-              d="M13 5v14M5 12h14"
+              d="M2 12c2.5-4.5 7-7 10-7s7.5 2.5 10 7c-2.5 4.5-7 7-10 7S4.5 16.5 2 12z"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="3"
+              stroke="currentColor"
+              strokeWidth="2"
             />
           </svg>
           <span>View Outfits</span>
