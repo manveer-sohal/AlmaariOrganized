@@ -22,21 +22,29 @@ function ViewOutfits() {
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const load = async () => {
       if (!user) return;
+      setLoading(true);
       console.log("Loading Clothes");
       const response = await fetch(`${API_BASE_URL}/api/clothes/getOutfits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ auth0Id: user.sub }),
       });
-      if (!response.ok) return;
-      const data = await response.json();
-      const list: Outfit[] = (data?.outfits || data?.Outfits || []).reverse();
-      setOutfits(list);
-      setActiveId(list[0]?.uniqueId || null);
+      try {
+        if (!response.ok) return;
+        const data = await response.json();
+        const list: Outfit[] = (data?.outfits || data?.Outfits || []).reverse();
+        setOutfits(list);
+        setActiveId(list[0]?.uniqueId || null);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [API_BASE_URL, user]);
@@ -50,7 +58,11 @@ function ViewOutfits() {
     <div className="p-4 w-full max-w-2xl mx-auto">
       <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
         <h3 className="font-medium text-indigo-900 mb-3">Your Outfits</h3>
-        {outfits.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center h-[260px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
+          </div>
+        ) : outfits.length === 0 ? (
           <p className="text-indigo-900">No outfits yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

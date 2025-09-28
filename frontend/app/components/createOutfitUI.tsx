@@ -16,6 +16,7 @@ function CreateOutfitUI() {
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
+  const [loadingClothes, setLoadingClothes] = useState<boolean>(false);
   const [mascotState, setMascotState] = useState<string>("thinking");
   type Slot = "head" | "body" | "legs" | "feet";
   const slots: Slot[] = ["head", "body", "legs", "feet"];
@@ -29,19 +30,25 @@ function CreateOutfitUI() {
   useEffect(() => {
     const load = async () => {
       if (!user) return;
+      setLoadingClothes(true);
       const auth0Id = user.sub;
       const response = await fetch(`${API_BASE_URL}/api/clothes/listClothes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ auth0Id }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch clothes data.");
+      try {
+        if (!response.ok) {
+          throw new Error("Failed to fetch clothes data.");
+        }
+        const data = await response.json();
+        console.log(data);
+        setClothes(data.Clothes || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingClothes(false);
       }
-
-      const data = await response.json();
-      console.log(data);
-      setClothes(data.Clothes || []);
     };
     load();
   }, [API_BASE_URL, user]);
@@ -200,38 +207,48 @@ function CreateOutfitUI() {
       <div className="grid grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
         <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
           <h3 className="font-medium text-indigo-900 mb-2">Your Clothes</h3>
-          <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
-            {clothes.map((item) => {
-              const isSelected = selectedItems.some((s) => s._id === item._id);
-              const slot = mapTypeToSlot(item.type);
-              return (
-                <button
-                  key={item._id}
-                  type="button"
-                  onClick={() => toggleSelect(item._id)}
-                  className={`relative border rounded-lg overflow-hidden h-[120px] w-[120px] ${
-                    isSelected ? "ring-2 ring-indigo-500" : "border-indigo-200"
-                  }`}
-                >
-                  <Image
-                    src={item.imageSrc}
-                    alt={item.type}
-                    width={120}
-                    height={120}
-                    className="object-cover h-full w-full"
-                  />
-                  <span className="absolute bottom-1 left-1 bg-white/80 text-indigo-900 text-[10px] px-1.5 py-0.5 rounded">
-                    {slot}
-                  </span>
-                  {isSelected && (
-                    <span className="absolute top-1 right-1 bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full">
-                      Selected
+          {loadingClothes ? (
+            <div className="flex justify-center items-center h-[260px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
+              {clothes.map((item) => {
+                const isSelected = selectedItems.some(
+                  (s) => s._id === item._id
+                );
+                const slot = mapTypeToSlot(item.type);
+                return (
+                  <button
+                    key={item._id}
+                    type="button"
+                    onClick={() => toggleSelect(item._id)}
+                    className={`relative border rounded-lg overflow-hidden h-[120px] w-[120px] ${
+                      isSelected
+                        ? "ring-2 ring-indigo-500"
+                        : "border-indigo-200"
+                    }`}
+                  >
+                    <Image
+                      src={item.imageSrc}
+                      alt={item.type}
+                      width={120}
+                      height={120}
+                      className="object-cover h-full w-full"
+                    />
+                    <span className="absolute bottom-1 left-1 bg-white/80 text-indigo-900 text-[10px] px-1.5 py-0.5 rounded">
+                      {slot}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                    {isSelected && (
+                      <span className="absolute top-1 right-1 bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full">
+                        Selected
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">

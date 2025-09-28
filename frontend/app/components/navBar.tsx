@@ -3,12 +3,14 @@ import temp from "../Logo.png";
 import Image from "next/image";
 import Link from "next/link";
 import React, { Dispatch, SetStateAction, useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
 };
 
 function NavBar({ onSearchTermChange }: NavBarProps) {
+  const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
 
   const handleChange = (value: string) => {
@@ -22,10 +24,10 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
   };
   return (
     <nav className=" border-indigo-300  border-solid border-s-4 w-full bg-indigo-400/90 h-16 p-2 sticky top-0 min-w-[600px] overflow-hidden">
-      <ul className="flex items-center justify-between gap-2 h-full">
-        <li id="icon" className="shrink-0">
-          <Image src={temp.src} width={50} height={30} alt="logo"></Image>
-        </li>
+      <li id="icon" className="shrink-0">
+        <Image src={temp.src} width={50} height={30} alt="logo"></Image>
+      </li>
+      <ul className="flex items-center justify-end gap-2 h-full">
         <li className="flex-1 max-w-2xl mx-2">
           <form onSubmit={handleSubmit} className="w-full">
             <div className="relative">
@@ -106,9 +108,22 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
             <span>Add Clothes</span>
           </Link>
         </li>
-        <li className="shrink-0">
-          <LoginButton></LoginButton>
-        </li>
+        <div className="max-w-2xl">
+          <li className="shrink-0">
+            <LoginButton></LoginButton>
+          </li>
+          <li className="shrink-0">
+            {isLoading ? (
+              <span>Loading...</span>
+            ) : user ? (
+              <div className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300">
+                <span>{user.email}</span>
+              </div>
+            ) : (
+              <span>Logged out</span>
+            )}
+          </li>
+        </div>
       </ul>
     </nav>
   );
