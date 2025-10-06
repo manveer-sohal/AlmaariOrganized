@@ -13,10 +13,20 @@
   }
 }
 
+@layer utilities {
+  .animate-wiggle {
+    animation: wiggle 2s ease-in-out infinite;
+  }
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 /* Container for cards */

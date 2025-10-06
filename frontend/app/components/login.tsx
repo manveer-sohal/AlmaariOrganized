@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import almaariMascot from "../almaari-mascot.png";
 import Image from "next/image";
+import Link from "next/link";
+import Logo from "../Logo.png";
+import { motion } from "framer-motion";
+import AlmaariMascot from "./almaariMascot";
 
 export default function Login() {
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -13,181 +16,347 @@ export default function Login() {
     window.location.assign("/api/auth/login");
   };
 
+  const handleSignup = () => {
+    if (isRedirecting) return;
+    setIsRedirecting(true);
+    // Auth0: use screen_hint=signup to open the sign up prompt
+    window.location.assign("/api/auth/login?screen_hint=signup");
+  };
+
   return (
-    <div className="min-h-screen grid grid-cols-2 items-center justify-center bg-indigo-300 px-4">
-      <div className="h-full col-span-1">
-        <h1 className="text-5xl  font-bold text-center text-indigo-700 mb-4 py-4">
-          Welcome to Almaari Organizer
-        </h1>
-        <p className="text-center text-white sm:text-lg">
-          With A new AI assistant, you can organize your wardrobe and create
-          outfits with ease.
-        </p>
-        <div className="h-full flex items-center justify-center">
-          <Image
-            src={almaariMascot}
-            alt="Almaari Mascot"
-            width={600}
-            height={600}
-          />
+    <div className=" min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
+      {/* Nav */}
+      <header className="w-full">
+        <nav className="mx-auto max-w-6xl flex items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold">
+              <Image src={Logo} alt="Almaari Logo" width={32} height={32} />
+            </div>
+            <span className="animate-wiggle font-semibold">
+              Almaari Organizer
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-6 text-sm">
+            <Link href="#home" className="hover:text-indigo-600">
+              Home
+            </Link>
+            <Link href="#about" className="hover:text-indigo-600">
+              About
+            </Link>
+            <button onClick={handleLogin} className="hover:text-indigo-600">
+              Log In
+            </button>
+            <button
+              onClick={handleSignup}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700"
+              disabled={isRedirecting}
+            >
+              Try Free
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* Hero */}
+      <section id="home" className="mx-auto max-w-6xl px-4 py-12 sm:py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-indigo-900">
+              Your Smart Wardrobe, Organized by AI.
+            </h1>
+            <p className="mt-4 text-lg text-indigo-700/80">
+              Upload your clothes, remove backgrounds, and auto-tag outfits
+              instantly.
+            </p>
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                onClick={handleSignup}
+                disabled={isRedirecting}
+                className="inline-flex items-center justify-center gap-2 font-semibold px-5 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-80"
+              >
+                {isRedirecting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
+                      ></path>
+                    </svg>
+                    Redirecting…
+                  </span>
+                ) : (
+                  <span>Get Started - It’s Free!</span>
+                )}
+              </button>
+              <button
+                onClick={handleLogin}
+                disabled={isRedirecting}
+                className="inline-flex items-center justify-center gap-2 font-semibold px-5 py-3 rounded-xl border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50 disabled:opacity-80"
+              >
+                Log In
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="bg-white/70 backdrop-blur border border-indigo-100 rounded-2xl shadow-md p-4">
+              <AlmaariMascot />
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="h-full col-span-1 bg-white">
-        <div className="bg-white/95 backdrop-blur rounded-2xl p-8 sm:p-10 w-full max-w-md  border-indigo-50 mx-auto align-middle mt-10">
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-              {/* Wardrobe/lock style icon */}
+      </section>
+
+      {/* How It Works */}
+
+      <motion.section
+        id="about"
+        className="mx-auto max-w-6xl px-4 py-12"
+        initial={{ opacity: 0, y: 100 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, ease: "easeOut" }}
+        viewport={{ once: true }}
+      >
+        <h2 className="text-2xl sm:text-3xl font-bold text-center">
+          How It Works
+        </h2>
+        <p className="text-center text-indigo-700/80 mt-2">
+          Three simple steps to a smarter wardrobe.
+        </p>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-4 gap-4">
+          {/* 1 */}
+          <div className="bg-white/80 backdrop-blur border border-indigo-100 rounded-xl p-5 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
               <svg
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
                 aria-hidden="true"
-                className="text-indigo-600"
               >
                 <path
-                  d="M7 10V7a5 5 0 1 1 10 0v3"
+                  d="M4 16v3h16v-3"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
-                  strokeLinejoin="round"
                 />
-                <rect
-                  x="4"
-                  y="10"
-                  width="16"
-                  height="10"
-                  rx="2"
+                <path
+                  d="M12 4v12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M8 8l4-4 4 4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+
+            <div className="font-semibold">Upload your clothes</div>
+            <div className="text-sm text-indigo-700/80 mt-1">
+              Add photos from your device in seconds.
+            </div>
+          </div>
+          {/* 2 */}
+          <div className="bg-white/80 backdrop-blur border border-indigo-100 rounded-xl p-5 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 3v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M12 17v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M3 12h4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M17 12h4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
                   stroke="currentColor"
                   strokeWidth="2"
                 />
-                <circle cx="12" cy="15" r="1.5" fill="currentColor" />
               </svg>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-center text-indigo-700">
-              Log In
-            </h1>
-            <p className="text-center text-gray-600 max-w-sm">
-              Sign in to access your personalized wardrobe, curated outfits, and
-              weather-aware suggestions.
-            </p>
-          </div>
-
-          <div className="space-y-3 mb-8">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0L3.293 9.207a1 1 0 1 1 1.414-1.414l3.046 3.046 6.543-6.546a1 1 0 0 1 1.411 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              <p className="text-sm text-gray-700">
-                Secure authentication powered by Auth0
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0L3.293 9.207a1 1 0 1 1 1.414-1.414l3.046 3.046 6.543-6.546a1 1 0 0 1 1.411 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              <p className="text-sm text-gray-700">
-                Personalized outfit recommendations
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0L3.293 9.207a1 1 0 1 1 1.414-1.414l3.046 3.046 6.543-6.546a1 1 0 0 1 1.411 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-              <p className="text-sm text-gray-700">
-                Weather-aware wardrobe planning
-              </p>
+            <div className="font-semibold">AI cleans and tags</div>
+            <div className="text-sm text-indigo-700/80 mt-1">
+              Background removal and smart labels-automatically.
             </div>
           </div>
-
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={handleLogin}
-              disabled={isRedirecting}
-              aria-busy={isRedirecting}
-              className="w-full bg-indigo-600 text-white font-semibold py-3.5 px-4 rounded-lg shadow hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-300 focus:outline-none transition disabled:opacity-80 disabled:cursor-not-allowed"
-            >
-              {isRedirecting ? (
-                <span className="inline-flex items-center justify-center gap-2">
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-                    ></path>
-                  </svg>
-                  Redirecting…
-                </span>
-              ) : (
-                <span>Continue with Auth0</span>
-              )}
-            </button>
-
-            <p className="text-center text-xs text-gray-500">
-              By continuing, you agree to our{" "}
-              <a
-                href="#"
-                className="text-indigo-600 hover:text-indigo-700 underline"
+          {/* 3 */}
+          <div className="bg-white/80 backdrop-blur border border-indigo-100 rounded-xl p-5 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
               >
-                Terms
-              </a>{" "}
-              and{" "}
-              <a
-                href="#"
-                className="text-indigo-600 hover:text-indigo-700 underline"
+                <path
+                  d="M11 11l9 9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="5.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <div className="font-semibold">Find outfits in seconds</div>
+            <div className="text-sm text-indigo-700/80 mt-1">
+              Filter by color, season, and more to style fast.
+            </div>
+          </div>
+          {/* 4 */}
+          <div className="bg-white/80 backdrop-blur border border-indigo-100 rounded-xl p-5 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
               >
-                Privacy Policy
-              </a>
-              .
-            </p>
+                <path
+                  d="M12 3v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M12 17v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M3 12h4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M17 12h4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <div className="font-semibold">Have an AI Assistant</div>
+            <div className="text-sm text-indigo-700/80 mt-1">
+              Get personalized outfit recommendations and styling tips.
+            </div>
           </div>
         </div>
-      </div>
+      </motion.section>
+
+      {/* Features */}
+      <section id="features" className="mx-auto max-w-6xl px-4 py-12">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6">
+          Features
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            "Auto Background Removal",
+            "Smart Tagging",
+            "Outfit Management",
+            "Cloud Sync",
+            "Privacy and Security",
+            "Fast and Free to Start",
+          ].map((feat) => (
+            <div
+              key={feat}
+              className="bg-white/80 backdrop-blur border border-indigo-100 rounded-xl p-5 shadow-sm"
+            >
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0L3.293 9.207a1 1 0 1 1 1.414-1.414l3.046 3.046 6.543-6.546a1 1 0 0 1 1.411 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+                <div className="font-medium">{feat}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="mx-auto max-w-6xl px-4 py-10 text-sm text-indigo-700/80">
+        <div className="border-t border-indigo-100 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>Almaari Organizer © 2025</div>
+          <div className="flex items-center gap-4">
+            <Link href="#" className="hover:text-indigo-900">
+              Privacy
+            </Link>
+            <Link href="#" className="hover:text-indigo-900">
+              Terms
+            </Link>
+            <Link href="#" className="hover:text-indigo-900">
+              Contact
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
