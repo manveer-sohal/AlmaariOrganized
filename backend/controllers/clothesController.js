@@ -346,8 +346,14 @@ export const uploadMiddleware = upload.single("image");
 export const createOutfit = async (request, response) => {
   console.log("Creating Outfit");
   try {
-    const { auth0Id, name, colour, season, waterproof, outfit_items } =
-      request.body;
+    const {
+      auth0Id,
+      name,
+      colour,
+      season,
+      waterproof,
+      outfit_items,
+    } = request.body;
 
     if (!auth0Id) {
       return response.status(400).json({ error: "auth0Id is required" });
@@ -445,13 +451,71 @@ export const createOutfit = async (request, response) => {
   }
 };
 
+const mapTypeToSlot = (type) => {
+  const t = type.toLowerCase();
+  if (
+    t.includes("hat") ||
+    t.includes("cap") ||
+    t.includes("beanie") ||
+    t.includes("scarf")
+  ) {
+    return "head";
+  }
+  if (
+    t.includes("shirt") ||
+    t.includes("t-shirt") ||
+    t.includes("tee") ||
+    t.includes("hoodie") ||
+    t.includes("jacket") ||
+    t.includes("coat") ||
+    t.includes("sweater") ||
+    t.includes("jumper") ||
+    t.includes("blouse") ||
+    t.includes("dress") ||
+    t.includes("top") ||
+    t.includes("cardigan") ||
+    t.includes("vest")
+  ) {
+    return "body";
+  }
+  if (
+    t.includes("jeans") ||
+    t.includes("pants") ||
+    t.includes("trousers") ||
+    t.includes("leggings") ||
+    t.includes("shorts") ||
+    t.includes("skirt") ||
+    t.includes("cargos") ||
+    t.includes("capri")
+  ) {
+    return "legs";
+  }
+  if (
+    t.includes("shoes") ||
+    t.includes("boots") ||
+    t.includes("sneakers") ||
+    t.includes("sandals") ||
+    t.includes("heels") ||
+    t.includes("socks")
+  ) {
+    return "feet";
+  }
+  return "body";
+};
+
 export const uploadData = async (request, response) => {
   console.log("Uploading");
   console.log(request.body);
 
   try {
-    const { auth0Id, type, colour, season, waterproof, favourite } =
-      request.body; // Other clothing data
+    const {
+      auth0Id,
+      type,
+      colour,
+      season,
+      waterproof,
+      favourite,
+    } = request.body; // Other clothing data
     const file = request.file; // Multer adds the uploaded file in request.file
     console.log(type);
     if (!file) {
@@ -481,6 +545,8 @@ export const uploadData = async (request, response) => {
       }
     })();
 
+    const slot = mapTypeToSlot(type);
+
     const clothingDoc = await Clothes.create({
       uniqueId: new mongoose.Types.ObjectId().toString(),
       type,
@@ -489,6 +555,7 @@ export const uploadData = async (request, response) => {
       colour: parsedColour,
       season: parsedSeason,
       waterproof: waterproof === "true" || Boolean(waterproof),
+      slot,
     });
 
     const user = await User.findOneAndUpdate(

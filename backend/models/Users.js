@@ -9,6 +9,7 @@ const ClothesSchema = new mongoose.Schema({
   colour: { type: [String], required: true },
   season: { type: [String], default: [] },
   waterproof: { type: Boolean, default: false },
+  slot: { type: String, required: true }, //head, body, legs, feet
 });
 
 const Clothes =
