@@ -11,11 +11,7 @@ type ClothingItem = {
 
 type Slot = "head" | "body" | "legs" | "feet";
 
-function OutfitPreview(items: {
-  id: string;
-  slot: Slot;
-  items: ClothingItem[];
-}) {
+function OutfitPreview() {
   type Slot = "head" | "body" | "legs" | "feet";
 
   const slots: Slot[] = ["head", "body", "legs", "feet"];
@@ -24,18 +20,6 @@ function OutfitPreview(items: {
   >({ head: [], body: [], legs: [], feet: null });
   //Item slot type
   // get the actual clothes item
-
-  const toggleSelect = () => {
-    if (!items) return;
-    const slot: Slot = items;
-    setSelectedBySlot((prev) => {
-      const current = prev[slot];
-      if (current && current.length > 0 && current.some((c) => c._id === id)) {
-        return { ...prev, [slot]: current.filter((c) => c._id !== id) };
-      }
-      return { ...prev, [slot]: [...(current || []), item] };
-    });
-  };
 
   return (
     <div className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
