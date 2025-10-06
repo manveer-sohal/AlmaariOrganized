@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
@@ -103,7 +103,7 @@ function CreateOutfitUI() {
     }
   };
 
-  const generateAiThoughts = (): string => {
+  const generateAiThoughts = useCallback((): string => {
     setMascotState("thinking");
     if (selectedItems.length === 0) {
       return "Select items to start building your outfit. I’ll review color balance and pieces as you go.";
@@ -134,11 +134,11 @@ function CreateOutfitUI() {
       tips.push("Looks balanced. Try contrasting textures or an accent piece.");
     setMascotState("idle");
     return `${summary}${colourNote} ${tips.join(" ")}`;
-  };
+  }, [selectedItems]);
 
   useEffect(() => {
     setAiMessages([generateAiThoughts()]);
-  }, [selectedItems]);
+  }, [generateAiThoughts]);
 
   return (
     <div className="bg-indigo-200 w-full min-h-screen top-0 z-10 p-4 h-full">
