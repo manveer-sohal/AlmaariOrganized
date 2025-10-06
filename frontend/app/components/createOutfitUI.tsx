@@ -3,11 +3,14 @@ import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
+
+type Slot = "head" | "body" | "legs" | "feet";
 type ClothingItem = {
   _id: string;
   type: string;
   colour: string[];
   imageSrc: string;
+  slot: Slot;
 };
 
 function CreateOutfitUI() {
@@ -19,10 +22,9 @@ function CreateOutfitUI() {
   const [loadingClothes, setLoadingClothes] = useState<boolean>(false);
   const [mascotState, setMascotState] = useState<string>("thinking");
   type Slot = "head" | "body" | "legs" | "feet";
-  const slots: Slot[] = ["head", "body", "legs", "feet"];
   const [selectedBySlot, setSelectedBySlot] = useState<
-    Partial<Record<Slot, ClothingItem | null>>
-  >({ head: null, body: null, legs: null, feet: null });
+    Partial<Record<Slot, ClothingItem[] | null>>
+  >({ head: [], body: [], legs: [], feet: null });
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([]);
@@ -53,75 +55,23 @@ function CreateOutfitUI() {
     load();
   }, [API_BASE_URL, user]);
 
-  const mapTypeToSlot = (type: string): Slot => {
-    const t = type.toLowerCase();
-    if (
-      t.includes("hat") ||
-      t.includes("cap") ||
-      t.includes("beanie") ||
-      t.includes("scarf")
-    ) {
-      return "head";
-    }
-    if (
-      t.includes("shirt") ||
-      t.includes("t-shirt") ||
-      t.includes("tee") ||
-      t.includes("hoodie") ||
-      t.includes("jacket") ||
-      t.includes("coat") ||
-      t.includes("sweater") ||
-      t.includes("jumper") ||
-      t.includes("blouse") ||
-      t.includes("dress") ||
-      t.includes("top") ||
-      t.includes("cardigan") ||
-      t.includes("vest")
-    ) {
-      return "body";
-    }
-    if (
-      t.includes("jeans") ||
-      t.includes("pants") ||
-      t.includes("trousers") ||
-      t.includes("leggings") ||
-      t.includes("shorts") ||
-      t.includes("skirt") ||
-      t.includes("cargos") ||
-      t.includes("capri")
-    ) {
-      return "legs";
-    }
-    if (
-      t.includes("shoes") ||
-      t.includes("boots") ||
-      t.includes("sneakers") ||
-      t.includes("sandals") ||
-      t.includes("heels") ||
-      t.includes("socks")
-    ) {
-      return "feet";
-    }
-    return "body";
-  };
-
   const toggleSelect = (id: string) => {
     const item = clothes.find((c) => c._id === id);
+    console.log(item);
     if (!item) return;
-    const slot = mapTypeToSlot(item.type);
     setSelectedBySlot((prev) => {
-      const current = prev[slot];
-      if (current && current._id === id) {
-        return { ...prev, [slot]: null };
+      const current = prev[item.slot];
+      if (current && current.length > 0 && current.some((c) => c._id === id)) {
+        return { ...prev, [item.slot]: current.filter((c) => c._id !== id) };
       }
-      return { ...prev, [slot]: item };
+      return { ...prev, [item.slot]: [...(current || []), item] };
     });
   };
 
   const selectedItems = useMemo(() => {
-    return slots
-      .map((s) => selectedBySlot[s])
-      .filter((v): v is ClothingItem => Boolean(v));
+    return Object.keys(selectedBySlot)
+      .map((s) => selectedBySlot[s as Slot])
+      .filter((v): v is ClothingItem[] => Boolean(v));
   }, [selectedBySlot]);
 
   const saveOutfit = async () => {
@@ -135,7 +85,7 @@ function CreateOutfitUI() {
         season: JSON.stringify([]),
         waterproof: false,
         outfit_items: selectedItems.map((i) => ({
-          _id: i._id,
+          _id: i.map((c) => c._id),
         })),
       };
       const response = await fetch(`${API_BASE_URL}/api/clothes/createOutfit`, {
@@ -158,8 +108,8 @@ function CreateOutfitUI() {
     if (selectedItems.length === 0) {
       return "Select items to start building your outfit. I’ll review color balance and pieces as you go.";
     }
-    const parts = selectedItems.map((i) => i.type.toLowerCase());
-    const colours = selectedItems.flatMap((i) => i.colour || []);
+    const parts = selectedItems.map((i) => i.map((c) => c.type.toLowerCase()));
+    const colours = selectedItems.flatMap((i) => i.map((c) => c.colour) || []);
     const uniqueColours = Array.from(new Set(colours));
     const summary = `Current picks: ${parts.join(", ")}.`;
     const colourNote =
@@ -167,9 +117,16 @@ function CreateOutfitUI() {
     const tips: string[] = [];
     if (uniqueColours.length >= 3)
       tips.push("Consider limiting to 2–3 core colours for cohesion.");
-    if (parts.includes("jacket") && parts.includes("shorts"))
+    if (
+      parts.some((p) => p.includes("jacket")) &&
+      parts.some((p) => p.includes("shorts"))
+    )
       tips.push("Layering with shorts works best in mild weather.");
-    if (uniqueColours.some((c) => /black|white|beige|grey|navy/i.test(c)))
+    if (
+      uniqueColours.some((c) =>
+        /black|white|beige|grey|navy/i.test((c as unknown) as string)
+      )
+    )
       tips.push(
         "Neutrals detected — easy to pair. Add one accent colour for pop."
       );
@@ -214,10 +171,9 @@ function CreateOutfitUI() {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
               {clothes.map((item) => {
-                const isSelected = selectedItems.some(
-                  (s) => s._id === item._id
+                const isSelected = selectedItems.some((s) =>
+                  s.some((c) => c._id === item._id)
                 );
-                const slot = mapTypeToSlot(item.type);
                 return (
                   <button
                     key={item._id}
@@ -237,7 +193,7 @@ function CreateOutfitUI() {
                       className="object-cover h-full w-full"
                     />
                     <span className="absolute bottom-1 left-1 bg-white/80 text-indigo-900 text-[10px] px-1.5 py-0.5 rounded">
-                      {slot}
+                      {item.slot}
                     </span>
                     {isSelected && (
                       <span className="absolute top-1 right-1 bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full">
@@ -254,8 +210,8 @@ function CreateOutfitUI() {
         <div className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
           <h3 className="font-medium text-indigo-900 mb-2">Outfit Preview</h3>
           <div className="flex flex-col gap-3">
-            {slots.map((slot) => {
-              const item = selectedBySlot[slot];
+            {Object.keys(selectedBySlot).map((slot) => {
+              const item = selectedBySlot[slot as Slot];
               return (
                 <div
                   key={slot}
@@ -265,28 +221,31 @@ function CreateOutfitUI() {
                     <div className="text-sm text-indigo-900 capitalize w-16 shrink-0">
                       {slot}
                     </div>
-                    {item ? (
-                      <div className="relative">
-                        <Image
-                          src={item.imageSrc}
-                          alt={item.type}
-                          width={100}
-                          height={100}
-                          className="object-cover rounded"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedBySlot((prev) => ({
-                              ...prev,
-                              [slot]: null,
-                            }))
-                          }
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center"
-                          aria-label={`Remove ${slot}`}
-                        >
-                          ×
-                        </button>
+                    {item && item.length > 0 ? (
+                      <div className="relative h-[110px] w-[180px]">
+                        {item.map((i: ClothingItem, idx: number) => (
+                          <div
+                            key={i._id}
+                            className="absolute top-0"
+                            style={{ left: `${idx * 20}px`, zIndex: idx + 1 }}
+                          >
+                            <Image
+                              onClick={() =>
+                                setSelectedBySlot((prev) => ({
+                                  ...prev,
+                                  [i.slot]: prev[i.slot]?.filter(
+                                    (c: ClothingItem) => c._id !== i._id
+                                  ),
+                                }))
+                              }
+                              src={i.imageSrc}
+                              alt={i.type}
+                              width={100}
+                              height={100}
+                              className="object-cover rounded border border-indigo-200 shadow-sm"
+                            />
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="flex items-center justify-center h-[110px] w-[110px] rounded-md bg-indigo-50 border border-indigo-200">
