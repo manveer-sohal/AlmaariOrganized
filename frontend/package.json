@@ -12,6 +12,7 @@
     "@auth0/nextjs-auth0": "^2.4.0",
     "@lottiefiles/dotlottie-react": "^0.12.1",
     "dotenv": "^16.4.7",
+    "framer-motion": "^12.23.22",
     "fs": "^0.0.1-security",
     "mongoose": "^8.9.1",
     "next": "15.1.0",
