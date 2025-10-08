@@ -7,7 +7,7 @@ import DisplayClothes from "./components/displayClothes";
 import Login from "./components/login";
 import CreateOutfitUI from "./components/createOutfitUI";
 import ViewOutfits from "./components/viewOutfits";
-import AddClothes from "./components/addClothes";
+import AddClothesUI from "./components/addClothesUI";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -68,7 +68,9 @@ export default function Home() {
         <div>
           {displayAddClothes && (
             <div className="absolute top-0 left-0 w-full z-10">
-              <AddClothes displayAddClothes={setDisplayAddClothes}></AddClothes>
+              <AddClothesUI
+                displayAddClothes={setDisplayAddClothes}
+              ></AddClothesUI>
             </div>
           )}
           <div className="nav-container">
