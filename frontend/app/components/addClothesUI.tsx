@@ -2,16 +2,23 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
+import { useClothesStore } from "../store/useClothesStore";
 
-//promp to allow accses to the toggleForm function in the main page, this lets us
+//prop to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
 //is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
 type addClothesUIProm = {
-  addClothes: (file: string, type: string, colour: string[]) => void;
+  displayAddClothes: (displayAddClothes: boolean) => void;
 };
-function AddClothesUI({ addClothes }: addClothesUIProm) {
+function AddClothesUI({ displayAddClothes }: addClothesUIProm) {
+  const addClothingItem = useClothesStore((state) => state.addClothingItem);
+  const [loading, setLoading] = useState(false);
+
+  const handleBack = () => {
+    displayAddClothes(false);
+  };
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
   //list of colours for clothes
   const colours_List = [
@@ -91,8 +98,9 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
   //file can either be of type string or type null
   const [preview, setPreview] = useState<string | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
-  const [filtered_colours_List, set_Filtered_colours_List] =
-    useState(colours_List);
+  const [filtered_colours_List, set_Filtered_colours_List] = useState(
+    colours_List
+  );
   //a filtered list of clothes which will change depedending on the user input for filtered results
   const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
 
@@ -239,18 +247,31 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
       body: formData,
     });
 
-    console.log(response);
+    console.log("response", response);
+    return await response;
   };
 
   //If submit is clicked
   const handleSubmit = async (
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
   ) => {
+    event.preventDefault();
+    setLoading(true);
+    console.log("submit clicked");
     validateType();
 
     if (validateColour() && validateType() && file) {
-      await pushDB();
-      addClothes(URL.createObjectURL(file), usersClothType, usersColours);
+      const response = await pushDB();
+      if (response && response.ok) {
+        console.log("picture uploaded1");
+        const data = await response.json();
+        addClothingItem(data.clothing);
+
+        console.log("picture uploaded2");
+        displayAddClothes(false);
+      } else {
+        console.error("Failed to upload picture");
+      }
     } else {
       event.preventDefault();
       if (file == null) {
@@ -258,6 +279,7 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
       }
       console.log("form not filled in properly");
     }
+    setLoading(false);
 
     //toggleForm();
   };
@@ -293,14 +315,14 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
   //   margin: 0px 0 0 90px;
   // }
   return (
-    <div className="bg-indigo-200 min-h-screen w-full sticky top-0 z-10 p-4">
+    <div className="backdrop-blur-sm min-h-screen w-full h-120vh sticky top-0 p-4">
       <div className="max-w-2xl mx-auto mb-3 flex items-center justify-between">
-        <Link
-          href="/"
+        <button
+          onClick={handleBack}
           className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
         >
           ← Back
-        </Link>
+        </button>
       </div>
       <form className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4">
         <div className="w-full">
@@ -443,14 +465,20 @@ function AddClothesUI({ addClothes }: addClothesUIProm) {
           <span className="text-sm text-red-600">Enter a Picture</span>
         )}
         <div className="mt-2 flex items-center gap-2">
-          <Link
-            href="/"
-            type="button"
-            onClick={(event) => handleSubmit(event)}
-            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            Submit
-          </Link>
+          {loading ? (
+            <div className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
+              Loading...
+            </div>
+          ) : (
+            <Link
+              href="/"
+              type="button"
+              onClick={(event) => handleSubmit(event)}
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Submit
+            </Link>
+          )}
         </div>
       </form>
     </div>

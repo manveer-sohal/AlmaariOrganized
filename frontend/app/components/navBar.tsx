@@ -1,21 +1,24 @@
 import LoginButton from "./loginButton";
 import temp from "../Logo.png";
 import Image from "next/image";
-import Link from "next/link";
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
+  displayAddClothes?: Dispatch<SetStateAction<boolean>>;
 };
 
-function NavBar({ onSearchTermChange }: NavBarProps) {
+function NavBar({ onSearchTermChange, displayAddClothes }: NavBarProps) {
   const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
 
   const handleChange = (value: string) => {
     setSearch(value);
     onSearchTermChange?.(value);
+  };
+  const onClickAddClothes = () => {
+    displayAddClothes?.(true);
   };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
@@ -86,8 +89,8 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
           </form>
         </li>
         <li className="shrink-0">
-          <Link
-            href="/addClothes"
+          <button
+            onClick={onClickAddClothes}
             title="Add Clothes"
             className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
           >
@@ -106,7 +109,7 @@ function NavBar({ onSearchTermChange }: NavBarProps) {
               />
             </svg>
             <span>Add Clothes</span>
-          </Link>
+          </button>
         </li>
         <div className="max-w-2xl">
           <li className="shrink-0">
