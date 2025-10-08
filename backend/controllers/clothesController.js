@@ -524,7 +524,34 @@ export const uploadData = async (request, response) => {
     }
     console.log("yes file");
 
-    const imageSrc = await toBase64(file);
+    let mlResponse = null;
+    try {
+      mlResponse = await fetch("http://192.168.2.35:8000/crop_image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+        body: file.buffer, //send the raw bytes directly
+      });
+    } catch (e) {
+      console.log("error cropping image");
+      console.error(e);
+    }
+
+    let imageSrc = "";
+
+    if (mlResponse.ok) {
+      const arrayBuffer = await mlResponse.arrayBuffer();
+      const base64Cropped = Buffer.from(arrayBuffer).toString("base64");
+      imageSrc = `data:image/png;base64,${base64Cropped}`;
+      console.log("image cropped");
+    } else {
+      console.log("error cropping image");
+      const errorText = await mlResponse.text();
+      console.log(errorText);
+      imageSrc = toBase64(file.buffer);
+    }
+
     console.log("next move");
 
     await connectMongoDB();
