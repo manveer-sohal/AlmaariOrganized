@@ -7,6 +7,7 @@ import DisplayClothes from "./components/displayClothes";
 import Login from "./components/login";
 import CreateOutfitUI from "./components/createOutfitUI";
 import ViewOutfits from "./components/viewOutfits";
+import AddClothes from "./components/addClothes";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -29,8 +30,10 @@ export default function Home() {
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [searchTerm, setSearchTerm] = useState("");
   const [displayOutfits, setDisplayOutfits] = useState<boolean>(false);
-  const [displayCreateOutfits, setDisplayCreateOutfits] =
-    useState<boolean>(false);
+  const [displayCreateOutfits, setDisplayCreateOutfits] = useState<boolean>(
+    false
+  );
+  const [displayAddClothes, setDisplayAddClothes] = useState<boolean>(false);
   const [displayHome, setDisplayHome] = useState<boolean>(true);
 
   const [query, setQuery] = useState<
@@ -63,8 +66,16 @@ export default function Home() {
 
       {user && (
         <div>
+          {displayAddClothes && (
+            <div className="absolute top-0 left-0 w-full z-10">
+              <AddClothes displayAddClothes={setDisplayAddClothes}></AddClothes>
+            </div>
+          )}
           <div className="nav-container">
-            <NavBar onSearchTermChange={setSearchTerm}></NavBar>
+            <NavBar
+              onSearchTermChange={setSearchTerm}
+              displayAddClothes={setDisplayAddClothes}
+            ></NavBar>
             <div className="sidebar-container">
               <SideBar
                 onQuery={setQuery}
@@ -74,17 +85,7 @@ export default function Home() {
               ></SideBar>
             </div>
           </div>
-
-          {!hasLoaded && (
-            <h1
-              style={{
-                fontSize: 120,
-                textAlign: "center",
-              }}
-            >
-              pictures are loading...
-            </h1>
-          )}
+          {/* previously had a loading screen here before the whole page loaded*/}
           {displayCreateOutfits && <CreateOutfitUI></CreateOutfitUI>}
           {displayOutfits && <ViewOutfits></ViewOutfits>}
           {displayHome && (
