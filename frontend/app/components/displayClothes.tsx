@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import ClothesCard from "./clothesCard";
+import { useClothesStore } from "../store/useClothesStore";
 
 type DisplayClothesProps = {
   query:
@@ -13,17 +14,17 @@ type DisplayClothesProps = {
 };
 
 function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
+  const { clothes, setClothes } = useClothesStore();
+
   const [filteredClothesCard, setFilteredClothesCard] = useState<
     { _id: string; colour: string[]; type: string; imageSrc: string }[]
   >([]);
-  const [allClothes, setAllClothes] = useState<
-    { _id: string; colour: string[]; type: string; imageSrc: string }[]
-  >([]);
+
   const [hasLoaded, setHasLoaded] = useState(false); // Track if data is loaded
 
   //change this
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
   const { user, isLoading } = useUser();
 
@@ -76,13 +77,13 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
 
       const data = await response.json();
       const clothesList = data.Clothes.reverse(); // Latest clothes first
+      setClothes(clothesList);
       console.log(clothesList);
-      setAllClothes(clothesList);
       setHasLoaded(true);
     } catch (error) {
       console.error("Error fetching clothes:", error);
     }
-  }, [user, API_BASE_URL]);
+  }, [user, API_BASE_URL, setClothes]);
 
   useEffect(() => {
     if (!user || (hasLoaded && !query)) return;
@@ -92,8 +93,8 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
 
   useEffect(() => {
     if (!hasLoaded) return;
-    display(allClothes);
-  }, [allClothes, display, hasLoaded]);
+    display(clothes);
+  }, [clothes, display, hasLoaded]);
 
   if (isLoading) {
     return <p>Loading...</p>;
@@ -105,8 +106,10 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
         <div className="flex justify-center items-center w-full h-[60vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
         </div>
-      ) : filteredClothesCard.length === 0 ? (
+      ) : clothes.length === 0 ? (
         <p className="text-xl">Add Some Clothes!</p>
+      ) : filteredClothesCard.length === 0 ? (
+        <p className="text-xl">No clothes found for this query</p>
       ) : (
         filteredClothesCard.map((item) => (
           <ClothesCard
