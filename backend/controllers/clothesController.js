@@ -4,9 +4,11 @@ import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
 import { createClient } from "redis";
 import dotenv from "dotenv";
+import rembg from "rembg-node";
+
 dotenv.config();
 
-const redisUrl = process.env.UPSTASH_REDIS_URL;
+const redisUrl = process.env.REDIS_URL;
 
 let redis;
 let _redisDnsErrorLogged = false; // dedupe DNS error logs
@@ -231,10 +233,14 @@ export const getData = async (request, response) => {
 
     // Measure MongoDB query time
     const startTime = Date.now();
+
+    await Clothes.deleteOne({ _id: "68e7ae5ffd4fd1145f627f3a" });
+
     const userData = await User.findOne(
       { auth0Id },
       { clothes: 1, _id: 0 }
     ).populate("clothes");
+
     const endTime = Date.now();
     console.log(`Query took ${endTime - startTime} ms`);
 
@@ -336,9 +342,9 @@ function addData() {
 // Configure multer
 const upload = multer({ storage: multer.memoryStorage() });
 
-const toBase64 = (file) => {
-  return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`; // Convert buffer to Base64 string
-};
+function toBase64(file) {
+  return `data:image/png;base64,${file.buffer.toString("base64")}`;
+}
 
 // Middleware for handling file upload route
 export const uploadMiddleware = upload.single("image");
@@ -502,6 +508,7 @@ const mapTypeToSlot = (type) => {
   }
   return "body";
 };
+const RUNPOD_API_KEY = "rpa_DMEHNHH9XU3IDOZEPDWC0JYM0P2XRE6KQ5CYDFYN14qvkg";
 
 export const uploadData = async (request, response) => {
   console.log("Uploading");
@@ -524,33 +531,7 @@ export const uploadData = async (request, response) => {
     }
     console.log("yes file");
 
-    let mlResponse = null;
-    try {
-      mlResponse = await fetch("http://192.168.2.35:8000/crop_image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/octet-stream",
-        },
-        body: file.buffer, //send the raw bytes directly
-      });
-    } catch (e) {
-      console.log("error cropping image");
-      console.error(e);
-    }
-
-    let imageSrc = "";
-
-    if (mlResponse.ok) {
-      const arrayBuffer = await mlResponse.arrayBuffer();
-      const base64Cropped = Buffer.from(arrayBuffer).toString("base64");
-      imageSrc = `data:image/png;base64,${base64Cropped}`;
-      console.log("image cropped");
-    } else {
-      console.log("error cropping image");
-      const errorText = await mlResponse.text();
-      console.log(errorText);
-      imageSrc = toBase64(file.buffer);
-    }
+    const imageSrc = toBase64(file);
 
     console.log("next move");
 
