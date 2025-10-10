@@ -17,7 +17,7 @@ export const useClothesStore = create<ClothesStore>((set) => ({
   clothes: [],
   addClothingItem: (item: ClothingItemProps) =>
     set((state: { clothes: ClothingItemProps[] }) => ({
-      clothes: [...state.clothes, item],
+      clothes: [item, ...state.clothes],
     })),
   setClothes: (clothes: ClothingItemProps[]) => set({ clothes }),
 }));
