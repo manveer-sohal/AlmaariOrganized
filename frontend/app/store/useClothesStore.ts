@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
+type Slot = "head" | "body" | "legs" | "feet";
 type ClothingItemProps = {
+  slot: Slot;
   _id: string;
   colour: string[];
   type: string;
