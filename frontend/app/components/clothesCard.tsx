@@ -16,16 +16,18 @@ export default function ClothesCard({
   onDelete,
 }: ClothingItemProps) {
   const [click, setClick] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  // const [loading, setLoading] = useState<boolean>(false);
   const { user } = useUser(); // Auth0 user information
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
   const removeClothingItem = async () => {
-    setLoading(true);
     if (!user) {
       console.error("User is not authenticated. Cannot remove clothing item.");
       return;
     }
+    const cloth_id = id;
+    onDelete();
+    console.log("cloth_id", cloth_id);
 
     const auth0Id = user.sub;
 
@@ -33,14 +35,12 @@ export default function ClothesCard({
       const response = await fetch(`${API_BASE_URL}/api/clothes/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id, uniqueId: id }), // Pass the correct `id`
+        body: JSON.stringify({ auth0Id, uniqueId: cloth_id }), // Pass the correct `id`
       });
 
       const data = await response.json();
       if (response.ok) {
         console.log("Clothing item removed successfully:", data);
-        onDelete();
-        setLoading(false);
       } else {
         console.error("Error removing clothing item:", data.error);
       }
@@ -52,17 +52,17 @@ export default function ClothesCard({
   return (
     <div className="border border-indigo-300 m-2 p-2 bg-slate-100 rounded-md w-[200px] h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl">
       <div onClick={() => setClick(!click)} className="h-full w-full">
-        {loading ? (
+        {/* {loading ? (
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500 absolute inset-0 m-auto"></div>
-        ) : (
-          <Image
-            src={imageSrc}
-            alt="Clothing item"
-            width={200}
-            height={200}
-            className="object-contain w-full h-full absolute inset-0"
-          />
-        )}
+        ) : ( */}
+        <Image
+          src={imageSrc}
+          alt="Clothing item"
+          width={200}
+          height={200}
+          className="object-contain w-full h-full absolute inset-0"
+        />
+        {/* )}*/}
       </div>
       {click && (
         <button
