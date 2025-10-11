@@ -59,12 +59,23 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
     [query, searchTerm]
   );
 
+  const deleteClothes = useCallback(
+    async (id: string) => {
+      if (clothes.length === 1) {
+        setClothes([]);
+        return;
+      }
+
+      setClothes(clothes.filter((item) => item._id !== id));
+    },
+    [setClothes, clothes]
+  );
+
   const loadClothes = useCallback(async () => {
     if (!user) return;
-
-    console.log("clothes", clothes);
     if (clothes.length > 0) {
       setHasLoaded(true);
+      console.log("skipping load");
       return;
     }
 
@@ -89,7 +100,7 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
     } catch (error) {
       console.error("Error fetching clothes:", error);
     }
-  }, [user, API_BASE_URL, setClothes, clothes]);
+  }, [user, API_BASE_URL, setClothes, clothes.length]);
 
   useEffect(() => {
     if (!user || (hasLoaded && !query)) return;
@@ -124,7 +135,7 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
             type={item.type}
             imageSrc={item.imageSrc}
             id={item._id}
-            onDelete={loadClothes} // Pass the reload function
+            onDelete={() => deleteClothes(item._id)} // Pass the reload function
           />
         ))
       )}
