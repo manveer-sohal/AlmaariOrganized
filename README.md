@@ -128,16 +128,17 @@ The architecture is optimized for real-time interaction—quick uploads, filteri
 MongoDB was chosen for its flexibility, horizontal scalability, and ability to handle frequent writes efficiently.
 However, if analytical insights such as “most worn color per month” become core features, MongoDB’s unstructured nature would introduce aggregation overhead.
 
-**Summary**
-• MongoDB is not optimal for analytics-heavy workloads.
-• **PostgreSQL** offers stronger performance for relational joins and aggregations.
-• Future enhancement: a hybrid system combining MongoDB (operations) and PostgreSQL (analytics).
+## Summary
+
+    • MongoDB is not optimal for analytics-heavy workloads.
+    • **PostgreSQL** offers stronger performance for relational joins and aggregations.
+    • Future enhancement: a hybrid system combining MongoDB (operations) and PostgreSQL (analytics).
 
 ## Impact and Outcomes
 
-• Reduced API response times by **25%** through query optimization and indexing.
-• Improved data reload speeds using **Redis caching** for faster refreshes.
-• Designed a scalable cloud architecture supporting seamless deployment and user growth.
+    • Reduced API response times by **25%** through query optimization and indexing.
+    • Improved data reload speeds using **Redis caching** for faster refreshes.
+    • Designed a scalable cloud architecture supporting seamless deployment and user growth.
 
 **Repository**
 
