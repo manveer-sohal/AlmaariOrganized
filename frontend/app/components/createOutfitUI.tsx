@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
+import { useClothesStore } from "../store/useClothesStore";
 
 type Slot = "head" | "body" | "legs" | "feet";
 type ClothingItem = {
@@ -14,17 +15,18 @@ type ClothingItem = {
 };
 
 function CreateOutfitUI() {
+  const { clothes, setClothes } = useClothesStore();
+
   const { user } = useUser();
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-  const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [loadingClothes, setLoadingClothes] = useState<boolean>(false);
   const [mascotState, setMascotState] = useState<string>("thinking");
   type Slot = "head" | "body" | "legs" | "feet";
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>
-  >({ head: [], body: [], legs: [], feet: null });
+  >({ head: null, body: null, legs: null, feet: null });
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([]);
@@ -32,6 +34,12 @@ function CreateOutfitUI() {
   useEffect(() => {
     const load = async () => {
       if (!user) return;
+      console.log("clothes len", clothes.length);
+      if (clothes.length > 0) {
+        setLoadingClothes(false);
+        console.log("skipping load");
+        return;
+      }
       setLoadingClothes(true);
       const auth0Id = user.sub;
       const response = await fetch(`${API_BASE_URL}/api/clothes/listClothes`, {
@@ -53,14 +61,14 @@ function CreateOutfitUI() {
       }
     };
     load();
-  }, [API_BASE_URL, user]);
+  }, [API_BASE_URL, user, clothes, setClothes]);
 
   const toggleSelect = (id: string) => {
     const item = clothes.find((c) => c._id === id);
     console.log(item);
     if (!item) return;
     setSelectedBySlot((prev) => {
-      const current = prev[item.slot];
+      const current = prev[item.slot as Slot];
       if (current && current.length > 0 && current.some((c) => c._id === id)) {
         return { ...prev, [item.slot]: current.filter((c) => c._id !== id) };
       }
@@ -108,6 +116,7 @@ function CreateOutfitUI() {
     if (selectedItems.length === 0) {
       return "Select items to start building your outfit. I’ll review color balance and pieces as you go.";
     }
+    console.log("selectedItems", selectedItems);
     const parts = selectedItems.map((i) => i.map((c) => c.type.toLowerCase()));
     const colours = selectedItems.flatMap((i) => i.map((c) => c.colour) || []);
     const uniqueColours = Array.from(new Set(colours));

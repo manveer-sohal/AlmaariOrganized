@@ -62,6 +62,12 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
   const loadClothes = useCallback(async () => {
     if (!user) return;
 
+    console.log("clothes", clothes);
+    if (clothes.length > 0) {
+      setHasLoaded(true);
+      return;
+    }
+
     try {
       console.log("attempting to list clothes");
       const auth0Id = user.sub;
@@ -83,7 +89,7 @@ function DisplayClothes({ query, searchTerm = "" }: DisplayClothesProps) {
     } catch (error) {
       console.error("Error fetching clothes:", error);
     }
-  }, [user, API_BASE_URL, setClothes]);
+  }, [user, API_BASE_URL, setClothes, clothes]);
 
   useEffect(() => {
     if (!user || (hasLoaded && !query)) return;
