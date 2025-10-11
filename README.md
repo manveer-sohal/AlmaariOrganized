@@ -120,8 +120,6 @@ _Database relationship diagram showing User–Clothes–Outfits references._
     •	Arrays such as colour and season support flexible metadata tagging.
     •	MongoDB’s dynamic structure allows adding new fields like material or style without schema migration.
 
-⸻
-
 ## Drawbacks and Trade-offs
 
 While the main goal of Almaari Organizer is to provide a fast, user-friendly wardrobe storage system, advanced data analytics is not a current design priority.
@@ -134,8 +132,6 @@ However, if analytical insights such as “most worn color per month” become c
 • MongoDB is not optimal for analytics-heavy workloads.
 • **PostgreSQL** offers stronger performance for relational joins and aggregations.
 • Future enhancement: a hybrid system combining MongoDB (operations) and PostgreSQL (analytics).
-
-⸻
 
 ## Impact and Outcomes
 
