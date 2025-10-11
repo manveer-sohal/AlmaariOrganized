@@ -4,7 +4,7 @@ import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
 import { createClient } from "redis";
 import dotenv from "dotenv";
-import rembg from "rembg-node";
+import sharp from "sharp";
 
 dotenv.config();
 
@@ -80,7 +80,7 @@ if (!redisUrl) {
     };
   }
   if (!redis) {
-    // if connect succeeded, use the real client
+    // if connect succeeded, use the real clilent
     redis = realClient;
   }
 }
@@ -132,6 +132,9 @@ export const removeData = async (request, response) => {
       { auth0Id },
       { _id: 0, clothes: 1 }
     ).populate("clothes");
+
+    const deletedCount1 = await redis.del("userClothes:" + auth0Id);
+    // const deletedCount2 = await redis.del("userOutfits:" + auth0Id);
 
     return response.json({
       message: "Clothing item removed successfully",
@@ -233,8 +236,6 @@ export const getData = async (request, response) => {
 
     // Measure MongoDB query time
     const startTime = Date.now();
-
-    await Clothes.deleteOne({ _id: "68e7ae5ffd4fd1145f627f3a" });
 
     const userData = await User.findOne(
       { auth0Id },
@@ -343,7 +344,7 @@ function addData() {
 const upload = multer({ storage: multer.memoryStorage() });
 
 function toBase64(file) {
-  return `data:image/png;base64,${file.buffer.toString("base64")}`;
+  return `data:image/png;base64,${file.toString("base64")}`;
 }
 
 // Middleware for handling file upload route
@@ -445,6 +446,7 @@ export const createOutfit = async (request, response) => {
       return response.status(404).json({ error: "User not found" });
     }
 
+    console.log("createdOutfit", createdOutfit);
     return response.status(200).json({
       message: "Outfit created successfully",
       outfit: createdOutfit,
@@ -508,7 +510,6 @@ const mapTypeToSlot = (type) => {
   }
   return "body";
 };
-const RUNPOD_API_KEY = "rpa_DMEHNHH9XU3IDOZEPDWC0JYM0P2XRE6KQ5CYDFYN14qvkg";
 
 export const uploadData = async (request, response) => {
   console.log("Uploading");
@@ -531,8 +532,13 @@ export const uploadData = async (request, response) => {
     }
     console.log("yes file");
 
-    const imageSrc = toBase64(file);
+    // const cropped_image = await sharp(file.buffer)
+    //   .resize(500, 120)
+    //   .toBuffer();
 
+    // const imageSrc = toBase64(cropped_image);
+
+    const imageSrc = toBase64(file);
     console.log("next move");
 
     await connectMongoDB();
