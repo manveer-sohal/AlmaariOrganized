@@ -13,6 +13,8 @@
   "type": "module",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.908.0",
+    "@aws-sdk/s3-request-presigner": "^3.908.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "env": "^0.0.2",
@@ -22,7 +24,8 @@
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
     "query-string": "^9.1.1",
-    "redis": "^4.7.1"
+    "redis": "^4.7.1",
+    "sharp": "^0.34.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
