@@ -2,3 +2,4 @@ node_modules
 dist 
 \*.env
 postman.json
+Dockerfile-dev/Dockerfile.dev
