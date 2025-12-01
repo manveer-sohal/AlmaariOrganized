@@ -14,7 +14,7 @@ COPY . .
 
 # Open the port for the express server
 EXPOSE 3001
-# ENV MONGODB_URI=mongodb+srv://marzveer123:PLwnGldtAXvSTQp7@users.y3oq1.mongodb.net/AlmaariOrganized
+# ENV MONGODB_URI=test
 
 
 CMD ["npm","run","dev"]
