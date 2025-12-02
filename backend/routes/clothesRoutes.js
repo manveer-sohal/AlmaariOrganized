@@ -6,6 +6,7 @@ import {
   uploadMiddleware,
   createOutfit,
   getOutfits,
+  deleteOutfit,
 } from "../controllers/clothesController.js";
 
 const router = express.Router();
@@ -16,5 +17,5 @@ router.post("/listClothes", getData);
 router.post("/upload", uploadMiddleware, uploadData);
 router.post("/remove", removeData);
 router.post("/createOutfit", createOutfit);
-
+router.post("/deleteOutfit", deleteOutfit);
 export default router;

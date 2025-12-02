@@ -4,7 +4,6 @@ import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
 import { createClient } from "redis";
 import dotenv from "dotenv";
-import sharp from "sharp";
 
 dotenv.config();
 
@@ -134,6 +133,8 @@ export const removeData = async (request, response) => {
     ).populate("clothes");
 
     const deletedCount1 = await redis.del("userClothes:" + auth0Id);
+    console.log("deletedCount1", deletedCount1);
+
     // const deletedCount2 = await redis.del("userOutfits:" + auth0Id);
 
     return response.json({
@@ -246,6 +247,7 @@ export const getData = async (request, response) => {
     console.log(`Query took ${endTime - startTime} ms`);
 
     if (!userData) {
+      console.log("User Not Found");
       return response.status(404).json({ error: "User Not Found" });
     }
 
@@ -591,5 +593,34 @@ export const uploadData = async (request, response) => {
     return response
       .status(500)
       .json({ error: "Failed to add clothes", details: e.message });
+  }
+};
+
+export const deleteOutfit = async (request, response) => {
+  console.log("Deleting Outfit");
+  try {
+    const { auth0Id, uniqueId } = request.body;
+    await connectMongoDB();
+    const outfit = await Outfits.findOneAndDelete({ uniqueId });
+    if (!outfit) {
+      return response.status(404).json({ error: "Outfit not found" });
+    }
+    const user = await User.findOneAndUpdate(
+      { auth0Id },
+      { $pull: { outfits: outfit._id } },
+      { new: true }
+    );
+    if (!user) {
+      return response.status(404).json({ error: "User not found" });
+    }
+    return response.status(200).json({
+      message: "Outfit deleted successfully",
+      outfit: outfit,
+    });
+  } catch (e) {
+    console.error(e);
+    return response
+      .status(500)
+      .json({ error: "Failed to delete outfit", details: e.message });
   }
 };
