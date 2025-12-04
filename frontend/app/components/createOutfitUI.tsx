@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
-import { useClothesStore } from "../store/useClothesStore";
+import { useQuery } from "@tanstack/react-query";
 
 type Slot = "head" | "body" | "legs" | "feet";
 type ClothingItem = {
@@ -15,13 +15,13 @@ type ClothingItem = {
 };
 
 function CreateOutfitUI() {
-  const { clothes, setClothes } = useClothesStore();
+  // const { clothes, setClothes } = useClothesStore();
+  //
 
   const { user } = useUser();
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-  const [loadingClothes, setLoadingClothes] = useState<boolean>(false);
   const [mascotState, setMascotState] = useState<string>("thinking");
   type Slot = "head" | "body" | "legs" | "feet";
   const [selectedBySlot, setSelectedBySlot] = useState<
@@ -30,41 +30,29 @@ function CreateOutfitUI() {
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([]);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      console.log("clothes len", clothes.length);
-      if (clothes.length > 0) {
-        setLoadingClothes(false);
-        console.log("skipping load");
-        return;
-      }
-      setLoadingClothes(true);
-      const auth0Id = user.sub;
+  const { data: clothes, isLoading: isLoadingClothes, error } = useQuery({
+    queryKey: ["clothes", user?.sub],
+    queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/clothes/listClothes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id }),
+        body: JSON.stringify({ auth0Id: user?.sub }),
       });
-      try {
-        if (!response.ok) {
-          throw new Error("Failed to fetch clothes data.");
-        }
-        const data = await response.json();
-        console.log(data);
-        setClothes(data.Clothes || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoadingClothes(false);
-      }
-    };
-    load();
-  }, [API_BASE_URL, user, clothes, setClothes]);
+      if (!response.ok) throw new Error("Failed to fetch clothes");
+      const data = await response.json();
+      return data.Clothes;
+    },
+    enabled: !!user,
+  });
+
+  const clothesById = useMemo(
+    () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
+    [clothes]
+  );
 
   const toggleSelect = (id: string) => {
-    const item = clothes.find((c) => c._id === id);
+    const item = clothesById.get(id) as ClothingItem;
+
     console.log(item);
     if (!item) return;
     setSelectedBySlot((prev) => {
@@ -173,13 +161,17 @@ function CreateOutfitUI() {
       <div className="grid grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
         <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
           <h3 className="font-medium text-indigo-900 mb-2">Your Clothes</h3>
-          {loadingClothes ? (
+          {isLoadingClothes ? (
             <div className="flex justify-center items-center h-[260px]">
               <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
             </div>
+          ) : error ? (
+            <div className="flex justify-center items-center h-[260px]">
+              <p className="text-indigo-900">Error loading clothes</p>
+            </div>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
-              {clothes.map((item) => {
+              {clothes?.map((item: ClothingItem) => {
                 const isSelected = selectedItems.some((s) =>
                   s.some((c) => c._id === item._id)
                 );
