@@ -1,84 +1,88 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import OutfitOption from "./outfitOption";
-
-type ClothingItem = {
-  uniqueId: string;
-  type: string;
-  colour: string[];
-  imageSrc: string;
-};
-
-type Outfit = {
-  uniqueId: string;
-  name: string;
-  outfit_items: ClothingItem[];
-};
+import { ClothingItem, Outfit } from "../types/clothes";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 function ViewOutfits() {
   const { user } = useUser();
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-  const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      setLoading(true);
-      console.log("Loading Clothes");
+  const { data: outfits = [], isLoading: loading } = useQuery({
+    queryKey: ["outfits", user?.sub],
+    queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/clothes/getOutfits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id: user.sub }),
+        body: JSON.stringify({ auth0Id: user?.sub }),
       });
-      try {
-        if (!response.ok) return;
-        const data = await response.json();
-        const list: Outfit[] = (data?.outfits || data?.Outfits || []).reverse();
-        setOutfits(list);
-        setActiveId(list[0]?.uniqueId || null);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+      if (!response.ok) throw new Error("Failed to fetch outfits");
+      const data = await response.json();
+      console.log(data.outfits);
+      const outfits = [...data.outfits].reverse();
+      if (!Array.isArray(outfits)) {
+        return [];
       }
-    };
-    load();
-  }, [API_BASE_URL, user]);
+      return outfits;
+    },
+
+    enabled: !!user,
+  });
+
+  function useDeleteOutfit() {
+    const client = useQueryClient();
+
+    return useMutation({
+      mutationFn: async (id: string) => {
+        const response = await fetch(
+          `${API_BASE_URL}/api/clothes/deleteOutfit`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ auth0Id: user?.sub, uniqueId: id }),
+          }
+        );
+        if (!response.ok) throw new Error("Failed to delete outfit");
+        return response.json();
+      },
+      // OPTIMISTIC UPDATE
+
+      onMutate: async (id: string) => {
+        await client.cancelQueries({ queryKey: ["outfits", user?.sub] });
+
+        const previousData = client.getQueryData(["outfits", user?.sub]);
+
+        client.setQueryData(["outfits", user?.sub], (old: Outfit[]) => {
+          return old?.filter((outfit: Outfit) => outfit.uniqueId !== id);
+        });
+
+        return { previousData };
+      },
+
+      // On error, rollback
+      onError: (_err, _vars, context) => {
+        if (context?.previousData) {
+          client.setQueryData(["outfits", user?.sub], context.previousData);
+        }
+      },
+
+      // After it's done, invalidate the query
+      onSettled: () => {
+        client.invalidateQueries({ queryKey: ["outfits", user?.sub] });
+      },
+    });
+  }
+
+  const deleteOutfit = useDeleteOutfit();
 
   const activeOutfit = useMemo(
-    () => outfits.find((o) => o.uniqueId === activeId) || null,
+    () => outfits.find((o: Outfit) => o.uniqueId === activeId) || null,
     [outfits, activeId]
   );
-  const deleteOutfit = async (uniqueId: string) => {
-    console.log("Deleting outfit:", uniqueId);
-    if (!user) {
-      console.error("User is not authenticated. Cannot delete outfit.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/clothes/deleteOutfit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth0Id: user.sub, uniqueId: uniqueId }),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to delete outfit");
-      }
-      const data = await response.json();
-      console.log("Outfit deleted successfully:", data);
-      setOutfits(outfits.filter((o) => o.uniqueId !== uniqueId));
-    } catch (error) {
-      console.error("Failed to delete outfit:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="p-4 w-full max-w-2xl mx-auto">
@@ -93,13 +97,13 @@ function ViewOutfits() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              {outfits.map((o) => (
+              {outfits.map((o: Outfit) => (
                 <OutfitOption
                   key={o.uniqueId}
                   outfit={o}
                   activeId={activeId}
                   setActiveId={setActiveId}
-                  onDelete={() => deleteOutfit(o.uniqueId)}
+                  onDelete={() => deleteOutfit.mutate(o.uniqueId)}
                 />
               ))}
             </div>
@@ -111,9 +115,9 @@ function ViewOutfits() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {activeOutfit.outfit_items.map((item) => (
+                  {activeOutfit.outfit_items.map((item: ClothingItem) => (
                     <div
-                      key={item.uniqueId}
+                      key={item._id}
                       className="border border-indigo-200 rounded-lg p-2 flex items-center gap-3"
                     >
                       <Image
@@ -130,7 +134,7 @@ function ViewOutfits() {
                         <div className="flex gap-1 mt-1">
                           {(item.colour || []).slice(0, 6).map((c, idx) => (
                             <span
-                              key={`${item.uniqueId}-c-${idx}`}
+                              key={`${item._id}-c-${idx}`}
                               className="h-3 w-3 rounded border border-indigo-200"
                               style={{ backgroundColor: c }}
                               title={c}
