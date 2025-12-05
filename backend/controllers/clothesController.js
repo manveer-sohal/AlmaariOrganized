@@ -540,7 +540,7 @@ export const uploadData = async (request, response) => {
 
     // const imageSrc = toBase64(cropped_image);
 
-    const imageSrc = toBase64(file);
+    const imageSrc = toBase64(file.buffer);
     console.log("next move");
 
     await connectMongoDB();
