@@ -2,85 +2,26 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
-import { useClothesStore } from "../store/useClothesStore";
-
+import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
+import { ClothingItem, View } from "../types/clothes";
+import { colours_List, type_List } from "../data/constants";
 //prop to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
 //is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
 type addClothesUIProm = {
-  displayAddClothes: (displayAddClothes: boolean) => void;
+  setView: (view: View) => void;
 };
-function AddClothesUI({ displayAddClothes }: addClothesUIProm) {
-  const addClothingItem = useClothesStore((state) => state.addClothingItem);
+
+function AddClothesUI({ setView }: addClothesUIProm) {
   const [loading, setLoading] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const handleBack = () => {
-    displayAddClothes(false);
+    setView("home");
   };
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-
-  //list of colours for clothes
-  const colours_List = [
-    "Black",
-    "White",
-    "Brown",
-    "Beige",
-    "Grey",
-    "Pink",
-    "Navy",
-    "Green",
-    "Red",
-    "Blue",
-    "Purple",
-    "Yellow",
-    "Orange",
-    "Camo",
-  ];
-
-  //type of clothes
-  const type_List = [
-    "Shirt",
-    "Jeans",
-    "Sweater",
-    "Jacket",
-    "T-shirt",
-    "Shorts",
-    "Skirt",
-    "Dress",
-    "Blouse",
-    "Trousers",
-    "Hoodie",
-    "Coat",
-    "Cardigan",
-    "Tank Top",
-    "Pajamas",
-    "Socks",
-    "Scarf",
-    "Hat",
-    "Gloves",
-    "Cargos",
-    "Jeans",
-    "Dress Shirt",
-    "Leggings",
-    "Vest",
-    "Swimsuit",
-    "Raincoat",
-    "Overalls",
-    "Jumper",
-    "Blazer",
-    "Crop Top",
-    "Pants",
-    "Capri Pants",
-    "Suit",
-    "Tie",
-    "Belt",
-    "Tunic",
-    "Poncho",
-    "Robe",
-    "Underwear",
-    "Shoes",
-  ];
 
   const [validColour, setValidColour] = useState<boolean | null>(null);
   const [validFile, setValidFile] = useState<boolean | null>(null);
@@ -262,13 +203,20 @@ function AddClothesUI({ displayAddClothes }: addClothesUIProm) {
 
     if (validateColour() && validateType() && file) {
       const response = await pushDB();
+
       if (response && response.ok) {
         console.log("picture uploaded1");
         const data = await response.json();
-        addClothingItem(data.clothing);
 
-        console.log("picture uploaded2");
-        displayAddClothes(false);
+        queryClient.setQueryData<ClothingItem[]>(
+          ["clothes", user?.sub],
+          (old) => {
+            if (!old) return [data.clothing];
+            return [data.clothing, ...old];
+          }
+        );
+
+        setView("home");
       } else {
         console.error("Failed to upload picture");
       }
