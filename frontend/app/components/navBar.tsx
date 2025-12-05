@@ -3,22 +3,61 @@ import temp from "../Logo.png";
 import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
+import { useClothesStore } from "../store/useClothesStore";
+import { View } from "../types/clothes";
+import { colours_List, type_List } from "../data/constants";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
-  displayAddClothes?: Dispatch<SetStateAction<boolean>>;
+  setView: (view: View) => void;
 };
 
-function NavBar({ onSearchTermChange, displayAddClothes }: NavBarProps) {
+function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
+  const { filters, setFilters } = useClothesStore();
+
+  const changeFilter = (value: string) => {
+    const terms = value
+      .trim()
+      .toLowerCase()
+      .split(" ");
+
+    console.log(terms);
+
+    const colour = [];
+    const type = [];
+    let count = 0;
+
+    for (const term of terms) {
+      if (term.length > 0) {
+        if (colours_List.includes(term[0].toUpperCase() + term.slice(1))) {
+          colour.push(term[0].toUpperCase() + term.slice(1));
+          count++;
+        } else if (type_List.includes(term[0].toUpperCase() + term.slice(1))) {
+          type.push(term[0].toUpperCase() + term.slice(1));
+          count++;
+        }
+      }
+    }
+
+    console.log(terms[count]);
+    setFilters({
+      ...filters,
+      colour,
+      type,
+      search: terms.length == count ? "" : terms[count],
+    });
+    console.log(filters);
+  };
 
   const handleChange = (value: string) => {
     setSearch(value);
     onSearchTermChange?.(value);
+    changeFilter(value);
   };
   const onClickAddClothes = () => {
-    displayAddClothes?.(true);
+    setView("addClothes");
   };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {

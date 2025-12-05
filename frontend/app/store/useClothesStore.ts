@@ -1,25 +1,20 @@
 import { create } from "zustand";
 
-type Slot = "head" | "body" | "legs" | "feet";
-type ClothingItemProps = {
-  slot: Slot;
-  _id: string;
+type Filters = {
   colour: string[];
-  type: string;
-  imageSrc: string;
+  type: string[];
+  search: string;
 };
-
 type ClothesStore = {
-  clothes: ClothingItemProps[];
-  addClothingItem: (item: ClothingItemProps) => void;
-  setClothes: (clothes: ClothingItemProps[]) => void;
+  setFilters: (filters: Filters) => void;
+  filters: Filters;
 };
 
 export const useClothesStore = create<ClothesStore>((set) => ({
-  clothes: [],
-  addClothingItem: (item: ClothingItemProps) =>
-    set((state: { clothes: ClothingItemProps[] }) => ({
-      clothes: [item, ...state.clothes],
-    })),
-  setClothes: (clothes: ClothingItemProps[]) => set({ clothes }),
+  setFilters: (filters: Filters) => set({ filters }),
+  filters: {
+    colour: [],
+    type: [],
+    search: "",
+  },
 }));

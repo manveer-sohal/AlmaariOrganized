@@ -1,19 +1,8 @@
 import React, { useState } from "react";
 import Image from "next/image";
-
-type ClothingItem = {
-  _id: string;
-  type: string;
-  colour: string[];
-  imageSrc: string;
-  slot: Slot;
-};
-
-type Slot = "head" | "body" | "legs" | "feet";
+import { ClothingItem, Slot } from "../types/clothes";
 
 function OutfitPreview() {
-  type Slot = "head" | "body" | "legs" | "feet";
-
   const slots: Slot[] = ["head", "body", "legs", "feet"];
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>

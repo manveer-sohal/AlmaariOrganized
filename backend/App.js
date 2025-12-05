@@ -7,7 +7,6 @@ import weatherRoutes from "./routes/weatherRoutes.js";
 //!!! unistall mongoose from front end !!!!
 const app = express();
 const port = process.env.PORT || 8080;
-app.set("trust proxy", 1); // so req.ip works behind Cloudflare
 app.all(/^\/(__ok|healthz|health)$/, (_req, res) => res.status(200).send("ok"));
 
 app.get("/__ok", (_req, res) => res.status(200).send("ok"));
