@@ -18,7 +18,7 @@ jobs:
       - name: Setup Google Cloud
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ vars.GCP_PROJECT_ID }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           export_default_credentials: true
       - name: Generate timestamp tag
@@ -28,14 +28,14 @@ jobs:
       - name: Build and Push Image
         run: |
           gcloud builds submit \
-          --tag "${{ vars.ARTIFACT_URL }}:${{ steps.vars.outputs.TAG }}"
+          --tag "${{ secrets.ARTIFACT_URL }}:${{ steps.vars.outputs.TAG }}"
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${{ vars.CLOUDRUN_SERVICE_NAME }}" \
-          --image "${{ vars.ARTIFACT_URL }}:${{ steps.vars.outputs.TAG }}" \
-          --region "${{ vars.GCP_REGION }}" \
-          --project "${{ vars.GCP_PROJECT_ID }}" \
+          --image "${{ secrets.ARTIFACT_URL }}:${{ steps.vars.outputs.TAG }}" \
+          --region "${{ secrets.GCP_REGION }}" \
+          --project "${{ secrets.GCP_PROJECT_ID }}" \
           --allow-unauthenticated
 
       - name: Output version deployed
