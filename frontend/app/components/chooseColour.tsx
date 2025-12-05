@@ -1,26 +1,9 @@
 import React, { Dispatch, useState } from "react";
-
+import { colours_List } from "../data/constants";
 type ChooseColourProps = {
   colour: Dispatch<React.SetStateAction<string[] | null | undefined>>;
 };
 function ChooseColour({ colour }: ChooseColourProps) {
-  const colours_List = [
-    "Black",
-    "White",
-    "Brown",
-    "Beige",
-    "Grey",
-    "Pink",
-    "Navy",
-    "Green",
-    "Red",
-    "Blue",
-    "Purple",
-    "Yellow",
-    "Orange",
-    "Camo",
-  ];
-
   const [validColour, setValidColour] = useState<boolean | null>(null);
 
   const [usersColours, setUsersColours] = useState<string[]>([]);

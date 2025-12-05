@@ -1,15 +1,6 @@
 import { useState } from "react";
-type ClothingItem = {
-  uniqueId: string;
-  type: string;
-  colour: string[];
-  imageSrc: string;
-};
-type Outfit = {
-  uniqueId: string;
-  name: string;
-  outfit_items: ClothingItem[];
-};
+import { Outfit } from "../types/clothes";
+
 export default function OutfitOption({
   outfit,
   activeId,

@@ -1,38 +1,26 @@
 import ChooseColour from "./chooseColour";
 import ValidateType from "./validateType";
-import React, { Dispatch, SetStateAction, useState } from "react";
+import React, { useState } from "react";
 import WeatherCheck from "./weatherCheck";
+import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
-
+type View = "home" | "outfits" | "createOutfit" | "addClothes";
 type SideBarProp = {
-  onQuery: Dispatch<
-    SetStateAction<
-      | {
-          colour: string[] | null | undefined;
-          type: string[] | null | undefined;
-        }
-      | undefined
-    >
-  >;
-  displayOutfits: Dispatch<SetStateAction<boolean>>;
-  displayCreateOutfits: Dispatch<SetStateAction<boolean>>;
-  displayHome: Dispatch<SetStateAction<boolean>>;
+  view: View;
+  setView: (view: View) => void;
 };
-function SideBar({
-  onQuery,
-  displayOutfits,
-  displayCreateOutfits,
-  displayHome,
-}: SideBarProp) {
+function SideBar({ view, setView }: SideBarProp) {
   const [active, setActive] = useState<boolean>(false);
   const [displayFilterType, setDisplayFilterType] = useState<string>("none");
   const [colour, setColour] = useState<string[] | null | undefined>([]);
   const [type, setType] = useState<string[] | null | undefined>([]);
-  const [displayOutfitsActive, setDisplayOutfitsActive] =
-    useState<boolean>(false);
-  const [displayCreateOutfitsActive, setDisplayCreateOutfitsActive] =
-    useState<boolean>(false);
-  const [displayHomeActive, setDisplayHomeActive] = useState<boolean>(true);
+  const { filters, setFilters } = useClothesStore();
+
+  const changeFilter = (colour: string[], type: string[]) => {
+    setFilters({ ...filters, colour, type });
+    console.log(filters);
+  };
+
   const onClickFilter = () => {
     if (displayFilterType == "none") {
       setDisplayFilterType("block");
@@ -45,52 +33,31 @@ function SideBar({
   };
 
   const onClickOutfits = () => {
-    displayOutfits(true);
-    setDisplayOutfitsActive(true);
-
-    displayCreateOutfits(false);
-    setDisplayCreateOutfitsActive(false);
-
-    displayHome(false);
-    setDisplayHomeActive(false);
+    setView("outfits");
   };
 
   const onClickCreateOutfits = () => {
-    displayCreateOutfits(true);
-    setDisplayCreateOutfitsActive(true);
-
-    displayOutfits(false);
-    setDisplayOutfitsActive(false);
-
-    displayHome(false);
-    setDisplayHomeActive(false);
+    setView("createOutfit");
   };
   const onClickHome = () => {
-    displayHome(true);
-    setDisplayHomeActive(true);
-
-    displayCreateOutfits(false);
-    setDisplayCreateOutfitsActive(false);
-
-    displayOutfits(false);
-    setDisplayOutfitsActive(false);
+    setView("home");
   };
 
   const handleSubmit = () => {
     console.log("apply");
 
-    onQuery({ colour, type });
+    changeFilter(colour ?? [], type ?? []);
 
     onClickFilter();
   };
   return (
     <>
-      <ul className=" border-indigo-300 border-l-4 p-3 h-screen text-center bg-indigo-400/90 backdrop-blur-sm py-[2.1vh] flex flex-col min-w-[180px] shadow-md">
+      <ul className=" border-indigo-300 border-l-4 p-3 h-[92.3vh] text-center bg-indigo-400/90 backdrop-blur-sm py-[2.1vh] flex flex-col min-w-[180px] shadow-md">
         <li>
           <button
             onClick={() => onClickHome()}
             className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
-              displayHomeActive
+              view === "home"
                 ? "bg-indigo-500 text-white"
                 : "bg-indigo-100/70 text-indigo-900"
             }`}
@@ -199,7 +166,7 @@ function SideBar({
         <button
           onClick={() => onClickOutfits()}
           className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
-            displayOutfitsActive
+            view === "outfits"
               ? "bg-indigo-500 text-white"
               : "bg-indigo-100/70 text-indigo-900"
           }`}
@@ -231,7 +198,7 @@ function SideBar({
         <button
           onClick={() => onClickCreateOutfits()}
           className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
-            displayCreateOutfitsActive
+            view === "createOutfit"
               ? "bg-indigo-500 text-white"
               : "bg-indigo-100/70 text-indigo-900"
           }`}

@@ -4,32 +4,21 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
 import { useQuery } from "@tanstack/react-query";
-
-type Slot = "head" | "body" | "legs" | "feet";
-type ClothingItem = {
-  _id: string;
-  type: string;
-  colour: string[];
-  imageSrc: string;
-  slot: Slot;
-};
+import { ClothingItem, Slot } from "../types/clothes";
 
 function CreateOutfitUI() {
-  // const { clothes, setClothes } = useClothesStore();
-  //
-
   const { user } = useUser();
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
   const [mascotState, setMascotState] = useState<string>("thinking");
-  type Slot = "head" | "body" | "legs" | "feet";
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>
   >({ head: null, body: null, legs: null, feet: null });
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([]);
+
   const { data: clothes, isLoading: isLoadingClothes, error } = useQuery({
     queryKey: ["clothes", user?.sub],
     queryFn: async () => {
@@ -84,6 +73,7 @@ function CreateOutfitUI() {
           _id: i.map((c) => c._id),
         })),
       };
+
       const response = await fetch(`${API_BASE_URL}/api/clothes/createOutfit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
