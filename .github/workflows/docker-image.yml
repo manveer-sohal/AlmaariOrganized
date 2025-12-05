@@ -30,8 +30,9 @@ jobs:
         run: echo "Image:${{ secrets.ARTIFACT_URL }}:${{ steps.image.outputs.TAG }}"
 
       - name: Build and Push Image
+        working-directory: ./backend
         run: |
-          gcloud builds submit \
+          gcloud builds submit . \
             --tag "${{ secrets.ARTIFACT_URL }}:${{ steps.image.outputs.TAG }}"
 
       - name: Deploy to Cloud Run
