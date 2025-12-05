@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import Logo from "./Logo.png";
+import Logo from "../Logo.png";
 import { motion } from "framer-motion";
-import AlmaariMascot from "./components/almaariMascot";
-import Login from "./components/login";
-import Signup from "./components/signup";
+import AlmaariMascot from "../components/almaariMascot";
+import Login from "../components/login";
+import Signup from "../components/signup";
 export default function Homepage() {
   return (
     <div className=" min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
