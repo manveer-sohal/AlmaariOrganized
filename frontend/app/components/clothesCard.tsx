@@ -10,6 +10,7 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
   // const [loading, setLoading] = useState<boolean>(false);
   const { user } = useUser(); // Auth0 user information
   const [loaded, setLoaded] = useState(false);
+  const [isMobile] = useState(true);
 
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
@@ -61,7 +62,11 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.2, rotate: -10 }}
       transition={{ duration: 0.1 }}
-      className="border border-indigo-300 m-2 p-2 bg-slate-100 rounded-md w-[200px] h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl"
+      className={`border border-indigo-300 m-2 p-2 bg-slate-100 rounded-md  w-[${
+        isMobile ? "80px" : "200px"
+      }] h-[${
+        isMobile ? "80px" : "200px"
+      }] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl`}
     >
       {" "}
       <div onClick={() => setClick(!click)} className="h-full w-full">

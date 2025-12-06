@@ -7,6 +7,8 @@ import DisplayClothes from "../components/displayClothes";
 import CreateOutfitUI from "../components/createOutfitUI";
 import ViewOutfits from "../components/viewOutfits";
 import AddClothesUI from "../components/addClothesUI";
+import MobileNavBar from "../components/mobileNavbar";
+
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -29,6 +31,7 @@ export default function Dashboard() {
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [view, setView] = useState<View>("home");
+  const [isMobile] = useState(false);
 
   useEffect(() => {
     if (!user || hasLoaded) return;
@@ -43,11 +46,17 @@ export default function Dashboard() {
 
   return (
     <main>
-      <div className="nav-container">
-        <NavBar setView={setView}></NavBar>
-        <div className="sidebar-container">
-          <SideBar view={view} setView={setView}></SideBar>
-        </div>
+      <div className="z-3 bg-blue-500 sticky top-0 box-shadow-md">
+        {isMobile ? (
+          <NavBar setView={setView}></NavBar>
+        ) : (
+          <MobileNavBar setView={setView}></MobileNavBar>
+        )}
+        {isMobile && (
+          <div className="sidebar-container">
+            <SideBar view={view} setView={setView}></SideBar>
+          </div>
+        )}
       </div>
       {isLoading ? (
         <div className="flex justify-center items-center h-screen">
@@ -62,7 +71,6 @@ export default function Dashboard() {
           )}
         </>
       )}
-
       {user && (
         <div>
           {view === "addClothes" && (
