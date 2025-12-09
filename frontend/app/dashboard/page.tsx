@@ -8,6 +8,9 @@ import CreateOutfitUI from "../components/createOutfitUI";
 import ViewOutfits from "../components/viewOutfits";
 import AddClothesUI from "../components/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
+import { useClothesStore } from "../store/useClothesStore";
+import MobileSideBar from "../components/mobileSidebar";
+import { isMobile } from "react-device-detect";
 
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
@@ -31,28 +34,37 @@ export default function Dashboard() {
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [view, setView] = useState<View>("home");
-  const [isMobile] = useState(false);
+  const { setIsMobile } = useClothesStore();
+  const { menuOpen } = useClothesStore();
 
   useEffect(() => {
+    setIsMobile(isMobile);
     if (!user || hasLoaded) return;
     const load = async () => {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
 
       setHasLoaded(true);
     };
+    console.log(menuOpen);
 
     load();
-  }, [user, hasLoaded]);
+  }, [user, hasLoaded, menuOpen, setIsMobile]);
+
+  const onClickAddClothes = () => {
+    setView("addClothes");
+  };
 
   return (
     <main>
-      <div className="z-3 bg-blue-500 sticky top-0 box-shadow-md">
+      <div className="z-20 bg-blue-500 sticky top-0 box-shadow-md">
         {isMobile ? (
-          <NavBar setView={setView}></NavBar>
+          <MobileNavBar></MobileNavBar>
         ) : (
-          <MobileNavBar setView={setView}></MobileNavBar>
+          <NavBar setView={setView}></NavBar>
         )}
-        {isMobile && (
+        {isMobile ? (
+          <MobileSideBar view={view} setView={setView}></MobileSideBar>
+        ) : (
           <div className="sidebar-container">
             <SideBar view={view} setView={setView}></SideBar>
           </div>
@@ -83,6 +95,31 @@ export default function Dashboard() {
           {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
           {view === "outfits" && <ViewOutfits></ViewOutfits>}
           {view === "home" && <DisplayClothes></DisplayClothes>}
+          {isMobile && (
+            <div className="absolute bottom-0 right-0">
+              <button
+                onClick={onClickAddClothes}
+                title="Add Clothes"
+                className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 5v14M5 12h14"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span>Add Clothes</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </main>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import ClothesCard from "./clothesCard";
 import { useClothesStore } from "../store/useClothesStore";
@@ -11,7 +11,8 @@ function DisplayClothes() {
   console.log("DisplayClothes");
   const { filters } = useClothesStore();
   const { colour, type, search } = filters;
-  const [isMobile] = useState(true);
+  const { isMobile } = useClothesStore();
+
   const { user, isLoading: isLoadingUser } = useUser();
   //change this
   const API_BASE_URL =
