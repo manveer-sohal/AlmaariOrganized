@@ -1,5 +1,4 @@
 import { create } from "zustand";
-
 type Filters = {
   colour: string[];
   type: string[];
@@ -8,6 +7,10 @@ type Filters = {
 type ClothesStore = {
   setFilters: (filters: Filters) => void;
   filters: Filters;
+  menuOpen: boolean;
+  setMenuOpen: (menuOpen: boolean) => void;
+  isMobile: boolean;
+  setIsMobile: (isMobile: boolean) => void;
 };
 
 export const useClothesStore = create<ClothesStore>((set) => ({
@@ -17,4 +20,8 @@ export const useClothesStore = create<ClothesStore>((set) => ({
     type: [],
     search: "",
   },
+  menuOpen: false,
+  setMenuOpen: (menuOpen: boolean) => set({ menuOpen }),
+  isMobile: true,
+  setIsMobile: (isMobile: boolean) => set({ isMobile }),
 }));
