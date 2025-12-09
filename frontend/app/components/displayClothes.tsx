@@ -11,6 +11,7 @@ function DisplayClothes() {
   console.log("DisplayClothes");
   const { filters } = useClothesStore();
   const { colour, type, search } = filters;
+  const { isMobile } = useClothesStore();
 
   const { user, isLoading: isLoadingUser } = useUser();
   //change this
@@ -60,7 +61,16 @@ function DisplayClothes() {
   }
 
   return (
-    <div className="rounded-[15px] w-[83%] h-full grid grid-cols-[repeat(auto-fill,_200px)] justify-center p-2 text-center order-first">
+    <div
+      className={`justify-self-center rounded-[15px] ${
+        isMobile ? "w-full" : "w-[83%]"
+      } h-full grid justify-center p-2 text-center order-first`}
+      style={{
+        gridTemplateColumns: `repeat(auto-fill, ${
+          isMobile ? "80px" : "200px"
+        })`,
+      }}
+    >
       {isLoadingClothes ? (
         // <div className="flex justify-center items-center w-full h-[60vh]">
         //   <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>

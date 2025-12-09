@@ -1,7 +1,6 @@
 import ChooseColour from "./chooseColour";
 import ValidateType from "./validateType";
 import React, { useState } from "react";
-import WeatherCheck from "./weatherCheck";
 import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 type View = "home" | "outfits" | "createOutfit" | "addClothes";
@@ -9,7 +8,7 @@ type SideBarProp = {
   view: View;
   setView: (view: View) => void;
 };
-function SideBar({ view, setView }: SideBarProp) {
+function MobileSideBar({ view, setView }: SideBarProp) {
   const [active, setActive] = useState<boolean>(false);
   const [displayFilterType, setDisplayFilterType] = useState<string>("none");
   const [colour, setColour] = useState<string[] | null | undefined>([]);
@@ -51,12 +50,12 @@ function SideBar({ view, setView }: SideBarProp) {
     onClickFilter();
   };
   return (
-    <>
-      <ul className=" border-indigo-300 border-l-4 p-3 h-[92.3vh] text-center bg-indigo-400/90 backdrop-blur-sm py-[2.1vh] flex flex-col min-w-[150px] shadow-md ">
+    <div className="w-full">
+      <ul className="flex overflow-x-auto whitespace-nowrap scrollbar-hide border-indigo-300 border-l-4 p-3 text-center bg-indigo-400/90 backdrop-blur-sm shadow-md ">
         <li>
           <button
             onClick={() => onClickHome()}
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
+            className={` inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
               view === "home"
                 ? "bg-indigo-500 text-white"
                 : "bg-indigo-100/70 text-indigo-900"
@@ -87,7 +86,7 @@ function SideBar({ view, setView }: SideBarProp) {
             <span>Home</span>
           </button>
           <button
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2.5 rounded-xl m-1 cursor-pointer border ${
+            className={` inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2.5 rounded-xl m-1 cursor-pointer border ${
               active === true
                 ? "bg-white text-indigo-900 border-indigo-300"
                 : "bg-indigo-100/70 text-indigo-900 border-indigo-200"
@@ -145,83 +144,83 @@ function SideBar({ view, setView }: SideBarProp) {
               <span>Apply</span>
             </button>
           </div>
+
+          <button className="w-1/3 inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 4h4v4H4zM16 4h4v4h-4zM10 10h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4z"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+            <span>Random</span>
+          </button>
+          <button
+            onClick={() => onClickOutfits()}
+            className={`inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
+              view === "outfits"
+                ? "bg-indigo-500 text-white"
+                : "bg-indigo-100/70 text-indigo-900"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 12c2.5-4.5 7-7 10-7s7.5 2.5 10 7c-2.5 4.5-7 7-10 7S4.5 16.5 2 12z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="3"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+            <span>View Outfits</span>
+          </button>
+          <button
+            onClick={() => onClickCreateOutfits()}
+            className={`inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
+              view === "createOutfit"
+                ? "bg-indigo-500 text-white"
+                : "bg-indigo-100/70 text-indigo-900"
+            }`}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Create Outfit</span>
+          </button>
         </li>
-        <button className="w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M4 4h4v4H4zM16 4h4v4h-4zM10 10h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4z"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-          </svg>
-          <span>Random</span>
-        </button>
-        <WeatherCheck></WeatherCheck>
-        <button
-          onClick={() => onClickOutfits()}
-          className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
-            view === "outfits"
-              ? "bg-indigo-500 text-white"
-              : "bg-indigo-100/70 text-indigo-900"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M2 12c2.5-4.5 7-7 10-7s7.5 2.5 10 7c-2.5 4.5-7 7-10 7S4.5 16.5 2 12z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle
-              cx="12"
-              cy="12"
-              r="3"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-          </svg>
-          <span>View Outfits</span>
-        </button>
-        <button
-          onClick={() => onClickCreateOutfits()}
-          className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
-            view === "createOutfit"
-              ? "bg-indigo-500 text-white"
-              : "bg-indigo-100/70 text-indigo-900"
-          }`}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 5v14M5 12h14"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span>Create Outfit</span>
-        </button>
       </ul>
-    </>
+    </div>
   );
 }
 
-export default SideBar;
+export default MobileSideBar;
