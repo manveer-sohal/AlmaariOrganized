@@ -3,20 +3,17 @@ import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useClothesStore } from "../store/useClothesStore";
-import { View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
 import LoginButton from "./loginButton";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
-  setView: (view: View) => void;
 };
 
-function MobileNavBar({ onSearchTermChange, setView }: NavBarProps) {
+function MobileNavBar({ onSearchTermChange }: NavBarProps) {
   const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
   const { filters, setFilters } = useClothesStore();
-
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
@@ -56,9 +53,6 @@ function MobileNavBar({ onSearchTermChange, setView }: NavBarProps) {
     onSearchTermChange?.(value);
     changeFilter(value);
   };
-  const onClickAddClothes = () => {
-    setView("addClothes");
-  };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -69,10 +63,11 @@ function MobileNavBar({ onSearchTermChange, setView }: NavBarProps) {
     <>
       <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400/90 h-full  p-2 sticky top-0 overflow-hidden">
         <div className="flex items-center justify-between gap-2">
-          <div> menu</div>
-          <li id="icon" className="shrink-0">
-            <Image src={temp.src} width={50} height={30} alt="logo"></Image>
-          </li>
+          <div className="flex items-center justify-end gap-2 h-full">
+            <li id="icon" className="shrink-0">
+              <Image src={temp.src} width={50} height={30} alt="logo"></Image>
+            </li>
+          </div>
           <div className=" flex max-w-2xl">
             <li className="shrink-0">
               {isLoading ? (
@@ -143,34 +138,6 @@ function MobileNavBar({ onSearchTermChange, setView }: NavBarProps) {
               )}
             </div>
           </form>
-        </div>
-        <div>
-          <ul className="flex items-center justify-end gap-2 h-full">
-            <li className="flex-1 max-w-2xl mx-2"></li>
-            <li className="shrink-0">
-              <button
-                onClick={onClickAddClothes}
-                title="Add Clothes"
-                className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M12 5v14M5 12h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span>Add Clothes</span>
-              </button>
-            </li>
-          </ul>
         </div>
       </nav>
     </>
