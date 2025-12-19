@@ -4,7 +4,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "lint": "^0.8.19",
-    "mongoose": "^8.9.2"
+    "mongoose": "^8.9.2",
+    "next": "^16.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.1",
