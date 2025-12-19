@@ -16,7 +16,7 @@
     "framer-motion": "^12.23.22",
     "fs": "^0.0.1-security",
     "mongoose": "^8.9.1",
-    "next": "15.1.0",
+    "next": "^16.1.0",
     "react": "^19.0.0",
     "react-device-detect": "^2.2.3",
     "react-dom": "^19.0.0",
