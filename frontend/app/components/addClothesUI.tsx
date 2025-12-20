@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
@@ -22,6 +22,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   };
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [validColour, setValidColour] = useState<boolean | null>(null);
   const [validFile, setValidFile] = useState<boolean | null>(null);
@@ -277,7 +279,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           <label className="block text-sm font-medium text-indigo-900 mb-1">
             Preview
           </label>
-          <div className="bg-white border border-indigo-200 rounded-lg w-full aspect-[6/4] flex items-center justify-center overflow-hidden">
+          <div
+            className="bg-white border border-indigo-200 rounded-lg w-full aspect-[6/4] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition"
+            onClick={() => fileInputRef.current?.click()}
+          >
             {preview ? (
               <Image
                 src={preview}
@@ -288,7 +293,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               />
             ) : (
               <div className="text-indigo-900/60 text-sm">
-                No image selected
+                Click to add image
               </div>
             )}
           </div>
@@ -390,18 +395,17 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         </datalist>
 
         <input
+          ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png, image/jpg"
+          accept="image/jpeg,image/png,image/jpg"
           id="input-file"
           style={{ display: "none" }}
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               setFile(e.target.files[0]);
-            } else {
-              console.log("null");
             }
           }}
-        ></input>
+        />
         <label
           htmlFor="input-file"
           id="input-file-label"
