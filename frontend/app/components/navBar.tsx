@@ -6,7 +6,6 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import { useClothesStore } from "../store/useClothesStore";
 import { View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
-
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
   setView: (view: View) => void;
@@ -16,7 +15,6 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
   const { filters, setFilters } = useClothesStore();
-
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
@@ -131,6 +129,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
           </li>
           <li className="shrink-0">
             <button
+              id="add-clothes-btn"
               onClick={onClickAddClothes}
               title="Add Clothes"
               className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"

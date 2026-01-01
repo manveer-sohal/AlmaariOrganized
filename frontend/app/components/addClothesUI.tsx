@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
 import { ClothingItem, View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
+import { goToNextTourStep } from "./OnBoardingTour";
+import { useOnboardingStore } from "../store/useOnboardingStore";
 //prop to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
 //is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
@@ -14,12 +16,23 @@ type addClothesUIProm = {
 
 function AddClothesUI({ setView }: addClothesUIProm) {
   const [loading, setLoading] = useState(false);
-
   const queryClient = useQueryClient();
-
+  const { setHasCompletedOnboarding } = useOnboardingStore();
   const handleBack = () => {
     setView("home");
   };
+  const nextTourStep = useMemo(() => {
+    return () => {
+      goToNextTourStep();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      nextTourStep();
+    };
+  }, [nextTourStep]);
+
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -222,6 +235,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       } else {
         console.error("Failed to upload picture");
       }
+      setHasCompletedOnboarding(true);
     } else {
       event.preventDefault();
       if (file == null) {
@@ -254,6 +268,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       setValidFile(true);
       const objectUrl = URL.createObjectURL(file);
+      console.log(objectUrl);
       setPreview(objectUrl);
     }
   }, [file]);
@@ -266,22 +281,34 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   // }
   return (
     <div className="backdrop-blur-sm min-h-screen w-full h-120vh sticky top-0 p-4">
-      <div className="max-w-2xl mx-auto mb-3 flex items-center justify-between">
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
-        >
-          ← Back
-        </button>
-      </div>
-      <form className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4">
+      <form
+        id="add-clothes-form"
+        className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4"
+      >
+        <div className="w-full mx-auto mb-3 flex justify-start">
+          <button
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+          >
+            ← Back
+          </button>
+        </div>
         <div className="w-full">
-          <label className="block text-sm font-medium text-indigo-900 mb-1">
-            Preview
-          </label>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+            }}
+            className="hidden"
+          />
           <div
+            id="add-picture-btn"
             className="bg-white border border-indigo-200 rounded-lg w-full aspect-[6/4] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
           >
             {preview ? (
               <Image
@@ -305,12 +332,12 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           Type
         </label>
         <input
+          id="add-type-btn"
           placeholder="Enter clothes type ie. pants"
           autoComplete="on"
           required
           className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           type="text"
-          id="input-tag"
           list="types"
           value={inputTypeValue}
           onBlur={() => onBlur("type")}
@@ -347,7 +374,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             placeholder="Enter multiple colours ie. red"
             enterKeyHint="next"
             type="text"
-            id="input-colour"
+            id="add-colour-btn"
             list="colours"
             value={inputColourValue}
             onBlur={() => onBlur("colour")}
@@ -394,16 +421,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           ))}{" "}
         </datalist>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/jpg"
-          id="input-file"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              setFile(e.target.files[0]);
-            }
+        {/* <input
+         
+         
           }}
         />
         <label
@@ -412,11 +432,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
         >
           Add Picture
-        </label>
+        </label> */}
         {validFile == false && (
           <span className="text-sm text-red-600">Enter a Picture</span>
         )}
-        <div className="mt-2 flex items-center gap-2">
+        <div id="submit-btn" className="mt-2 flex items-center gap-2">
           {loading ? (
             <div className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
               Loading...

@@ -5,9 +5,12 @@ import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
 import { useQuery } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../types/clothes";
+import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
+import { useOnboardingStore } from "../store/useOnboardingStore";
 
 function CreateOutfitUI() {
   const { user } = useUser();
+  const { setHasCompletedOnboardingOutfit } = useOnboardingStore();
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -33,6 +36,18 @@ function CreateOutfitUI() {
     },
     enabled: !!user,
   });
+
+  const nextTourStep = useMemo(() => {
+    return () => {
+      goToNextTourStepOutfit();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      nextTourStep();
+    };
+  }, [nextTourStep]);
 
   const clothesById = useMemo(
     () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
@@ -82,6 +97,7 @@ function CreateOutfitUI() {
       if (!response.ok) throw new Error("Failed to save outfit");
       setSelectedBySlot({ head: null, body: null, legs: null, feet: null });
       setName("");
+      setHasCompletedOnboardingOutfit(true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -132,6 +148,7 @@ function CreateOutfitUI() {
       <div className="flex items-center justify-between mb-4 mr-40">
         <div className="flex justify-end w-full gap-2">
           <input
+            id="create-outfit-form-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -149,7 +166,10 @@ function CreateOutfitUI() {
       </div>
 
       <div className="grid grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
-        <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
+        <div
+          id="create-outfit-form"
+          className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md"
+        >
           <h3 className="font-medium text-indigo-900 mb-2">Your Clothes</h3>
           {isLoadingClothes ? (
             <div className="flex justify-center items-center h-[260px]">
@@ -198,7 +218,10 @@ function CreateOutfitUI() {
           )}
         </div>
 
-        <div className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
+        <div
+          id="outfit-preview"
+          className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md"
+        >
           <h3 className="font-medium text-indigo-900 mb-2">Outfit Preview</h3>
           <div className="flex flex-col gap-3">
             {Object.keys(selectedBySlot).map((slot) => {
@@ -364,7 +387,10 @@ function CreateOutfitUI() {
             })}
           </div>
         </div>
-        <div className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md">
+        <div
+          id="ai-stylist"
+          className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md"
+        >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="leading-tight">
