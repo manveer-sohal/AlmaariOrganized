@@ -154,10 +154,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     if (event.key === "Enter") {
       event.preventDefault();
 
-      if (event.currentTarget.id === "input-colour") {
+      if (event.currentTarget.id === "add-colour-btn") {
         setUserColour();
       }
-      if (event.currentTarget.id === "input-tag") {
+      if (event.currentTarget.id === "add-type-btn") {
         setUserType();
       }
     }
