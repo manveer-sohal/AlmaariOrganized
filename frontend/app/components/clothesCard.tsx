@@ -65,9 +65,9 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
       transition={{ duration: 0.1 }}
       className={`border border-indigo-300 p-2 bg-slate-100 rounded-md  w-[${
         isMobile ? "80px" : "200px"
-      }] h-[${
-        isMobile ? "80px" : "200px"
-      }] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl`}
+      }] ${
+        isMobile ? "h-[80px]" : "h-[200px]"
+      } shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl`}
     >
       {" "}
       <div onClick={() => setClick(!click)} className="h-full w-full">

@@ -11,7 +11,9 @@ import MobileNavBar from "../components/mobileNavbar";
 import { useClothesStore } from "../store/useClothesStore";
 import MobileSideBar from "../components/mobileSidebar";
 import { isMobile } from "react-device-detect";
-
+// import { startOnboardingTour } from "../components/OnBoardingTour";
+import CheckList from "../components/CheckList";
+// import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
 those shoudlnt really have any functioanliy untill they do log in
@@ -35,7 +37,7 @@ export default function Dashboard() {
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [view, setView] = useState<View>("home");
   const { setIsMobile } = useClothesStore();
-  const { menuOpen } = useClothesStore();
+  // const { menuOpen } = useClothesStore();
 
   useEffect(() => {
     setIsMobile(isMobile);
@@ -43,12 +45,24 @@ export default function Dashboard() {
     const load = async () => {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
 
+      // const response = await fetch(
+      //   `${API_BASE_URL}/api/users/hasCompletedOnboarding`,
+      //   {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({ auth0Id: user?.sub }),
+      //   }
+      // );
+      // const data = await response.json();
+
+      // if (!data.hasCompletedOnboardingForClothes) {
+      //   startOnboardingTour();
+      // }
       setHasLoaded(true);
     };
-    console.log(menuOpen);
 
     load();
-  }, [user, hasLoaded, menuOpen, setIsMobile]);
+  }, [user, hasLoaded, setIsMobile]);
 
   const onClickAddClothes = () => {
     setView("addClothes");
@@ -86,7 +100,7 @@ export default function Dashboard() {
       {user && (
         <div>
           {view === "addClothes" && (
-            <div className="absolute top-0 left-0 w-full z-10">
+            <div className="absolute top-20 left-0 w-full z-10">
               <AddClothesUI setView={setView}></AddClothesUI>
             </div>
           )}
@@ -98,6 +112,7 @@ export default function Dashboard() {
           {isMobile && (
             <div className="absolute bottom-0 right-0">
               <button
+                id="add-clothes-btn"
                 onClick={onClickAddClothes}
                 title="Add Clothes"
                 className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
@@ -120,6 +135,9 @@ export default function Dashboard() {
               </button>
             </div>
           )}
+          <div>
+            <CheckList />
+          </div>
         </div>
       )}
     </main>

@@ -196,6 +196,7 @@ function SideBar({ view, setView }: SideBarProp) {
           <span>View Outfits</span>
         </button>
         <button
+          id="create-outfit-btn"
           onClick={() => onClickCreateOutfits()}
           className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
             view === "createOutfit"

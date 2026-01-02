@@ -34,6 +34,8 @@ const usersSchema = new mongoose.Schema({
   email: { type: String, required: true },
   clothes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Clothes" }],
   outfits: [{ type: mongoose.Schema.Types.ObjectId, ref: "Outfits" }],
+  hasCompletedOnboardingForClothes: { type: Boolean, default: false },
+  hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
 });
 
 const User = mongoose.models.User || mongoose.model("User", usersSchema);
