@@ -393,40 +393,16 @@ export const createOutfit = async (request, response) => {
     })();
 
     // Extract clothing ObjectIds from provided items (supports _id or uniqueId)
-    const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
     const stringOrObjectItems = Array.isArray(parsedItems) ? parsedItems : [];
     const candidateObjectIds = [];
-    const candidateUniqueIds = [];
     for (const it of stringOrObjectItems) {
-      if (typeof it === "string") {
-        if (objectIdLike.test(it)) candidateObjectIds.push(it);
-        else candidateUniqueIds.push(it);
-      } else if (it && typeof it === "object") {
-        if (it._id && objectIdLike.test(String(it._id))) {
-          candidateObjectIds.push(String(it._id));
-        } else if (it.uniqueId) {
-          candidateUniqueIds.push(String(it.uniqueId));
+      if (it) {
+        for (const item of it._id) {
+          candidateObjectIds.push(item);
         }
       }
     }
-
     await connectMongoDB();
-
-    let uniqueIdToObjectId = {};
-    if (candidateUniqueIds.length) {
-      const clothesFound = await Clothes.find(
-        { uniqueId: { $in: candidateUniqueIds } },
-        { _id: 1, uniqueId: 1 }
-      );
-      for (const c of clothesFound) {
-        uniqueIdToObjectId[c.uniqueId] = c._id.toString();
-      }
-    }
-
-    const outfitClothesIds = [
-      ...candidateObjectIds,
-      ...candidateUniqueIds.map((u) => uniqueIdToObjectId[u]).filter(Boolean),
-    ];
 
     const createdOutfit = await Outfits.create({
       uniqueId: new mongoose.Types.ObjectId().toString(),
@@ -435,15 +411,17 @@ export const createOutfit = async (request, response) => {
       colour: parsedColour,
       season: parsedSeason,
       waterproof: waterproof === "true" || Boolean(waterproof),
-      outfit_items: outfitClothesIds,
+      outfit_items: candidateObjectIds,
     });
 
     const user = await User.findOneAndUpdate(
       { auth0Id },
-      { $push: { outfits: createdOutfit._id } },
+      {
+        $push: { outfits: createdOutfit._id },
+        $set: { hasCompletedOnboardingForOutfits: true },
+      },
       { new: true }
     );
-
     if (!user) {
       return response.status(404).json({ error: "User not found" });
     }
@@ -576,10 +554,14 @@ export const uploadData = async (request, response) => {
 
     const user = await User.findOneAndUpdate(
       { auth0Id },
-      { $push: { clothes: clothingDoc._id } },
+      {
+        $push: { clothes: clothingDoc._id },
+        $set: { hasCompletedOnboardingForClothes: true },
+      },
       { new: true }
     );
 
+    console.log("user upload clothes", user);
     if (!user) {
       return response.status(404).json({ error: "User not found" });
     }
