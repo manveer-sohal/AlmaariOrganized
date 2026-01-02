@@ -29,7 +29,7 @@ export function startOnboardingTourOutfit() {
         popover: {
           title: "Preview your outfit!",
           description:
-            "Preview your outfit to see how it looks. Clothes can be layered and they can beremoved when clicked.",
+            "Preview your outfit to see how it looks. Clothes can be layered and they can be removed when clicked.",
         },
       },
       {

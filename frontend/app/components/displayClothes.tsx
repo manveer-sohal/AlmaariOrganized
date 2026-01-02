@@ -8,7 +8,6 @@ import { AnimatePresence } from "framer-motion";
 import { ClothingItem } from "../types/clothes";
 function DisplayClothes() {
   // const { clothes, setClothes } = useClothesStore();
-  console.log("DisplayClothes");
   const { filters } = useClothesStore();
   const { colour, type, search } = filters;
   const { isMobile } = useClothesStore();
@@ -37,6 +36,7 @@ function DisplayClothes() {
     },
     enabled: !!user,
   });
+  console.log("isLoadingClothes", isLoadingClothes);
 
   const filteredClothes = useMemo(() => {
     if (!clothes) return [];
@@ -62,7 +62,7 @@ function DisplayClothes() {
 
   return (
     <div
-      className={`justify-self-center rounded-[15px] ${
+      className={`justify-self-center rounded-[15px] h-full ${
         isMobile ? "w-full" : "w-[83%]"
       } h-full grid justify-center p-2 text-center order-first`}
       style={{

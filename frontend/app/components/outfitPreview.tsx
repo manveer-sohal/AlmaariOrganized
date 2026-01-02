@@ -30,7 +30,7 @@ function OutfitPreview() {
                     {item.map((i, idx) => (
                       <div
                         key={i._id}
-                        className="absolute top-0"
+                        className="h-full w-full absolute top-0"
                         style={{ left: `${idx * 20}px`, zIndex: idx + 1 }}
                       >
                         <Image
