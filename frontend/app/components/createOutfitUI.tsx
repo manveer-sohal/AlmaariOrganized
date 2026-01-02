@@ -3,17 +3,15 @@ import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../types/clothes";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
-import { useOnboardingStore } from "../store/useOnboardingStore";
 
 function CreateOutfitUI() {
   const { user } = useUser();
-  const { setHasCompletedOnboardingOutfit } = useOnboardingStore();
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-
+  const queryClient = useQueryClient();
   const [mascotState, setMascotState] = useState<string>("thinking");
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>
@@ -97,7 +95,7 @@ function CreateOutfitUI() {
       if (!response.ok) throw new Error("Failed to save outfit");
       setSelectedBySlot({ head: null, body: null, legs: null, feet: null });
       setName("");
-      setHasCompletedOnboardingOutfit(true);
+      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
     } catch (e) {
       console.error(e);
     } finally {

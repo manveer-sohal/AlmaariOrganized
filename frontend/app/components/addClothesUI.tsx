@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if y
 import { ClothingItem, View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
 import { goToNextTourStep } from "./OnBoardingTour";
-import { useOnboardingStore } from "../store/useOnboardingStore";
 //prop to allow accses to the toggleForm function in the main page, this lets us
 //send infromation if the back button is clicked, if it is the state of toggle form
 //is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
@@ -17,7 +16,7 @@ type addClothesUIProm = {
 function AddClothesUI({ setView }: addClothesUIProm) {
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
-  const { setHasCompletedOnboarding } = useOnboardingStore();
+
   const handleBack = () => {
     setView("home");
   };
@@ -214,7 +213,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     event.preventDefault();
     setLoading(true);
     console.log("submit clicked");
-    validateType();
 
     if (validateColour() && validateType() && file) {
       const response = await pushDB();
@@ -232,10 +230,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         );
 
         setView("home");
+        queryClient.invalidateQueries({ queryKey: ["onboarding"] });
       } else {
         console.error("Failed to upload picture");
       }
-      setHasCompletedOnboarding(true);
     } else {
       event.preventDefault();
       if (file == null) {
