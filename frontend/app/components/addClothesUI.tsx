@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
@@ -20,17 +20,14 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const handleBack = () => {
     setView("home");
   };
-  const nextTourStep = useMemo(() => {
-    return () => {
-      goToNextTourStep();
-    };
-  }, []);
+
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    return () => {
-      nextTourStep();
-    };
-  }, [nextTourStep]);
+    if (hasRun.current) return;
+    hasRun.current = true;
+    goToNextTourStep();
+  }, []);
 
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
