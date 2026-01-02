@@ -37,6 +37,94 @@ import connectMongoDB from "../libs/mongodb.js";
 //     return response.status(405).json({ error: "Method Not Allowed" });
 //   }
 // };
+//set the onboarding step the user completed
+export const setOnboardingStep = async (req, res) => {
+  console.log("activate");
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+  const { step, auth0Id } = req.body;
+  if (!step || !auth0Id) {
+    return res.status(400).json({ error: "step and auth0Id are required" });
+  }
+  let user = await User.findOne({ auth0Id });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  if (step === "clothes") {
+    user.hasCompletedOnboardingForClothes = true;
+  } else if (step === "outfits") {
+    user.hasCompletedOnboardingForOutfits = true;
+  }
+  await user.save();
+  return res.status(200).json({ message: "Onboarding step completed", user });
+};
+
+export const getOnboardingStatus = async (req, res) => {
+  console.log("activate");
+  await connectMongoDB();
+  const { auth0Id } = req.body;
+  if (!auth0Id) {
+    return res.status(400).json({ error: "auth0Id is required" });
+  }
+  let user = await User.findOne({ auth0Id });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  console.log("user", user);
+  //return both hasCompletedOnboardingForClothes and hasCompletedOnboardingForOutfits
+  return res.status(200).json({
+    hasCompletedOnboardingForClothes: user.hasCompletedOnboardingForClothes,
+    hasCompletedOnboardingForOutfits: user.hasCompletedOnboardingForOutfits,
+  });
+};
+
+export const updateUserHasCompletedOnboardingForClothes = async (req, res) => {
+  console.log("activate");
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+  console.log("activate1");
+  const { auth0Id } = req.body;
+  if (!auth0Id) {
+    return res.status(400).json({ error: "auth0Id is required" });
+  }
+
+  await connectMongoDB();
+  let user = await User.findOne({ auth0Id });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  user.hasCompletedOnboardingForClothes = true;
+  await user.save();
+  return res
+    .status(200)
+    .json({ message: "User has completed onboarding for clothes", user });
+};
+
+export const updateUserHasCompletedOnboardingForOutfits = async (req, res) => {
+  console.log("activate");
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+  console.log("activate1");
+  const { auth0Id } = req.body;
+  if (!auth0Id) {
+    return res.status(400).json({ error: "auth0Id is required" });
+  }
+
+  await connectMongoDB();
+  let user = await User.findOne({ auth0Id });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  user.hasCompletedOnboardingForOutfits = true;
+  await user.save();
+  return res
+    .status(200)
+    .json({ message: "User has completed onboarding for outfits", user });
+};
 
 export const test = async (req, res) => {
   console.log("activate");
