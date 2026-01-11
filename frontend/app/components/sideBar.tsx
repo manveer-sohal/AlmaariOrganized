@@ -52,7 +52,7 @@ function SideBar({ view, setView }: SideBarProp) {
   };
   return (
     <>
-      <ul className=" border-indigo-300 border-l-4 p-3 h-[92.3vh] text-center bg-indigo-400/90 backdrop-blur-sm py-[2.1vh] flex flex-col min-w-[150px] shadow-md ">
+      <ul className="border-indigo-300 border-l-4 p-3 h-[92.3vh] text-center bg-indigo-400/100  py-[2.1vh] flex flex-col min-w-[150px] shadow-md ">
         <li>
           <button
             onClick={() => onClickHome()}

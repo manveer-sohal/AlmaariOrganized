@@ -10,8 +10,6 @@ function DisplayClothes() {
   // const { clothes, setClothes } = useClothesStore();
   const { filters } = useClothesStore();
   const { colour, type, search } = filters;
-  const { isMobile } = useClothesStore();
-
   const { user, isLoading: isLoadingUser } = useUser();
   //change this
   const API_BASE_URL =
@@ -62,14 +60,7 @@ function DisplayClothes() {
 
   return (
     <div
-      className={`justify-self-center rounded-[15px] h-full ${
-        isMobile ? "w-full" : "w-[83%]"
-      } h-full grid justify-center p-2 text-center order-first`}
-      style={{
-        gridTemplateColumns: `repeat(auto-fill, ${
-          isMobile ? "80px" : "200px"
-        })`,
-      }}
+      className={`justify-self-center rounded-[15px] h-full w-full md:w-[83%] grid justify-center p-2 text-center order-first grid-cols-[repeat(auto-fill,80px)] md:grid-cols-[repeat(auto-fill,200px)]`}
     >
       {isLoadingClothes ? (
         // <div className="flex justify-center items-center w-full h-[60vh]">

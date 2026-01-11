@@ -4,14 +4,12 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ClothingItem } from "../types/clothes";
-import { useClothesStore } from "../store/useClothesStore";
 
 export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
   const [click, setClick] = useState<boolean>(false);
   // const [loading, setLoading] = useState<boolean>(false);
   const { user } = useUser(); // Auth0 user information
   const [loaded, setLoaded] = useState(false);
-  const { isMobile } = useClothesStore();
 
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
@@ -63,11 +61,7 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.2, rotate: -10 }}
       transition={{ duration: 0.1 }}
-      className={`border border-indigo-300 p-2 bg-slate-100 rounded-md  w-[${
-        isMobile ? "80px" : "200px"
-      }] ${
-        isMobile ? "h-[80px]" : "h-[200px]"
-      } shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl`}
+      className="border border-indigo-300 p-2 bg-slate-100 rounded-md  w-[80px] h-[80px] md:w-[200px] md:h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl"
     >
       {" "}
       <div onClick={() => setClick(!click)} className="h-full w-full">

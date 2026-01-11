@@ -8,9 +8,8 @@ import CreateOutfitUI from "../components/createOutfitUI";
 import ViewOutfits from "../components/viewOutfits";
 import AddClothesUI from "../components/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
-import { useClothesStore } from "../store/useClothesStore";
 import MobileSideBar from "../components/mobileSidebar";
-import { isMobile } from "react-device-detect";
+import { goToNextTourStep } from "../components/OnBoardingTour";
 // import { startOnboardingTour } from "../components/OnBoardingTour";
 import CheckList from "../components/CheckList";
 // import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
@@ -36,11 +35,9 @@ export default function Dashboard() {
   const { user, isLoading } = useUser();
   const [hasLoaded, setHasLoaded] = useState(false); // State to track if data is loaded
   const [view, setView] = useState<View>("home");
-  const { setIsMobile } = useClothesStore();
   // const { menuOpen } = useClothesStore();
 
   useEffect(() => {
-    setIsMobile(isMobile);
     if (!user || hasLoaded) return;
     const load = async () => {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
@@ -62,7 +59,7 @@ export default function Dashboard() {
     };
 
     load();
-  }, [user, hasLoaded, setIsMobile]);
+  }, [user, hasLoaded]);
 
   const onClickAddClothes = () => {
     setView("addClothes");
@@ -70,19 +67,24 @@ export default function Dashboard() {
 
   return (
     <main>
-      <div className="z-20 bg-blue-500 sticky top-0 box-shadow-md">
-        {isMobile ? (
+      <div className="z-20 sticky top-0 box-shadow-md">
+        <div className="block md:hidden">
           <MobileNavBar></MobileNavBar>
-        ) : (
+        </div>
+
+        <div className="hidden md:block">
           <NavBar setView={setView}></NavBar>
-        )}
-        {isMobile ? (
+        </div>
+
+        <div className="block md:hidden">
           <MobileSideBar view={view} setView={setView}></MobileSideBar>
-        ) : (
+        </div>
+
+        <div className="hidden md:block">
           <div className="sidebar-container">
             <SideBar view={view} setView={setView}></SideBar>
           </div>
-        )}
+        </div>
       </div>
       {isLoading ? (
         <div className="flex justify-center items-center h-screen">
@@ -98,9 +100,9 @@ export default function Dashboard() {
         </>
       )}
       {user && (
-        <div>
+        <div className="h-full w-full relative">
           {view === "addClothes" && (
-            <div className="absolute top-20 left-0 w-full z-10">
+            <div className="fixed w-full h-full z-20">
               <AddClothesUI setView={setView}></AddClothesUI>
             </div>
           )}
@@ -108,14 +110,19 @@ export default function Dashboard() {
           {/* previously had a loading screen here before the whole page loaded*/}
           {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
           {view === "outfits" && <ViewOutfits></ViewOutfits>}
-          {view === "home" && <DisplayClothes></DisplayClothes>}
-          {isMobile && (
-            <div className="absolute bottom-0 right-0">
+          {(view === "home" || view === "addClothes") && (
+            <DisplayClothes></DisplayClothes>
+          )}
+          <div className="block md:hidden">
+            <div
+              className="absolute bottom-0 right-0"
+              onClick={onClickAddClothes}
+            >
               <button
-                id="add-clothes-btn"
-                onClick={onClickAddClothes}
+                id="add-clothes-btn-mobile"
+                onClick={goToNextTourStep}
                 title="Add Clothes"
-                className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+                className="fixed bottom-0 right-0 inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
               >
                 <svg
                   width="18"
@@ -134,8 +141,17 @@ export default function Dashboard() {
                 <span>Add Clothes</span>
               </button>
             </div>
-          )}
-          <div>
+          </div>
+          <div
+            className="   
+  z-10 fixed
+  left-0 bottom-0
+  md:left-auto
+  md:top-20 md:right-0
+  lg:right-0 lg:top-20
+  xl:top-20 xl:right-0
+"
+          >
             <CheckList />
           </div>
         </div>

@@ -21,14 +21,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     setView("home");
   };
 
-  const hasRun = useRef(false);
-
-  useEffect(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
-    goToNextTourStep();
-  }, []);
-
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -227,6 +219,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         );
 
         setView("home");
+        goToNextTourStep();
         queryClient.invalidateQueries({ queryKey: ["onboarding"] });
       } else {
         console.error("Failed to upload picture");
@@ -275,10 +268,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //   margin: 0px 0 0 90px;
   // }
   return (
-    <div className="backdrop-blur-sm min-h-screen w-full h-120vh sticky top-0 p-4">
+    <div className="p-4 z-10 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky">
       <form
         id="add-clothes-form"
-        className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4"
+        className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4 "
       >
         <div className="w-full mx-auto mb-3 flex justify-start">
           <button

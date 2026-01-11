@@ -45,12 +45,11 @@ function CheckList() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className=" absolute top-20 right-0 z-10 flex justify-end"
         >
           {active ? (
-            <div className="bg-white/40 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col">
+            <div className="bg-white/40 backdrop-blur border border-indigo-200 rounded-xl md:max-w-full max-w-[200px] mx-auto p-6 shadow-md text-base flex flex-col h-42 md:h-32">
               <button
-                className="flex justify-start absolute top-0 left-0 p-1 cursor-pointer"
+                className="bg-indigo-100/70 text-indigo-900 w-6 h-6 md:w-8 md:h-8 p-1 md:p-2 cursor-pointer flex rounded-md absolute top-0 justify-end right-0 md:justify-start md:left-0"
                 onClick={() => {
                   setActive((prev) => !prev);
                 }}
@@ -74,7 +73,7 @@ function CheckList() {
                 <ul>
                   <div className="flex items-center justify-between gap-2">
                     <li
-                      className={` list-disc ${
+                      className={` list-disc text-xs md:text-base ${
                         onboarding?.hasCompletedOnboardingForClothes
                           ? "text-green-500"
                           : "text-indigo-900"
@@ -92,7 +91,7 @@ function CheckList() {
                         onboarding?.hasCompletedOnboardingForClothes
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
                           : ""
-                      }`}
+                      } text-xs h-8 md:text-base md:h-10`}
                       disabled={
                         isLoadingOnboarding ||
                         onboarding?.hasCompletedOnboardingForClothes
@@ -103,7 +102,7 @@ function CheckList() {
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <li
-                      className={`list-disc ${
+                      className={`list-disc text-xs md:text-base ${
                         onboarding?.hasCompletedOnboardingForOutfits
                           ? "text-green-500"
                           : "text-indigo-900"
@@ -121,7 +120,7 @@ function CheckList() {
                         onboarding?.hasCompletedOnboardingForOutfits
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
                           : ""
-                      }`}
+                      } text-xs h-8 md:text-base md:h-10`}
                       disabled={
                         isLoadingOnboarding ||
                         onboarding?.hasCompletedOnboardingForOutfits

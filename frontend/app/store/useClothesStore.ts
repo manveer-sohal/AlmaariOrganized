@@ -9,8 +9,7 @@ type ClothesStore = {
   filters: Filters;
   menuOpen: boolean;
   setMenuOpen: (menuOpen: boolean) => void;
-  isMobile: boolean;
-  setIsMobile: (isMobile: boolean) => void;
+  
 };
 
 export const useClothesStore = create<ClothesStore>((set) => ({
@@ -22,6 +21,5 @@ export const useClothesStore = create<ClothesStore>((set) => ({
   },
   menuOpen: false,
   setMenuOpen: (menuOpen: boolean) => set({ menuOpen }),
-  isMobile: true,
-  setIsMobile: (isMobile: boolean) => set({ isMobile }),
+
 }));

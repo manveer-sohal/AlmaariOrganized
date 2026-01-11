@@ -49,9 +49,13 @@ function MobileSideBar({ view, setView }: SideBarProp) {
 
     onClickFilter();
   };
+
   return (
     <div className="w-full">
-      <ul className="flex overflow-x-auto whitespace-nowrap scrollbar-hide border-indigo-300 border-l-4 p-3 text-center bg-indigo-400/90 backdrop-blur-sm shadow-md ">
+      <ul
+        id="mobile-sidebar-ul"
+        className="flex overflow-x-auto whitespace-nowrap scrollbar-hide border-indigo-300 border-l-4 p-3 text-center bg-indigo-400/90 backdrop-blur-sm shadow-md "
+      >
         <li>
           <button
             onClick={() => onClickHome()}
@@ -194,6 +198,7 @@ function MobileSideBar({ view, setView }: SideBarProp) {
             <span>View Outfits</span>
           </button>
           <button
+            id="create-outfit-btn"
             onClick={() => onClickCreateOutfits()}
             className={`inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
               view === "createOutfit"

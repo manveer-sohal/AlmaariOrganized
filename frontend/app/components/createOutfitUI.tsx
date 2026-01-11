@@ -143,7 +143,7 @@ function CreateOutfitUI() {
 
   return (
     <div className="bg-indigo-200 w-full min-h-screen top-0 z-10 p-4 h-full">
-      <div className="flex items-center justify-between mb-4 mr-40">
+      <div className="flex items-center justify-between mb-4 md:mr-40">
         <div className="flex justify-end w-full gap-2">
           <input
             id="create-outfit-form-name"
@@ -151,7 +151,7 @@ function CreateOutfitUI() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Outfit name (optional)"
-            className=" w-1/2 rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className=" w-full md:w-1/2 rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
           <button
             disabled={saving || selectedItems.length === 0}
@@ -163,7 +163,7 @@ function CreateOutfitUI() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
+      <div className="grid grid-rows-[0.5fr,0.3fr,0.4fr] lg:grid-cols-[0.5fr,0.3fr,0.4fr] gap-4 pl-2">
         <div
           id="create-outfit-form"
           className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md"
@@ -178,7 +178,7 @@ function CreateOutfitUI() {
               <p className="text-indigo-900">Error loading clothes</p>
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center">
+            <div className="grid grid-cols-[repeat(auto-fill,_80px)] md:grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center overflow-y-auto max-h-[200px] sm:max-h-[500px] md:max-h-[800px]">
               {clothes?.map((item: ClothingItem) => {
                 const isSelected = selectedItems.some((s) =>
                   s.some((c) => c._id === item._id)
@@ -188,7 +188,7 @@ function CreateOutfitUI() {
                     key={item._id}
                     type="button"
                     onClick={() => toggleSelect(item._id)}
-                    className={`relative border rounded-lg overflow-hidden h-[120px] w-[120px] ${
+                    className={`relative border rounded-lg overflow-hidden  md:h-[120px] md:w-[120px] h-[80px] w-[80px] ${
                       isSelected
                         ? "ring-2 ring-indigo-500"
                         : "border-indigo-200"

@@ -6,6 +6,7 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import { useClothesStore } from "../store/useClothesStore";
 import { View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
+import { goToNextTourStep } from "./OnBoardingTour";
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
   setView: (view: View) => void;
@@ -56,6 +57,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   };
   const onClickAddClothes = () => {
     setView("addClothes");
+    goToNextTourStep();
   };
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
@@ -65,7 +67,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
 
   return (
     <>
-      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400/90 h-16  p-2 sticky top-0 overflow-hidden">
+      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 overflow-hidden">
         <li id="icon" className="shrink-0">
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
         </li>
@@ -129,7 +131,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
           </li>
           <li className="shrink-0">
             <button
-              id="add-clothes-btn"
+              id="add-clothes-btn-desktop"
               onClick={onClickAddClothes}
               title="Add Clothes"
               className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"

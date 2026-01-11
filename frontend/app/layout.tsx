@@ -21,7 +21,7 @@ export default function RootLayout({
         />
         <GoogleAnalytics />
       </head>
-      <body className="text-gray-900">
+      <body className="text-gray-900 min-w-[360px]">
         <UserProvider>
           <QueryClientProvider client={client}>{children}</QueryClientProvider>
         </UserProvider>
