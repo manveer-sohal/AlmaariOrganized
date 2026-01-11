@@ -493,7 +493,7 @@ const mapTypeToSlot = (type) => {
 
 export const uploadData = async (request, response) => {
   console.log("Uploading");
-  console.log(request.body);
+  // console.log(request.body);
 
   try {
     const {

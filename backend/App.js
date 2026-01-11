@@ -38,6 +38,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 
 app.listen(port, "0.0.0.0", async () => {
-  console.log(`App listening  on port ${port}`);
+  // console.log(`App listening  on port ${port}`);
   console.log("Routes mounted");
 });
