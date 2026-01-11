@@ -61,7 +61,7 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.2, rotate: -10 }}
       transition={{ duration: 0.1 }}
-      className="border border-indigo-300 p-2 bg-slate-100 rounded-md  w-[80px] h-[80px] md:w-[200px] md:h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl"
+      className="border border-indigo-300 p-1 bg-slate-100 rounded-sm w-[90px] h-[90px] sm:w-[120px] sm:h-[120px] md:w-[150px] md:h-[150px] lg:w-[200px] lg:h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl"
     >
       {" "}
       <div onClick={() => setClick(!click)} className="h-full w-full">
@@ -85,7 +85,7 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
       {click && (
         <button
           onClick={() => deleteClothes.mutate()}
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-300"
+          className="absolute text-xs sm:text-sm md:text-base bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white md:px-4 px-2 py-1 rounded-full shadow-lg hover:bg-red-600 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-300"
         >
           Delete me
         </button>

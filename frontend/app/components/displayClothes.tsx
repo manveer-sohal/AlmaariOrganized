@@ -60,7 +60,7 @@ function DisplayClothes() {
 
   return (
     <div
-      className={`justify-self-center rounded-[15px] h-full w-full md:w-[83%] grid justify-center p-2 text-center order-first grid-cols-[repeat(auto-fill,80px)] md:grid-cols-[repeat(auto-fill,200px)]`}
+      className={`justify-self-center rounded-sm h-full w-full md:w-[83%] grid justify-center p-2 text-center order-first grid-cols-[repeat(auto-fill,90px)] sm:grid-cols-[repeat(auto-fill,120px)] md:grid-cols-[repeat(auto-fill,150px)] lg:grid-cols-[repeat(auto-fill,200px)]`}
     >
       {isLoadingClothes ? (
         // <div className="flex justify-center items-center w-full h-[60vh]">

@@ -18,6 +18,9 @@
     animation: wiggle 2s ease-in-out infinite;
   }
 }
+* {
+  touch-action: manipulation;
+}
 
 @keyframes shimmer {
   0% {
