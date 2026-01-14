@@ -5,7 +5,6 @@ import almaariMascot from "../almaari-mascot.png";
 import almaariMascotThinking from "../almaari-mascot-thinking.png";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../types/clothes";
-import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 
 function CreateOutfitUI() {
   const { user } = useUser();
@@ -34,18 +33,6 @@ function CreateOutfitUI() {
     },
     enabled: !!user,
   });
-
-  const nextTourStep = useMemo(() => {
-    return () => {
-      goToNextTourStepOutfit();
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      nextTourStep();
-    };
-  }, [nextTourStep]);
 
   const clothesById = useMemo(
     () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),

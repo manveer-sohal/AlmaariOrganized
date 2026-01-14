@@ -1,27 +1,26 @@
 "use client";
 import { driver, Driver } from "driver.js";
-import { isMobile } from "react-device-detect";
 
 let tour: Driver | null = null;
 
 export function startOnboardingTourOutfit() {
-  let description = "";
-  let id = "";
-  if (isMobile) {
+  let description = "click this button to create an outfit.";
+  let id = "#desktop-sidebar-button";
+  console.log(window.innerWidth);
+  //check if screen is small or medium
+  if (window.innerWidth < 768) {
     description =
       'Scroll to the right and click the "Create Outfit" button to create an outfit.';
     id = "#mobile-sidebar-ul";
-  } else {
-    description = "click this button to create an outfit.";
-    id = "#create-outfit-btn";
+    console.log("mobile sidebar ul");
   }
+
   setTimeout(() => {
     tour = driver({
       showProgress: true,
       steps: [
         {
           element: id,
-
           popover: {
             title: "Create an outfit",
             description: description,
@@ -68,5 +67,15 @@ export function startOnboardingTourOutfit() {
 }
 
 export function goToNextTourStepOutfit() {
-  tour?.moveNext();
+  const checkIfCreateOutfitFormLoaded = () => {
+    const createOutfitForm = document.getElementById("create-outfit-form");
+    if (createOutfitForm) {
+      tour?.moveNext();
+    } else {
+      setTimeout(() => {
+        checkIfCreateOutfitFormLoaded();
+      }, 100);
+    }
+  };
+  checkIfCreateOutfitFormLoaded();
 }

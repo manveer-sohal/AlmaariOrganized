@@ -3,6 +3,7 @@ import ValidateType from "./validateType";
 import React, { useState } from "react";
 import WeatherCheck from "./weatherCheck";
 import { useClothesStore } from "../store/useClothesStore";
+import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 type View = "home" | "outfits" | "createOutfit" | "addClothes";
 type SideBarProp = {
@@ -196,8 +197,11 @@ function SideBar({ view, setView }: SideBarProp) {
           <span>View Outfits</span>
         </button>
         <button
-          id="create-outfit-btn"
-          onClick={() => onClickCreateOutfits()}
+          id="desktop-sidebar-button"
+          onClick={() => {
+            onClickCreateOutfits();
+            goToNextTourStepOutfit();
+          }}
           className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
             view === "createOutfit"
               ? "bg-indigo-500 text-white"

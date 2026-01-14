@@ -5,8 +5,8 @@ import { startOnboardingTour } from "./OnBoardingTour";
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 function CheckList() {
-  const [active, setActive] = useState(true);
   const { onboarding, isLoadingOnboarding } = useOnboarding();
+  const [active, setActive] = useState(true);
 
   const startOnboardingOutfit = useMemo(() => {
     return () => {
@@ -86,7 +86,10 @@ function CheckList() {
                       Add a picture of your first item
                     </li>
                     <button
-                      onClick={startOnboardingClothes}
+                      onClick={() => {
+                        setActive(false);
+                        startOnboardingClothes();
+                      }}
                       className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
                         onboarding?.hasCompletedOnboardingForClothes
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
@@ -115,7 +118,10 @@ function CheckList() {
                       Create an outfit
                     </li>
                     <button
-                      onClick={startOnboardingOutfit}
+                      onClick={() => {
+                        setActive(false);
+                        startOnboardingOutfit();
+                      }}
                       className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
                         onboarding?.hasCompletedOnboardingForOutfits
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
