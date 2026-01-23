@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Logo from "./Logo.png";
 import { motion } from "framer-motion";
-import AlmaariMascot from "./components/almaariMascot";
+import AlmaariMascot from "./components/CreatOutfitPage/almaariMascot";
 import Login from "./components/login";
 import Signup from "./components/signup";
 export default function Homepage() {
