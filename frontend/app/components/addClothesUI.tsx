@@ -426,7 +426,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     <div className=" p-1 z-10 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky sm:h-full">
       <form
         id="add-clothes-form"
-        className="mt-5 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4 "
+        className="mt-5 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 gap-2 "
       >
         <div className="w-full mx-auto mb-1 flex justify-start">
           <button
