@@ -4,7 +4,7 @@ import NavBar from "../components/navBar";
 import SideBar from "../components/sideBar";
 import React, { useEffect, useState } from "react";
 import DisplayClothes from "../components/displayClothes";
-import CreateOutfitUI from "../components/createOutfitUI";
+import CreateOutfitUI from "../components/CreatOutfitPage/createOutfitUI";
 import ViewOutfits from "../components/viewOutfits";
 import AddClothesUI from "../components/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
@@ -102,7 +102,7 @@ export default function Dashboard() {
       {user && (
         <div className="h-full w-full relative">
           {view === "addClothes" && (
-            <div className="fixed w-full h-full z-20">
+            <div className="fixed w-full h-full z-20 top-0">
               <AddClothesUI setView={setView}></AddClothesUI>
             </div>
           )}
@@ -144,6 +144,7 @@ export default function Dashboard() {
           </div>
           <div
             className="   
+            
   z-10 fixed
   left-0 bottom-0
   md:left-auto

@@ -1,5 +1,5 @@
 "use client";
-import CreateOutfitUI from "@/components/createOutfitUI";
+import CreateOutfitUI from "@/app/components/CreatOutfitPage/createOutfitUI";
 
 const CreateOutfit = () => {
   return (
