@@ -4,6 +4,7 @@ import connectMongoDB from "../libs/mongodb.js";
 import multer from "multer";
 import { createClient } from "redis";
 import dotenv from "dotenv";
+import axios from "axios";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ let _redisDnsErrorLogged = false; // dedupe DNS error logs
 
 if (!redisUrl) {
   console.warn(
-    "UPSTASH_REDIS_URL is missing. Caching will be disabled and the app will fall back to MongoDB."
+    "UPSTASH_REDIS_URL is missing. Caching will be disabled and the app will fall back to MongoDB.",
   );
   redis = {
     isOpen: false,
@@ -118,18 +119,18 @@ export const removeData = async (request, response) => {
       User.findOneAndUpdate(
         { auth0Id },
         { $pull: { clothes: clothingDoc._id } },
-        { new: true }
+        { new: true },
       ),
       Outfits.updateMany(
         { outfit_items: clothingDoc._id },
-        { $pull: { outfit_items: clothingDoc._id } }
+        { $pull: { outfit_items: clothingDoc._id } },
       ),
       Clothes.deleteOne({ _id: clothingDoc._id }),
     ]);
 
     const updatedUser = await User.findOne(
       { auth0Id },
-      { _id: 0, clothes: 1 }
+      { _id: 0, clothes: 1 },
     ).populate("clothes");
 
     const deletedCount1 = await redis.del("userClothes:" + auth0Id);
@@ -177,7 +178,7 @@ export const getOutfits = async (request, response) => {
     const startTime = Date.now();
     const userData = await User.findOne(
       { auth0Id },
-      { outfits: 1, _id: 0 }
+      { outfits: 1, _id: 0 },
     ).populate({
       path: "outfits",
       populate: { path: "outfit_items", model: "Clothes" },
@@ -196,7 +197,7 @@ export const getOutfits = async (request, response) => {
     } catch (err) {
       console.warn(
         "Redis set failed, returning Mongo result without caching:",
-        err
+        err,
       );
     }
     return response.status(200).json(userData);
@@ -210,6 +211,7 @@ export const getOutfits = async (request, response) => {
 
 export const getData = async (request, response) => {
   console.log("List clothes");
+
   try {
     const { auth0Id } = request.body;
 
@@ -240,7 +242,7 @@ export const getData = async (request, response) => {
 
     const userData = await User.findOne(
       { auth0Id },
-      { clothes: 1, _id: 0 }
+      { clothes: 1, _id: 0 },
     ).populate("clothes");
 
     const endTime = Date.now();
@@ -256,13 +258,13 @@ export const getData = async (request, response) => {
       await redis.set(
         redisKey,
         JSON.stringify({ Clothes: userData.clothes || [] }),
-        { EX: 600 }
+        { EX: 600 },
       );
       console.log("Cache miss: Queried MongoDB and cached the result");
     } catch (err) {
       console.warn(
         "Redis set failed, returning Mongo result without caching:",
-        err
+        err,
       );
     }
     return response.status(200).json({ Clothes: userData.clothes || [] });
@@ -420,7 +422,7 @@ export const createOutfit = async (request, response) => {
         $push: { outfits: createdOutfit._id },
         $set: { hasCompletedOnboardingForOutfits: true },
       },
-      { new: true }
+      { new: true },
     );
     if (!user) {
       return response.status(404).json({ error: "User not found" });
@@ -518,7 +520,32 @@ export const uploadData = async (request, response) => {
 
     // const imageSrc = toBase64(cropped_image);
 
-    const imageSrc = toBase64(file.buffer);
+    let imageSrc = toBase64(file.buffer);
+
+    const CROP_SERVICE_URL = "https://imagecropper-production.up.railway.app";
+
+    const cropImage = async (base64Image) => {
+      const res = await axios.post(
+        `${CROP_SERVICE_URL}/crop`,
+        {
+          image: base64Image,
+        },
+        {
+          timeout: 15000,
+        },
+      );
+
+      return res.data.image;
+    };
+
+    try {
+      imageSrc = await cropImage(imageSrc);
+      imageSrc = "data:image/png;base64," + imageSrc;
+    } catch (e) {
+      console.log("error cropping image", e);
+      console.error(e);
+    }
+
     console.log("next move");
 
     await connectMongoDB();
@@ -558,7 +585,7 @@ export const uploadData = async (request, response) => {
         $push: { clothes: clothingDoc._id },
         $set: { hasCompletedOnboardingForClothes: true },
       },
-      { new: true }
+      { new: true },
     );
 
     console.log("user upload clothes", user);
@@ -590,7 +617,7 @@ export const deleteOutfit = async (request, response) => {
     const user = await User.findOneAndUpdate(
       { auth0Id },
       { $pull: { outfits: outfit._id } },
-      { new: true }
+      { new: true },
     );
     if (!user) {
       return response.status(404).json({ error: "User not found" });

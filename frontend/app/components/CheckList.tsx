@@ -24,6 +24,11 @@ function CheckList() {
     if (!isLoadingOnboarding) {
       if (onboarding?.hasCompletedOnboardingForClothes == false) {
         startOnboardingClothes();
+      } else if (
+        onboarding?.hasCompletedOnboardingForOutfits == true &&
+        onboarding?.hasCompletedOnboardingForClothes == true
+      ) {
+        setActive(false);
       }
       // startOnboardingClothes();
     }
