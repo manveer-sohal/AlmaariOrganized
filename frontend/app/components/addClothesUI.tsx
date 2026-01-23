@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
@@ -43,12 +42,20 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [preview, setPreview] = useState<string | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
   const [filtered_colours_List, set_Filtered_colours_List] = useState(
-    colours_List
+    colours_List,
   );
   //a filtered list of clothes which will change depedending on the user input for filtered results
   const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
 
   const { user } = useUser();
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  // const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -158,12 +165,170 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const filter = (
     input: string,
     list: string[],
-    setState: React.Dispatch<React.SetStateAction<string[]>>
+    setState: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     const filtered = list
       .filter((item) => item.toLowerCase().startsWith(input.toLowerCase()))
       .slice(0, 10);
     setState(filtered);
+  };
+
+  const drawCropPreview = useCallback(
+    (imageSrc: string, zoomLevel: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      let img = imageRef.current;
+
+      if (!img) {
+        img = new window.Image();
+        img.src = imageSrc;
+        imageRef.current = img;
+      }
+
+      if (!img.complete) {
+        img.onload = () => drawCropPreview(imageSrc, zoomLevel);
+        return;
+      }
+
+      let size = 355; // square crop size
+      console.log("img.width", img.width);
+      console.log("img.height", img.height);
+
+      canvas.width = size;
+      canvas.height = size;
+      if (img.width < 280) {
+        canvas.width = img.width;
+      }
+      if (img.height < 400) {
+        canvas.height = img.height + 10;
+      }
+      size = Math.min(canvas.width, canvas.height);
+      ctx.clearRect(0, 0, size, size);
+
+      const minZoom = Math.max(size / img.width, size / img.height);
+      const scale = minZoom * zoom;
+
+      const baseX = (size - img.width * scale) / 2;
+      const baseY = (size - img.height * scale) / 2;
+
+      const x = baseX + offset.x;
+      const y = baseY + offset.y;
+
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    },
+    [canvasRef, imageRef, offset, zoom],
+  );
+
+  useEffect(() => {
+    if (!file) return;
+
+    setValidFile(true);
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+
+    imageRef.current = null;
+    // Draw initial crop preview
+    drawCropPreview(objectUrl, 1);
+    setOffset({ x: 0, y: 0 });
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  useEffect(() => {
+    if (preview) {
+      drawCropPreview(preview, zoom);
+    }
+  }, [zoom, preview, offset, drawCropPreview]);
+
+  const generateCroppedImage = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, "image/png");
+    });
+  };
+
+  const clampOffset = (
+    x: number,
+    y: number,
+    imgW: number,
+    imgH: number,
+    scale: number,
+  ) => {
+    const size = 400;
+    const maxX = Math.max(0, (imgW * scale - size) / 2);
+    const maxY = Math.max(0, (imgH * scale - size) / 2);
+
+    return {
+      x: Math.min(maxX, Math.max(-maxX, x)),
+      y: Math.min(maxY, Math.max(-maxY, y)),
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !preview || !imageRef.current) return;
+
+    const dx = e.clientX - lastPosRef.current.x;
+    const dy = e.clientY - lastPosRef.current.y;
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+
+    const img = imageRef.current;
+    const minZoom = Math.max(400 / img.width, 400 / img.height);
+    const scale = minZoom * zoom;
+
+    setOffset((prev) => {
+      const next = { x: prev.x + dx, y: prev.y + dy };
+      return clampOffset(next.x, next.y, img.width, img.height, scale);
+    });
+  };
+
+  const getTouchPoint = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    return { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isDraggingRef.current = true;
+    lastPosRef.current = getTouchPoint(e);
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current || !preview || !imageRef.current) return;
+
+    const { x, y } = getTouchPoint(e);
+    const dx = x - lastPosRef.current.x;
+    const dy = y - lastPosRef.current.y;
+    lastPosRef.current = { x, y };
+
+    const img = imageRef.current;
+    const minZoom = Math.max(400 / img.width, 400 / img.height);
+    const scale = minZoom * zoom;
+
+    setOffset((prev) => {
+      const next = { x: prev.x + dx, y: prev.y + dy };
+      return clampOffset(next.x, next.y, img.width, img.height, scale);
+    });
   };
 
   const pushDB = async () => {
@@ -178,11 +343,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("auth0Id", auth0Id ?? "");
     formData.append("type", usersClothType);
     formData.append("colour", JSON.stringify(usersColours));
-    if (file) {
+    const cropped = await generateCroppedImage();
+    if (cropped) {
+      formData.append("image", cropped, "cropped.png");
+    } else if (file) {
       formData.append("image", file);
-    } else {
-      console.error("No file selected");
-      return;
     }
 
     console.log(formData);
@@ -197,7 +362,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   //If submit is clicked
   const handleSubmit = async (
-    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
+    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
   ) => {
     event.preventDefault();
     setLoading(true);
@@ -215,7 +380,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           (old) => {
             if (!old) return [data.clothing];
             return [data.clothing, ...old];
-          }
+          },
         );
 
         setView("home");
@@ -239,7 +404,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //delete colour
   const handleClick = (value: string) => {
     setUsersColours(
-      usersColours.filter((item) => (item !== value ? item : null))
+      usersColours.filter((item) => (item !== value ? item : null)),
     );
     if (usersColours.length == 0) {
       setValidColour(false);
@@ -250,16 +415,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //FUTURE: sending it to database
 
   //maybe refractor this to a const function
-  useEffect(() => {
-    if (file) {
-      console.log(file);
-
-      setValidFile(true);
-      const objectUrl = URL.createObjectURL(file);
-      console.log(objectUrl);
-      setPreview(objectUrl);
-    }
-  }, [file]);
 
   //  .image-container {
   //   background-color: #ffffff84;
@@ -268,12 +423,12 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //   margin: 0px 0 0 90px;
   // }
   return (
-    <div className="p-4 z-10 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky">
+    <div className=" p-1 z-10 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky sm:h-full">
       <form
         id="add-clothes-form"
-        className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4 "
+        className="mt-5 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col gap-4 "
       >
-        <div className="w-full mx-auto mb-3 flex justify-start">
+        <div className="w-full mx-auto mb-1 flex justify-start">
           <button
             onClick={handleBack}
             className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
@@ -281,7 +436,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             ← Back
           </button>
         </div>
-        <div className="w-full">
+        {/* Add Picture */}
+        <div className=" rounded-lg p-2 w-full">
           <input
             type="file"
             accept="image/*"
@@ -293,19 +449,36 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           />
           <div
             id="add-picture-btn"
-            className="bg-white border border-indigo-200 rounded-lg w-full aspect-[6/4] flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition"
+            className="relative bg-white border border-indigo-200 rounded-lg  h-[360px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
             onClick={() => {
-              fileInputRef.current?.click();
+              if (!preview) fileInputRef.current?.click();
             }}
           >
             {preview ? (
-              <Image
-                src={preview}
-                alt="your pic"
-                width={600}
-                height={600}
-                className="object-contain h-full w-full"
-              />
+              <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+                <canvas
+                  ref={canvasRef}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  className="cursor-grab active:cursor-grabbing touch-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
+                >
+                  Replace
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
+                  Drag to reposition • Zoom to crop
+                </div>
+              </div>
             ) : (
               <div className="text-indigo-900/60 text-sm">
                 Click to add image
@@ -313,6 +486,17 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             )}
           </div>
         </div>
+
+        <input
+          type="range"
+          min="1"
+          max="2.5"
+          step="0.01"
+          value={zoom}
+          onChange={(e) => setZoom(Number(e.target.value))}
+          className="w-full"
+        />
+        <span className="text-xs text-indigo-700">Adjust crop</span>
         <label
           htmlFor="input-tag"
           className="text-sm font-medium text-indigo-900"
@@ -357,7 +541,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         >
           Colour
         </label>
-        <div className="colour-input-container">
+        <div className="flex items-center gap-1">
           <input
             placeholder="Enter multiple colours ie. red"
             enterKeyHint="next"
@@ -372,7 +556,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               filter(value, colours_List, set_Filtered_colours_List);
               setInputColourValue(value);
             }}
-            className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           ></input>
           <button
             type="button"
