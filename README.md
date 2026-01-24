@@ -23,6 +23,7 @@ _Main dashboard interface of Almaari Organizer showcasing the clothing grid and 
 **Frontend:** TypeScript, React, Next.js, Tailwind CSS  
 **Backend:** Node.js (Express), MongoDB, Auth0  
 **Infrastructure:** Docker, Google Cloud Run, AWS S3  
+**Image Processing Microservice:** Python  
 **Additional:** Redis (for caching)
 
 ---
@@ -39,7 +40,7 @@ _Main dashboard interface of Almaari Organizer showcasing the clothing grid and 
 
 ---
 
-## Technical Highlight: AWS S3 Image Storage Pipeline
+## Technical Highlight 1: AWS S3 Image Storage Pipeline
 
 Implemented a secure, scalable image upload workflow using **AWS S3 presigned URLs** to avoid routing large files through the backend.
 
@@ -64,6 +65,78 @@ _Sequence flowchart of AWS S3 image upload pipeline._
 
 This design improved reliability and throughput for file uploads, allowing high-volume concurrent operations with minimal backend load.
 
+## Technical Highlight 2: Image Processing Architecture  
+The image pipeline is split across three layers to keep responsibilities isolated and scalable:  
+	1.	Frontend (Next.js)  
+	2.	Backend API (Node.js / Express)  
+	3.	Image Cropper Microservice (Python)  
+  
+This separation ensures image processing logic does not block or complicate core application flows.  
+
+---
+
+### Upload & Processing Flow  
+
+Following is the breakdown of the image processing flow:
+
+**1. Frontend Image Composition**
+-  Users upload an image and adjust framing using a client-side cropper.  
+-  The cropper allows zooming and repositioning while preserving the full garment.  
+-   The cropped image is exported as base64 data.  
+    
+**2.	Backend Orchestration**
+-  The Node.js backend receives the base64 image payload.  
+-  Metadata (type, colour tags, user ID) is validated and stored.  
+-  The image data is forwarded to the Python image-cropper service.  
+    
+**3.	Python Image Cropper Microservice**
+-  Removes the background from the garment image.  
+-  Computes tight visible bounds and recenters the subject.  
+-  Pads the image to a square aspect ratio without cropping content.  
+-  Returns a transparent PNG encoded as base64.  
+
+**4.	Persistence & Response**
+-  The processed image is stored and linked to the clothing item.  
+-  The finalized image is returned to the frontend for immediate display.  
+    
+
+---
+  
+### Why a Separate Microservice?  
+  
+Image processing is CPU-intensive and stateful, making it a poor fit for the main API layer.  
+  
+**Using a standalone microservice provides:**
+
+	•	Isolation from request spikes caused by uploads  
+	•	Language flexibility (Python for image tooling)  
+	•	Easier scaling and optimization of image workloads  
+	•	Cleaner backend responsibilities  
+
+## Future Enhancements: Asynchronous Processing  
+  
+The current implementation processes images synchronously to provide immediate feedback to users.  
+  
+A planned enhancement is to move the cropper to an asynchronous workflow, allowing users to upload multiple items without waiting for image processing to complete.  
+  
+**Proposed flow: ** 
+
+	•	Frontend uploads image → immediate optimistic UI update  
+	•	Image processing runs in the background  
+	•	Frontend is notified when processing completes  
+	•	Final image replaces the placeholder automatically  
+  
+This approach would further improve perceived performance and throughput during bulk uploads.  
+  
+---  
+  
+**Impact**
+
+	•	Ensures visual consistency across all clothing items  
+	•	Improves downstream outfit composition and grid rendering  
+	•	Reduces frontend complexity by centralizing image normalization  
+	•	Enables future scalability without rewriting core logic  
+    
 ## Data Architecture and Design Decisions
 
 The database design uses **MongoDB** with three main collections:
