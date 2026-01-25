@@ -426,7 +426,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     <div className=" p-1 z-10 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky sm:h-full">
       <form
         id="add-clothes-form"
-        className="mt-5 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 gap-2 "
+        className="md:mt-5 mt-2 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1"
       >
         <div className="w-full mx-auto mb-1 flex justify-start">
           <button
@@ -449,7 +449,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           />
           <div
             id="add-picture-btn"
-            className="relative bg-white border border-indigo-200 rounded-lg  h-[360px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
+            className="relative bg-white border border-indigo-200 rounded-lg md:h-[360px] h-[280px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
             onClick={() => {
               if (!preview) fileInputRef.current?.click();
             }}
