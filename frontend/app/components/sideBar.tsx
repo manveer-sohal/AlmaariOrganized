@@ -1,5 +1,5 @@
-import ChooseColour from "./chooseColour";
-import ValidateType from "./validateType";
+import ChooseColour from "../dashboard/components/chooseColour";
+import ValidateType from "../dashboard/components/validateType";
 import React, { useState } from "react";
 import WeatherCheck from "./weatherCheck";
 import { useClothesStore } from "../store/useClothesStore";
@@ -52,8 +52,8 @@ function SideBar({ view, setView }: SideBarProp) {
     onClickFilter();
   };
   return (
-    <>
-      <ul className="border-indigo-300 border-l-4 p-3 h-[92.3vh] text-center bg-indigo-400/100  py-[2.1vh] flex flex-col min-w-[150px] shadow-md ">
+    <div className="bg-red-500 w-full">
+      <ul className="border-indigo-300 border-l-4 p-3 w-full h-[93.4vh] text-center bg-indigo-400/100  py-[2.1vh] flex flex-col min-w-[150px] shadow-md ">
         <li>
           <button
             onClick={() => onClickHome()}
@@ -225,7 +225,7 @@ function SideBar({ view, setView }: SideBarProp) {
           <span>Create Outfit</span>
         </button>
       </ul>
-    </>
+    </div>
   );
 }
 

@@ -68,7 +68,11 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   return (
     <>
       <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 overflow-hidden">
-        <li id="icon" className="shrink-0">
+        <li
+          id="icon"
+          className="shrink-0 cursor-pointer"
+          onClick={() => setView("home")}
+        >
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
         </li>
         <ul className="flex items-center justify-end gap-2 h-full">

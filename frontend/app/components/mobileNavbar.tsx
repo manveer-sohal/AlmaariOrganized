@@ -61,7 +61,7 @@ function MobileNavBar({ onSearchTermChange }: NavBarProps) {
 
   return (
     <>
-      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400/90 h-full  p-2 sticky top-0 overflow-hidden">
+      <nav className=" border-indigo-300 border-solid border-s-4 bg-indigo-400/90 h-full  p-2 sticky top-0 overflow-hidden z-10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center justify-end gap-2 h-full">
             <li id="icon" className="shrink-0">

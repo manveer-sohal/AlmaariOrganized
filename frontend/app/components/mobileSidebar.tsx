@@ -1,5 +1,5 @@
-import ChooseColour from "./chooseColour";
-import ValidateType from "./validateType";
+import ChooseColour from "../dashboard/components/chooseColour";
+import ValidateType from "../dashboard/components/validateType";
 import React, { useState } from "react";
 import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
