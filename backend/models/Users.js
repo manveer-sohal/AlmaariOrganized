@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const ClothesSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, //reference to the user who owns the clothing item, allows for efficient querying of clothes by user
   uniqueId: { type: String, required: true, unique: true },
   type: { type: String, required: true, index: true },
   imageSrc: { type: String, required: true },
@@ -11,6 +12,10 @@ const ClothesSchema = new mongoose.Schema({
   waterproof: { type: Boolean, default: false },
   slot: { type: String, required: true }, //head, body, legs, feet
 });
+
+ClothesSchema.index({ userId: 1, createdAt: -1 });
+ClothesSchema.index({ userId: 1, type: 1, createdAt: -1 });
+ClothesSchema.index({ userId: 1, colour: 1, createdAt: -1 });
 
 const Clothes =
   mongoose.models.Clothes || mongoose.model("Clothes", ClothesSchema);
