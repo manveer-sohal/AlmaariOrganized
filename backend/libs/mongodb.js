@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-dotenv.config();
+if (process.env.NODE_ENV !== "test") {
+  dotenv.config();
+}
+const isTestEnv = process.env.NODE_ENV === "test";
 /*
 
 In a serverless enviorment (like next,js API routes on Vercel AWS Lambda, or similar platforms)
@@ -51,12 +54,30 @@ if (!cached) {
 }
 
 async function connectMongoDB() {
+  if (process.env.NODE_ENV === "test") {
+    if (
+      process.env.MONGODB_URI &&
+      !process.env.MONGODB_URI.includes("mongodb-memory-server")
+    ) {
+      throw new Error(
+        "❌ Tests attempted to connect to a non-test MongoDB URI",
+      );
+    }
+  }
+  // Prevent connecting during tests if already connected
+  if (isTestEnv && mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+  // Prevent reconnecting if Mongoose is already connected
+  if (mongoose.connection.readyState === 1) {
+    cached.conn = mongoose.connection;
+    return cached.conn;
+  }
   //if the conenction exists in the cache, return it
   //prevents unnecessary re-connections
   if (cached.conn) {
     return cached.conn;
   }
-
   //if a new connection is not being attempted
   //useNewUrlParser: true: Ensures the connection string is parsed correctly.
   //useUnifiedTopology: true: Enables the new connection management engine in Mongoose for better performance.
