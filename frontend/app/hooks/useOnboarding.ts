@@ -4,12 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export const useOnboarding = () => {
   const { user } = useUser();
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
   const { data: onboarding, isLoading: isLoadingOnboarding } = useQuery({
     queryKey: ["onboarding"],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/api/users/onboarding`, {
+      const response = await fetch(`/api/users/onboarding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
