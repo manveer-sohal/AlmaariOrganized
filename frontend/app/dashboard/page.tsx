@@ -3,15 +3,15 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import NavBar from "../components/navBar";
 import SideBar from "../components/sideBar";
 import React, { useEffect, useState } from "react";
-import DisplayClothes from "../components/displayClothes";
-import CreateOutfitUI from "../components/CreatOutfitPage/createOutfitUI";
-import ViewOutfits from "../components/viewOutfits";
-import AddClothesUI from "../components/addClothesUI";
+import DisplayClothes from "./components/displayClothes";
+import CreateOutfitUI from "./CreateOutfit/createOutfitUI";
+import ViewOutfits from "./PreviewOutfit/viewOutfits";
+import AddClothesUI from "./addClothes/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
 import MobileSideBar from "../components/mobileSidebar";
 import { goToNextTourStep } from "../components/OnBoardingTour";
 // import { startOnboardingTour } from "../components/OnBoardingTour";
-import CheckList from "../components/CheckList";
+import CheckList from "./components/CheckList";
 // import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
@@ -66,9 +66,11 @@ export default function Dashboard() {
   };
 
   return (
-    <main>
-      <div className="z-20 sticky top-0 box-shadow-md">
-        <div className="block md:hidden">
+    <main className="bg-indigo-400 h-screen w-full grid grid-rows-[auto_1fr] overflow-hidden">
+      {" "}
+      {/* top row container, this contains the nav bar and the mobile side bar*/}
+      <div className="w-[100vw] ">
+        <div className="block md:hidden ">
           <MobileNavBar></MobileNavBar>
         </div>
 
@@ -79,71 +81,78 @@ export default function Dashboard() {
         <div className="block md:hidden">
           <MobileSideBar view={view} setView={setView}></MobileSideBar>
         </div>
-
-        <div className="hidden md:block">
-          <div className="sidebar-container">
+      </div>
+      {/* bottom row container, this contains the side bar and the content area*/}
+      <div className=" h-full grid  md:grid-cols-[auto_1fr]">
+        {/* side bar*/}
+        <div className=" z-10 hidden md:block">
+          <div
+            className="sidebar-container"
+            style={{ width: "clamp(100px,20vw,280px)" }}
+          >
             <SideBar view={view} setView={setView}></SideBar>
           </div>
         </div>
-      </div>
-      {isLoading ? (
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
-        </div>
-      ) : (
-        <>
-          {!user && (
+        {/* content area*/}
+        <div className=" h-[calc(100vh-64px)] w-full bg-background md:rounded-tl-3xl  ">
+          {isLoading ? (
             <div className="flex justify-center items-center h-screen">
-              <p>please log in to view your dashboard</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
             </div>
+          ) : (
+            <>
+              {!user && (
+                <div className="flex justify-center items-center h-screen">
+                  <p>please log in to view your dashboard</p>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
-      {user && (
-        <div className="h-full w-full relative">
-          {view === "addClothes" && (
-            <div className="fixed w-full h-full z-20 top-0">
-              <AddClothesUI setView={setView}></AddClothesUI>
-            </div>
-          )}
+          {user && (
+            <div className=" md:rounded-tl-3xl w-full relative overflow-y-scroll h-full">
+              {view === "addClothes" && (
+                <div className="fixed w-full h-full z-20 top-0">
+                  <AddClothesUI setView={setView}></AddClothesUI>
+                </div>
+              )}
 
-          {/* previously had a loading screen here before the whole page loaded*/}
-          {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
-          {view === "outfits" && <ViewOutfits></ViewOutfits>}
-          {(view === "home" || view === "addClothes") && (
-            <DisplayClothes></DisplayClothes>
-          )}
-          <div className="block md:hidden">
-            <div
-              className="absolute bottom-0 right-0"
-              onClick={onClickAddClothes}
-            >
-              <button
-                id="add-clothes-btn-mobile"
-                onClick={goToNextTourStep}
-                title="Add Clothes"
-                className="fixed bottom-0 right-0 inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
+              {/* previously had a loading screen here before the whole page loaded*/}
+              {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
+              {view === "outfits" && <ViewOutfits></ViewOutfits>}
+              {(view === "home" || view === "addClothes") && (
+                <DisplayClothes></DisplayClothes>
+              )}
+              <div className="block md:hidden">
+                <div
+                  className="absolute bottom-0 right-0"
+                  onClick={onClickAddClothes}
                 >
-                  <path
-                    d="M12 5v14M5 12h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span>Add Clothes</span>
-              </button>
-            </div>
-          </div>
-          <div
-            className="   
+                  <button
+                    id="add-clothes-btn-mobile"
+                    onClick={goToNextTourStep}
+                    title="Add Clothes"
+                    className="fixed bottom-0 right-0 inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 5v14M5 12h14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span>Add Clothes</span>
+                  </button>
+                </div>
+              </div>
+              <div
+                className="   
             
   z-10 fixed
   left-0 bottom-0
@@ -152,11 +161,13 @@ export default function Dashboard() {
   lg:right-0 lg:top-20
   xl:top-20 xl:right-0
 "
-          >
-            <CheckList />
-          </div>
+              >
+                <CheckList />
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </main>
   );
 }
