@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outfit } from "../types/clothes";
+import { Outfit } from "../../types/clothes";
 
 export default function OutfitOption({
   outfit,

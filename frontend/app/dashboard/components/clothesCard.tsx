@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ClothingItem } from "../types/clothes";
+import { ClothingItem } from "../../types/clothes";
 
 export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
   const [click, setClick] = useState<boolean>(false);
