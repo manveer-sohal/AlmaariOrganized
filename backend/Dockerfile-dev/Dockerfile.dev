@@ -13,7 +13,7 @@ RUN npm ci && npm cache clean --force
 COPY . .
 
 # Open the port for the express server
-EXPOSE 3001
+EXPOSE 8080
 # ENV MONGODB_URI=test
 
 
