@@ -33,7 +33,10 @@ const AiStylist = ({
       </div>
       <div className="h-[260px] overflow-auto space-y-2 pr-1">
         {aiMessages.map((m, idx) => (
-          <div key={`ai-${idx}`} className="flex items-start">
+          <div
+            key={`ai-${idx}`}
+            className=" flex md:flex-row flex-col items-start"
+          >
             <Image
               src={
                 mascotState === "thinking"

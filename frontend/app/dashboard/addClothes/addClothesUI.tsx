@@ -2,12 +2,10 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { ClothingItem, View } from "../types/clothes";
-import { colours_List, type_List } from "../data/constants";
-import { goToNextTourStep } from "./OnBoardingTour";
-//prop to allow accses to the toggleForm function in the main page, this lets us
-//send infromation if the back button is clicked, if it is the state of toggle form
-//is flipped (ie. false) which will not load the <AddClothesUI> </AddClothesUI> component
+import { ClothingItem, View } from "../../types/clothes";
+import { colours_List, type_List } from "../../data/constants";
+import { goToNextTourStep } from "../../components/OnBoardingTour";
+
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -19,9 +17,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const handleBack = () => {
     setView("home");
   };
-
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -351,7 +346,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     }
 
     console.log(formData);
-    const response = await fetch(`${API_BASE_URL}/api/clothes/upload`, {
+    const response = await fetch(`/api/clothes/upload`, {
       method: "POST",
       body: formData,
     });

@@ -1,5 +1,5 @@
 import React, { Dispatch, useState } from "react";
-import { colours_List } from "../data/constants";
+import { colours_List } from "../../data/constants";
 type ChooseColourProps = {
   colour: Dispatch<React.SetStateAction<string[] | null | undefined>>;
 };
@@ -12,7 +12,7 @@ function ChooseColour({ colour }: ChooseColourProps) {
 
   //a filtered list of colours which will change depedending on the user input for filtered results
   const [filtered_colours_List, set_Filtered_colours_List] = useState(
-    colours_List
+    colours_List,
   );
 
   //list of colours for clothes
@@ -87,7 +87,7 @@ function ChooseColour({ colour }: ChooseColourProps) {
   const filter = (
     input: string,
     list: string[],
-    setState: React.Dispatch<React.SetStateAction<string[]>>
+    setState: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     const filtered = list
       .filter((item) => item.toLowerCase().startsWith(input.toLowerCase()))
@@ -98,7 +98,7 @@ function ChooseColour({ colour }: ChooseColourProps) {
   //delete colour
   const handleClick = (value: string) => {
     const filteredColoursVar = usersColours.filter((item) =>
-      item !== value ? item : null
+      item !== value ? item : null,
     );
     setUsersColours(filteredColoursVar);
     colour(filteredColoursVar);

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useOnboarding } from "../hooks/useOnboarding";
-import { startOnboardingTourOutfit } from "./OnBoardingTourOutfit";
-import { startOnboardingTour } from "./OnBoardingTour";
+import { useOnboarding } from "../../hooks/useOnboarding";
+import { startOnboardingTourOutfit } from "../../components/OnBoardingTourOutfit";
+import { startOnboardingTour } from "../../components/OnBoardingTour";
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 function CheckList() {

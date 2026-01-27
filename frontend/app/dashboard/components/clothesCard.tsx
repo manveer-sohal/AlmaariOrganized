@@ -11,15 +11,12 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
   const { user } = useUser(); // Auth0 user information
   const [loaded, setLoaded] = useState(false);
 
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-
   function useDeleteClothes() {
     const client = useQueryClient();
 
     return useMutation({
       mutationFn: () =>
-        fetch(`${API_BASE_URL}/api/clothes/remove`, {
+        fetch("/api/clothes/remove", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ auth0Id: user?.sub, uniqueId: _id }),
