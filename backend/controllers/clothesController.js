@@ -213,8 +213,10 @@ export const getData = async (request, response) => {
   console.log("List clothes");
 
   try {
-    const { auth0Id } = request.body;
-
+    const { auth0Id, numberOfClothes = 40, page = 1 } = request.body;
+    console.log("auth0Id", auth0Id);
+    console.log("numberOfClothes", numberOfClothes);
+    console.log("page", page);
     if (!auth0Id) {
       return response.status(400).json({ error: "auth0Id is required" });
     }
@@ -237,13 +239,16 @@ export const getData = async (request, response) => {
 
     await connectMongoDB();
 
+    const skip = (page - 1) * numberOfClothes;
+    const limit = numberOfClothes;
+
     // Measure MongoDB query time
     const startTime = Date.now();
-
-    const userData = await User.findOne(
-      { auth0Id },
-      { clothes: 1, _id: 0 },
-    ).populate("clothes");
+    const userId = await User.findOne({ auth0Id }, { _id: 1 });
+    const userData = await Clothes.find({ userId: userId._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const endTime = Date.now();
     console.log(`Query took ${endTime - startTime} ms`);
@@ -267,7 +272,7 @@ export const getData = async (request, response) => {
         err,
       );
     }
-    return response.status(200).json({ Clothes: userData.clothes || [] });
+    return response.status(200).json({ Clothes: userData || [] });
   } catch (e) {
     console.error(e);
     return response
@@ -476,7 +481,8 @@ const mapTypeToSlot = (type) => {
     t.includes("shorts") ||
     t.includes("skirt") ||
     t.includes("cargos") ||
-    t.includes("capri")
+    t.includes("capri") ||
+    t.includes("pajamas")
   ) {
     return "legs";
   }
@@ -567,8 +573,13 @@ export const uploadData = async (request, response) => {
     })();
 
     const slot = mapTypeToSlot(type);
+    const userId = await User.findOne({ auth0Id });
+    if (!userId) {
+      return response.status(404).json({ error: "User not found" });
+    }
 
     const clothingDoc = await Clothes.create({
+      userId: userId._id,
       uniqueId: new mongoose.Types.ObjectId().toString(),
       type,
       imageSrc,
