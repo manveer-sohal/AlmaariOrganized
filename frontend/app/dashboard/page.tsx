@@ -66,8 +66,12 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="bg-indigo-400 h-screen w-full grid grid-rows-[auto_1fr] overflow-hidden">
-      {" "}
+    <main className="bg-indigo-400 h-screen w-full grid grid-rows-[auto_1fr] overflow-hidden relative">
+      {view === "addClothes" && (
+        <div className="absolute w-full h-full z-20 top-0">
+          <AddClothesUI setView={setView}></AddClothesUI>
+        </div>
+      )}
       {/* top row container, this contains the nav bar and the mobile side bar*/}
       <div className="w-[100vw] ">
         <div className="block md:hidden ">
@@ -109,13 +113,7 @@ export default function Dashboard() {
             </>
           )}
           {user && (
-            <div className=" md:rounded-tl-3xl w-full relative overflow-y-scroll h-full">
-              {view === "addClothes" && (
-                <div className="fixed w-full h-full z-20 top-0">
-                  <AddClothesUI setView={setView}></AddClothesUI>
-                </div>
-              )}
-
+            <div className=" md:rounded-tl-3xl w-full  overflow-y-scroll h-full">
               {/* previously had a loading screen here before the whole page loaded*/}
               {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}

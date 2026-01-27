@@ -9,14 +9,11 @@ import axios from "axios";
 dotenv.config();
 
 const redisUrl = process.env.REDIS_URL;
-
+const isTestEnv = process.env.NODE_ENV === "test";
 let redis;
 let _redisDnsErrorLogged = false; // dedupe DNS error logs
 
-if (!redisUrl) {
-  console.warn(
-    "UPSTASH_REDIS_URL is missing. Caching will be disabled and the app will fall back to MongoDB.",
-  );
+if (isTestEnv) {
   redis = {
     isOpen: false,
     on: () => {},
@@ -26,50 +23,10 @@ if (!redisUrl) {
     set: async () => {},
   };
 } else {
-  // Real Redis client
-  const realClient = createClient({
-    url: redisUrl,
-    socket: {
-      reconnectStrategy: (retries) => {
-        // backoff a bit, but stop trying after 3 attempts
-        if (retries > 3) return new Error("Stop reconnecting to Redis");
-        return Math.min(retries * 500, 2000);
-      },
-    },
-  });
-
-  realClient.on("error", (err) => {
-    // Avoid spamming logs on DNS failures
-    if (err && err.code === "ENOTFOUND") {
-      if (!_redisDnsErrorLogged) {
-        console.error("Redis client DNS error (once):", err);
-        _redisDnsErrorLogged = true;
-      }
-      return; // swallow further repeats
-    }
-    console.error("Redis client error:", err);
-  });
-
-  try {
-    if (!realClient.isOpen) {
-      await realClient.connect();
-      await realClient.ping();
-      console.log("✅ Redis connected");
-    }
-  } catch (err) {
-    console.error("Failed to connect to Redis. Continuing without cache:", err);
-    // Stop the real client and remove listeners to prevent further error spam
-    try {
-      await realClient.quit();
-    } catch (_) {
-      /* ignore */
-    }
-    try {
-      realClient.removeAllListeners && realClient.removeAllListeners();
-    } catch (_) {
-      /* ignore */
-    }
-    // Swap in a no-op shim so subsequent calls don't throw
+  if (!redisUrl) {
+    console.warn(
+      "UPSTASH_REDIS_URL is missing. Caching will be disabled and the app will fall back to MongoDB.",
+    );
     redis = {
       isOpen: false,
       on: () => {},
@@ -78,10 +35,67 @@ if (!redisUrl) {
       get: async () => null,
       set: async () => {},
     };
-  }
-  if (!redis) {
-    // if connect succeeded, use the real clilent
-    redis = realClient;
+  } else {
+    // Real Redis client
+    const realClient = createClient({
+      url: redisUrl,
+      socket: {
+        reconnectStrategy: (retries) => {
+          // backoff a bit, but stop trying after 3 attempts
+          if (retries > 3) return new Error("Stop reconnecting to Redis");
+          return Math.min(retries * 500, 2000);
+        },
+      },
+    });
+
+    realClient.on("error", (err) => {
+      // Avoid spamming logs on DNS failures
+      if (err && err.code === "ENOTFOUND") {
+        if (!_redisDnsErrorLogged) {
+          console.error("Redis client DNS error (once):", err);
+          _redisDnsErrorLogged = true;
+        }
+        return; // swallow further repeats
+      }
+      console.error("Redis client error:", err);
+    });
+
+    try {
+      if (!realClient.isOpen) {
+        await realClient.connect();
+        await realClient.ping();
+        console.log("✅ Redis connected");
+      }
+    } catch (err) {
+      console.error(
+        "Failed to connect to Redis. Continuing without cache:",
+        err,
+      );
+      // Stop the real client and remove listeners to prevent further error spam
+      try {
+        await realClient.quit();
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        realClient.removeAllListeners && realClient.removeAllListeners();
+      } catch (_) {
+        /* ignore */
+      }
+      // Swap in a no-op shim so subsequent calls don't throw
+      redis = {
+        isOpen: false,
+        on: () => {},
+        connect: async () => {},
+        ping: async () => {},
+        get: async () => null,
+        set: async () => {},
+      };
+    }
+    if (!redis) {
+      // if connect succeeded, use the real clilent
+      redis = realClient;
+    }
   }
 }
 
@@ -214,13 +228,10 @@ export const getData = async (request, response) => {
 
   try {
     const { auth0Id, numberOfClothes = 40, page = 1 } = request.body;
-    console.log("auth0Id", auth0Id);
-    console.log("numberOfClothes", numberOfClothes);
-    console.log("page", page);
+
     if (!auth0Id) {
       return response.status(400).json({ error: "auth0Id is required" });
     }
-    console.log(auth0Id);
 
     // Redis cache key
     const redisKey = `userClothes:${auth0Id}`;
@@ -244,7 +255,12 @@ export const getData = async (request, response) => {
 
     // Measure MongoDB query time
     const startTime = Date.now();
+    console.log("auth0Id", auth0Id);
     const userId = await User.findOne({ auth0Id }, { _id: 1 });
+    if (!userId) {
+      console.log("User Not Found");
+      return response.status(404).json({ error: "User Not Found" });
+    }
     const userData = await Clothes.find({ userId: userId._id })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -253,18 +269,11 @@ export const getData = async (request, response) => {
     const endTime = Date.now();
     console.log(`Query took ${endTime - startTime} ms`);
 
-    if (!userData) {
-      console.log("User Not Found");
-      return response.status(404).json({ error: "User Not Found" });
-    }
-
     // Store the data in Redis cache with a TTL (best-effort)
     try {
-      await redis.set(
-        redisKey,
-        JSON.stringify({ Clothes: userData.clothes || [] }),
-        { EX: 600 },
-      );
+      await redis.set(redisKey, JSON.stringify({ Clothes: userData || [] }), {
+        EX: 600,
+      });
       console.log("Cache miss: Queried MongoDB and cached the result");
     } catch (err) {
       console.warn(
