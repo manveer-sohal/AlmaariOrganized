@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { ClothingItem, View } from "../../types/clothes";
+import { View } from "../../types/clothes";
 import { colours_List, type_List } from "../../data/constants";
 import { goToNextTourStep } from "../../components/OnBoardingTour";
 
@@ -368,16 +368,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       if (response && response.ok) {
         console.log("picture uploaded1");
-        const data = await response.json();
-
-        queryClient.setQueryData<ClothingItem[]>(
-          ["clothes", user?.sub],
-          (old) => {
-            if (!old) return [data.clothing];
-            return [data.clothing, ...old];
-          },
-        );
-
+        await queryClient.invalidateQueries({
+          queryKey: ["clothesData", user?.sub],
+        });
         setView("home");
         goToNextTourStep();
         queryClient.invalidateQueries({ queryKey: ["onboarding"] });
