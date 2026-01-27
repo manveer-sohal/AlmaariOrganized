@@ -5,7 +5,6 @@ export default function WeatherCheck() {
   const [weather, setWeather] = useState<string>("bg-slate-300");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const getWeather = async () => {
     setLoading(true);
@@ -33,17 +32,13 @@ export default function WeatherCheck() {
 
           const location = { lat, long };
 
-          const response = await fetch(
-            `${API_BASE_URL}/api/weather/getWeather` ||
-              "http://localhost:3001/api",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(location),
-            }
-          );
+          const response = await fetch(`/api/weather/getWeather`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(location),
+          });
 
           if (!response.ok) {
             throw new Error("Failed to fetch weather data.");
@@ -55,7 +50,7 @@ export default function WeatherCheck() {
         (err) => {
           setError("Location access denied. Please enable location services.");
           console.error(err);
-        }
+        },
       );
     } catch (err) {
       if (err instanceof Error) {
