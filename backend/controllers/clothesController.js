@@ -105,7 +105,6 @@ export const removeData = async (request, response) => {
   console.log("delete");
   try {
     const { auth0Id, uniqueId, clothingId } = request.body;
-    await connectMongoDB();
 
     if (!auth0Id) {
       return response.status(400).json({ error: "auth0Id is required" });
@@ -186,8 +185,6 @@ export const getOutfits = async (request, response) => {
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
     }
 
-    await connectMongoDB();
-
     // Measure MongoDB query time
     const startTime = Date.now();
     const userData = await User.findOne(
@@ -247,8 +244,6 @@ export const getData = async (request, response) => {
       console.log("Cache hit: Returning cached data");
       return response.status(200).json(JSON.parse(cachedData)); // Send cached data
     }
-
-    await connectMongoDB();
 
     const skip = (page - 1) * numberOfClothes;
     const limit = numberOfClothes;
@@ -418,7 +413,6 @@ export const createOutfit = async (request, response) => {
         }
       }
     }
-    await connectMongoDB();
 
     const createdOutfit = await Outfits.create({
       uniqueId: new mongoose.Types.ObjectId().toString(),
@@ -563,8 +557,6 @@ export const uploadData = async (request, response) => {
 
     console.log("next move");
 
-    await connectMongoDB();
-
     const parsedColour = (() => {
       try {
         return JSON.parse(colour || "[]");
@@ -629,7 +621,6 @@ export const deleteOutfit = async (request, response) => {
   console.log("Deleting Outfit");
   try {
     const { auth0Id, uniqueId } = request.body;
-    await connectMongoDB();
     const outfit = await Outfits.findOneAndDelete({ uniqueId });
     if (!outfit) {
       return response.status(404).json({ error: "Outfit not found" });
