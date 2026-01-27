@@ -4,7 +4,12 @@ import clothesRoutes from "./routes/clothesRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import aiStylistRoutes from "./routes/aiStylistRoutes.js";
-
+import connectMongoDB from "./libs/mongodb.js";
+import dotenv from "dotenv";
+dotenv.config();
+if (process.env.NODE_ENV !== "test") {
+  await connectMongoDB();
+}
 //!!! unistall mongoose from front end !!!!
 const app = express();
 const port = process.env.PORT || 8080;
