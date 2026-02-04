@@ -4,6 +4,7 @@ import { mapTypeToSlot } from "../utils/slot.utils.js";
 import { User } from "../models/Users.js";
 import mongoose from "mongoose";
 import { Clothes } from "../models/Users.js";
+import { Outfits } from "../models/Users.js";
 import { redis } from "../libs/redis.client.js";
 
 export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
@@ -48,7 +49,7 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
     ).populate("clothes");
 
     await redis.del("userClothes:" + auth0Id);
-
+    await redis.del("userOutfits:" + auth0Id);
     return {
       message: "Clothing item removed successfully",
       Clothes: updatedUser?.clothes || [],
