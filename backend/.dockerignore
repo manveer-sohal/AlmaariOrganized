@@ -3,3 +3,6 @@ dist
 \*.env
 postman.json
 Dockerfile-dev/Dockerfile.dev
+.next/
+node_modules/
+.cache/

@@ -1,14 +1,16 @@
 import request from "supertest";
 import { describe, it, before, after, beforeEach } from "mocha";
 import { expect } from "chai";
-import app from "../App.js";
+import app from "../app.js";
+import sinon from "sinon";
+import { User } from "../models/Users.js";
 import {
   connectTestDB,
   disconnectTestDB,
   clearTestDB,
   seedTestUserWithClothes,
 } from "./setupTestDB.js";
-
+import { redis } from "../libs/redis.client.js";
 describe("App Test", () => {
   before(async () => {
     await connectTestDB();
@@ -20,6 +22,9 @@ describe("App Test", () => {
 
   beforeEach(async () => {
     await clearTestDB();
+  });
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("should return a 200 status code", async () => {
@@ -33,12 +38,15 @@ describe("App Test", () => {
     expect(clothes.length).to.equal(2);
   });
   it("should return 404 for a non-existent user", async () => {
+    sinon.stub(User, "findOne").resolves(null);
     const res = await request(app)
       .post("/api/clothes/listClothes")
       .send({ auth0Id: "does-not-exist" });
 
     expect(res.status).to.equal(404);
+    expect(res.body.error).to.equal("User Not Found");
   });
+
   it("should support pagination for clothes", async () => {
     const { user } = await seedTestUserWithClothes();
 
