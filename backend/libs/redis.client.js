@@ -15,6 +15,7 @@ if (isTestEnv) {
     ping: async () => {},
     get: async () => null,
     set: async () => {},
+    del: async () => {},
   };
 } else {
   if (!redisUrl) {
@@ -28,6 +29,7 @@ if (isTestEnv) {
       ping: async () => {},
       get: async () => null,
       set: async () => {},
+      del: async () => {},
     };
   } else {
     // Real Redis client
@@ -84,6 +86,7 @@ if (isTestEnv) {
         ping: async () => {},
         get: async () => null,
         set: async () => {},
+        del: async () => {},
       };
     }
     if (!redis) {
