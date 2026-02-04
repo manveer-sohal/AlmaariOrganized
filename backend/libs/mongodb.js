@@ -51,6 +51,25 @@ if (!cached) {
 }
 
 async function connectMongoDB() {
+  if (process.env.NODE_ENV === "test") {
+    if (
+      process.env.MONGODB_URI &&
+      !process.env.MONGODB_URI.includes("mongodb-memory-server")
+    ) {
+      throw new Error(
+        "❌ Tests attempted to connect to a non-test MongoDB URI"
+      );
+    }
+  }
+  // Prevent connecting during tests if already connected
+  if (isTestEnv && mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+  // Prevent reconnecting if Mongoose is already connected
+  if (mongoose.connection.readyState === 1) {
+    cached.conn = mongoose.connection;
+    return cached.conn;
+  }
   //if the conenction exists in the cache, return it
   //prevents unnecessary re-connections
   if (cached.conn) {

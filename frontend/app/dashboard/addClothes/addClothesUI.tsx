@@ -37,7 +37,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [preview, setPreview] = useState<string | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
   const [filtered_colours_List, set_Filtered_colours_List] = useState(
-    colours_List,
+    colours_List
   );
   //a filtered list of clothes which will change depedending on the user input for filtered results
   const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
@@ -160,7 +160,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const filter = (
     input: string,
     list: string[],
-    setState: React.Dispatch<React.SetStateAction<string[]>>,
+    setState: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     const filtered = list
       .filter((item) => item.toLowerCase().startsWith(input.toLowerCase()))
@@ -215,7 +215,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
     },
-    [canvasRef, imageRef, offset, zoom],
+    [canvasRef, imageRef, offset, zoom]
   );
 
   useEffect(() => {
@@ -256,7 +256,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     y: number,
     imgW: number,
     imgH: number,
-    scale: number,
+    scale: number
   ) => {
     const size = 400;
     const maxX = Math.max(0, (imgW * scale - size) / 2);
@@ -357,7 +357,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   //If submit is clicked
   const handleSubmit = async (
-    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
+    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
   ) => {
     event.preventDefault();
     setLoading(true);
@@ -399,7 +399,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //delete colour
   const handleClick = (value: string) => {
     setUsersColours(
-      usersColours.filter((item) => (item !== value ? item : null)),
+      usersColours.filter((item) => (item !== value ? item : null))
     );
     if (usersColours.length == 0) {
       setValidColour(false);

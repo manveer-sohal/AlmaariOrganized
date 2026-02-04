@@ -22,13 +22,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev # This is the file name for your backend Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     restart: unless-stopped
     ports:
       - "3000:3000"
     env_file: ./frontend/.env.local
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - api
     networks:

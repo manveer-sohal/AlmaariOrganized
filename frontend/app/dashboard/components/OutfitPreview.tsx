@@ -8,23 +8,23 @@ const OutfitPreview = ({
   selectedBySlot: Partial<Record<Slot, ClothingItem[] | null>>;
   setSelectedBySlot: (
     selectedBySlot: (
-      prev: Partial<Record<Slot, ClothingItem[] | null>>,
-    ) => Partial<Record<Slot, ClothingItem[] | null>>,
+      prev: Partial<Record<Slot, ClothingItem[] | null>>
+    ) => Partial<Record<Slot, ClothingItem[] | null>>
   ) => void;
 }) => {
   return (
     <div
       id="outfit-preview"
-      className=" w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md h-full"
+      className=" w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md h-[calc(100vh-200px)]  overflow-hidden min-h-[350px]"
     >
       <h3 className=" font-medium text-indigo-900 mb-2">Outfit Preview</h3>
-      <div className="flex flex-col gap-3 h-[650px] ">
+      <div className="flex flex-col gap-3 h-full hidden-scrollbar overflow-y-scroll  overflow-hidden">
         {Object.keys(selectedBySlot).map((slot) => {
           const item = selectedBySlot[slot as Slot];
           return (
             <div
               key={slot}
-              className="border border-indigo-200 w-full rounded-lg p-3 md:min-h-[100px] flex items-center  overflow-x-scroll "
+              className="border border-indigo-200 w-full rounded-lg p-3 md:min-h-[100px] flex items-center  overflow-x-scroll hidden-scrollbar overflow-hidden"
             >
               <div className="flex flex-col md:flex-row items-center ">
                 <div className="text-sm text-indigo-900 capitalize w-10 md:w-12 lg:w-16 shrink-0">
@@ -63,7 +63,7 @@ const OutfitPreview = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[110px] md:w-[110px] rounded-md bg-indigo-50 border border-indigo-200">
+                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[110px] md:w-[110px] rounded-md bg-indigo-50 border border-indigo-200 ">
                     {slot === "head" && (
                       <svg
                         width="48"
