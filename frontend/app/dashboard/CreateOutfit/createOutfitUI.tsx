@@ -20,7 +20,7 @@ function CreateOutfitUI() {
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([DEFAULT_AI_MESSAGE]);
-  const numberOfClothes = 20;
+  const numberOfClothes = 30;
   const {
     clothes,
     fetchNextPage,
@@ -37,12 +37,12 @@ function CreateOutfitUI() {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
   const selectedItems = useMemo(() => {
     return Object.values(selectedBySlot).filter(
-      (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0,
+      (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0
     );
   }, [selectedBySlot]);
 
   const { thoughts, isLoadingThoughts, errorThoughts } = useGenerateAiThoughts(
-    selectedItems,
+    selectedItems
   );
 
   const mascotState = useMemo(() => {
@@ -62,7 +62,7 @@ function CreateOutfitUI() {
 
   const clothesById = useMemo(
     () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
-    [clothes],
+    [clothes]
   );
 
   const toggleSelect = (id: string) => {

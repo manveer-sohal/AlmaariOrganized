@@ -1,7 +1,11 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  InfiniteData,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 
@@ -15,36 +19,53 @@ export default function ClothesCard({ imageSrc, _id }: ClothingItem) {
     const client = useQueryClient();
 
     return useMutation({
-      mutationFn: () =>
-        fetch("/api/clothes/remove", {
+      mutationFn: async () => {
+        const res = await fetch("/api/clothes/remove", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auth0Id: user?.sub, uniqueId: _id }),
-        }),
-
-      // OPTIMISTIC UPDATE
-      onMutate: async () => {
-        await client.cancelQueries({ queryKey: ["clothes", user?.sub] });
-
-        const previousData = client.getQueryData(["clothes", user?.sub]);
-
-        client.setQueryData(["clothes", user?.sub], (old: ClothingItem[]) => {
-          return old?.filter((item: ClothingItem) => item._id !== _id);
+          body: JSON.stringify({
+            auth0Id: user?.sub,
+            uniqueId: _id,
+          }),
         });
 
-        return { previousData };
+        if (!res.ok) throw new Error("Failed to delete clothing");
       },
 
-      // On error, rollback
+      // 🔥 OPTIMISTIC UPDATE
+      onMutate: async () => {
+        // 1️⃣ Cancel all clothes queries
+        await client.cancelQueries({ queryKey: ["clothesData"] });
+
+        // 2️⃣ Snapshot all existing clothesData caches
+        const previousQueries = client.getQueriesData({
+          queryKey: ["clothesData"],
+        });
+
+        // 3️⃣ Optimistically remove item from ALL pages
+        client.setQueriesData(
+          { queryKey: ["clothesData"] },
+          (old: InfiniteData<ClothingItem[]>) => {
+            if (!old?.pages) return old;
+
+            return {
+              ...old,
+              pages: old.pages.map((page: ClothingItem[]) =>
+                page.filter((item) => item._id !== _id)
+              ),
+            };
+          }
+        );
+
+        // 4️⃣ Return snapshot for rollback
+        return { previousQueries };
+      },
+
+      // ❌ Rollback on failure
       onError: (_err, _vars, context) => {
-        if (context?.previousData) {
-          client.setQueryData(["clothes", user?.sub], context.previousData);
-        }
-      },
-
-      // After it's done, invalidate the query
-      onSettled: () => {
-        client.invalidateQueries({ queryKey: ["clothes", user?.sub] });
+        context?.previousQueries?.forEach(([key, data]) => {
+          client.setQueryData(key, data);
+        });
       },
     });
   }
