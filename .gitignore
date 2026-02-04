@@ -2,6 +2,7 @@ node_modules
 .DS_Store
 build/
 .env
+.env.test
 gcloud.md
 changes.txt
 .gitignore

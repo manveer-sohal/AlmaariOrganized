@@ -3,11 +3,11 @@ import {
   getData,
   uploadData,
   removeData,
-  uploadMiddleware,
   createOutfit,
   getOutfits,
   deleteOutfit,
 } from "../controllers/clothesController.js";
+import uploadMiddleware from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
