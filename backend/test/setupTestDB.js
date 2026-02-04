@@ -16,6 +16,10 @@ export async function connectTestDB() {
 }
 
 export async function clearTestDB() {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("❌ clearTestDB called outside test environment");
+  }
+
   const collections = mongoose.connection.collections;
   for (const key in collections) {
     await collections[key].deleteMany({});
@@ -30,6 +34,7 @@ export async function disconnectTestDB() {
 
 export async function seedTestUserWithClothes() {
   const user = await User.create({
+    _id: new mongoose.Types.ObjectId().toString(),
     auth0Id: "test-auth0-id",
     email: "test@example.com",
     clothes: [],
