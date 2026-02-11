@@ -1,6 +1,7 @@
 "use client";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
+import { useState } from "react";
 
 /*
 this is a login button component, we leep it seprate as interactable compoents should have the
@@ -18,20 +19,22 @@ this is loaded into the nav bar, keeping it seperate due to "use cliet"
 */
 function LoginButton() {
   const { user } = useUser();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   return (
-    <div>
+    <div className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300">
       {user ? (
         <Link
-          className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
           href="/api/auth/logout"
-          onClick={() => console.log("Logging out...")}
+          onClick={() => {
+            setIsLoggingOut(true);
+            console.log("Logging out...");
+          }}
         >
-          Logout
+          {isLoggingOut ? "Logging out..." : "Logout"}
         </Link>
       ) : (
         <Link
-          className="block font-semibold text-lg px-5 py-2 rounded-3xl m-1 cursor-pointer hover:bg-indigo-500 active:bg-purple-600 hover:text-white transition-colors duration-300"
           href="/api/auth/login"
           prefetch={false}
           onClick={() => console.log("Redirecting to login...")}
