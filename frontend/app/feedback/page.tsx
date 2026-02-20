@@ -1,5 +1,6 @@
 "use client";
 
+//feedback/page.tsx
 import { useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export default function FeedbackPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/feedback", {
+      const response = await fetch("/api/feedback/createFeedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -32,7 +33,7 @@ export default function FeedbackPage() {
           message: message.trim(),
           priority,
           email: user?.email ?? undefined,
-          userId: user?.sub ?? undefined,
+          auth0Id: user?.sub ?? undefined,
         }),
       });
 
