@@ -4,6 +4,7 @@ import clothesRoutes from "./routes/clothesRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import aiStylistRoutes from "./routes/aiStylistRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
 import connectMongoDB from "./libs/mongodb.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -43,5 +44,6 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 export default app;

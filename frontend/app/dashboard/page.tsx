@@ -68,7 +68,7 @@ export default function Dashboard() {
   return (
     <main className="bg-indigo-400 h-screen w-full grid grid-rows-[auto_1fr] overflow-hidden relative">
       {view === "addClothes" && (
-        <div className="absolute w-full h-full z-20 top-0">
+        <div className="absolute w-full h-full z-40 top-0">
           <AddClothesUI setView={setView}></AddClothesUI>
         </div>
       )}

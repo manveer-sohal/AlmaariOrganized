@@ -1,21 +1,21 @@
-import LoginButton from "./loginButton";
 import temp from "../Logo.png";
 import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useClothesStore } from "../store/useClothesStore";
 import { View } from "../types/clothes";
 import { colours_List, type_List } from "../data/constants";
 import { goToNextTourStep } from "./OnBoardingTour";
+import Dropdown from "../dashboard/components/Dropdown";
+import { motion } from "framer-motion";
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
   setView: (view: View) => void;
 };
 
 function NavBar({ onSearchTermChange, setView }: NavBarProps) {
-  const { user, isLoading } = useUser();
   const [search, setSearch] = useState("");
   const { filters, setFilters } = useClothesStore();
+  const [showFeedback, setShowFeedback] = useState(true);
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
@@ -67,7 +67,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
 
   return (
     <>
-      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 overflow-hidden">
+      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 z-20">
         <li
           id="icon"
           className="shrink-0 cursor-pointer"
@@ -157,22 +157,32 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
               <span>Add Clothes</span>
             </button>
           </li>
-          <div className="max-w-2xl">
-            <li className="shrink-0">
-              <LoginButton></LoginButton>
-            </li>
-            <li className="shrink-0">
-              {isLoading ? (
-                <span>Loading...</span>
-              ) : user ? (
-                <div className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300">
-                  <span>{user.email}</span>
-                </div>
-              ) : (
-                <span>Logged out</span>
+          <li className="max-w-2xl">
+            <div
+              className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
+                showFeedback
+                  ? "bg-indigo-500 text-white"
+                  : "bg-indigo-100/70 text-indigo-900"
+              }`}
+            >
+              <span
+                className="cursor-pointer"
+                onClick={() => setShowFeedback(!showFeedback)}
+              >
+                Settings
+              </span>
+              {showFeedback && (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.1, ease: "easeOut" }}
+                  className="z-50 fixed right-0 top-16"
+                >
+                  <Dropdown />
+                </motion.div>
               )}
-            </li>
-          </div>
+            </div>
+          </li>
         </ul>
       </nav>
     </>

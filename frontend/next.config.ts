@@ -20,6 +20,10 @@ const nextConfig = {
         source: "/api/aiStylist/:path*",
         destination: `${API_BASE_URL}/api/aiStylist/:path*`,
       },
+      {
+        source: "/api/feedback/:path*",
+        destination: `${API_BASE_URL}/api/feedback/:path*`,
+      },
     ];
   },
 };
