@@ -41,6 +41,7 @@ const usersSchema = new mongoose.Schema({
   outfits: [{ type: mongoose.Schema.Types.ObjectId, ref: "Outfits" }],
   hasCompletedOnboardingForClothes: { type: Boolean, default: false },
   hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
+  role: { type: String, default: "user" },
 });
 
 const User = mongoose.models.User || mongoose.model("User", usersSchema);

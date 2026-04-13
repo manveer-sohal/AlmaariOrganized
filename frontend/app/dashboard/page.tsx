@@ -12,6 +12,7 @@ import MobileSideBar from "../components/mobileSidebar";
 import { goToNextTourStep } from "../components/OnBoardingTour";
 // import { startOnboardingTour } from "../components/OnBoardingTour";
 import CheckList from "./components/CheckList";
+import { useRole } from "../hooks/useRole";
 // import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
@@ -37,24 +38,13 @@ export default function Dashboard() {
   const [view, setView] = useState<View>("home");
   // const { menuOpen } = useClothesStore();
 
+  useRole(user?.sub || "");
+
   useEffect(() => {
     if (!user || hasLoaded) return;
     const load = async () => {
       if (!user || hasLoaded) return; // Prevent fetching multiple times
 
-      // const response = await fetch(
-      //   `${API_BASE_URL}/api/users/hasCompletedOnboarding`,
-      //   {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ auth0Id: user?.sub }),
-      //   }
-      // );
-      // const data = await response.json();
-
-      // if (!data.hasCompletedOnboardingForClothes) {
-      //   startOnboardingTour();
-      // }
       setHasLoaded(true);
     };
 

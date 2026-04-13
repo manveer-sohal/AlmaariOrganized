@@ -34,18 +34,18 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       User.findOneAndUpdate(
         { auth0Id },
         { $pull: { clothes: clothingDoc._id } },
-        { new: true }
+        { new: true },
       ),
       Outfits.updateMany(
         { outfit_items: clothingDoc._id },
-        { $pull: { outfit_items: clothingDoc._id } }
+        { $pull: { outfit_items: clothingDoc._id } },
       ),
       Clothes.deleteOne({ _id: clothingDoc._id }),
     ]);
 
     const updatedUser = await User.findOne(
       { auth0Id },
-      { _id: 0, clothes: 1 }
+      { _id: 0, clothes: 1 },
     ).populate("clothes");
 
     await redis.del("userClothes:" + auth0Id);
@@ -111,7 +111,7 @@ export const uploadData = async ({
         $push: { clothes: clothingDoc._id },
         $set: { hasCompletedOnboardingForClothes: true },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!user) {
@@ -140,7 +140,7 @@ export const deleteOutfit = async ({ auth0Id, uniqueId }) => {
     const user = await User.findOneAndUpdate(
       { auth0Id },
       { $pull: { outfits: outfit._id } },
-      { new: true }
+      { new: true },
     );
     if (!user) {
       throw { status: 404, message: "User not found" };
@@ -179,7 +179,7 @@ export const getOutfits = async ({ auth0Id }) => {
     const startTime = Date.now();
     const userData = await User.findOne(
       { auth0Id },
-      { outfits: 1, _id: 0 }
+      { outfits: 1, _id: 0 },
     ).populate({
       path: "outfits",
       populate: { path: "outfit_items", model: "Clothes" },
@@ -198,7 +198,7 @@ export const getOutfits = async ({ auth0Id }) => {
     } catch (err) {
       console.warn(
         "Redis set failed, returning Mongo result without caching:",
-        err
+        err,
       );
     }
     return { status: 200, outfits: userData };
@@ -259,7 +259,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   } catch (err) {
     console.warn(
       "Redis set failed, returning Mongo result without caching:",
-      err
+      err,
     );
   }
   console.log("it worked");
@@ -330,7 +330,7 @@ export const createOutfit = async ({
         $push: { outfits: createdOutfit._id },
         $set: { hasCompletedOnboardingForOutfits: true },
       },
-      { new: true }
+      { new: true },
     );
     if (!user) {
       throw { status: 404, message: "User not found" };

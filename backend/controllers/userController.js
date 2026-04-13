@@ -126,6 +126,23 @@ export const updateUserHasCompletedOnboardingForOutfits = async (req, res) => {
     .json({ message: "User has completed onboarding for outfits", user });
 };
 
+export const getUserRole = async (req, res) => {
+  console.log("activate");
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+  const { auth0Id } = req.body;
+  if (!auth0Id) {
+    return res.status(400).json({ error: "auth0Id is required" });
+  }
+  await connectMongoDB();
+  let user = await User.findOne({ auth0Id });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  return res.status(200).json({ role: user.role });
+};
+
 export const test = async (req, res) => {
   console.log("activate");
   // Only allow POST requests
