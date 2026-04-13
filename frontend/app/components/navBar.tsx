@@ -15,7 +15,7 @@ type NavBarProps = {
 function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   const [search, setSearch] = useState("");
   const { filters, setFilters } = useClothesStore();
-  const [showFeedback, setShowFeedback] = useState(true);
+  const [showFeedback, setShowFeedback] = useState(false);
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
