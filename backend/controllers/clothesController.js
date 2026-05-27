@@ -132,6 +132,9 @@ export const uploadData = async (request, response) => {
       season,
       waterproof,
       favourite,
+      material,
+      fit,
+      pattern,
     } = request.body; // Other clothing data
 
     const file = request.file; // Multer adds the uploaded file in request.file
@@ -156,6 +159,27 @@ export const uploadData = async (request, response) => {
         return Array.isArray(season) ? season : [];
       }
     })();
+    const parseMaterial = (() => {
+      try {
+        return JSON.parse(material || "[]");
+      } catch (_) {
+        return Array.isArray(material) ? material : [];
+      }
+    })();
+    const parseFit = (() => {
+      try {
+        return JSON.parse(fit || "[]");
+      } catch (_) {
+        return Array.isArray(fit) ? fit : [];
+      }
+    })();
+    const parsePattern = (() => {
+      try {
+        return JSON.parse(pattern || "[]");
+      } catch (_) {
+        return Array.isArray(pattern) ? pattern : [];
+      }
+    })();
 
     let result = await uploadDataService({
       auth0Id,
@@ -165,6 +189,9 @@ export const uploadData = async (request, response) => {
       waterproof,
       favourite,
       file,
+      material: parseMaterial,
+      fit: parseFit,
+      pattern: parsePattern,
     });
 
     return response

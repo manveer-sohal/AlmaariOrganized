@@ -1,11 +1,12 @@
 import express from "express";
 import {
-  test,
   getOnboardingStatus,
   updateUserHasCompletedOnboardingForClothes,
   updateUserHasCompletedOnboardingForOutfits,
   setOnboardingStep,
   getUserRole,
+  syncUserOnLogin,
+  getData,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -14,7 +15,7 @@ const router = express.Router();
 
 // router.post("/create", POST);
 // router.post("/get", getData);
-router.post("/login", test);
+router.post("/login", syncUserOnLogin);
 router.post(
   "/updateUserHasCompletedOnboardingForClothes",
   updateUserHasCompletedOnboardingForClothes,
@@ -26,4 +27,5 @@ router.post(
 router.post("/onboarding", getOnboardingStatus);
 router.post("/setOnboardingStep", setOnboardingStep);
 router.post("/role", getUserRole);
+router.post("/data", getData);
 export default router;

@@ -71,6 +71,9 @@ export const uploadData = async ({
   waterproof,
   favourite,
   file,
+  material,
+  fit,
+  pattern,
 }) => {
   try {
     const slot = mapTypeToSlot(type);
@@ -103,6 +106,9 @@ export const uploadData = async ({
       season,
       waterproof: waterproof === "true" || Boolean(waterproof),
       slot,
+      material,
+      fit,
+      pattern,
     });
 
     const user = await User.findOneAndUpdate(

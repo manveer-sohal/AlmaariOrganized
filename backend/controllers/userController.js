@@ -59,6 +59,39 @@ export const setOnboardingStep = async (req, res) => {
   await user.save();
   return res.status(200).json({ message: "Onboarding step completed", user });
 };
+//get the onboarding status of the user, get user role, get credit balance
+export const getData = async (req, res) => {
+  try {
+    await connectMongoDB();
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    return res.status(500).json({ error: "Failed to connect to MongoDB" });
+  }
+  const { auth0Id } = req.body;
+  if (!auth0Id) {
+    return res.status(400).json({ error: "auth0Id is required" });
+  }
+  let user = await User.findOne(
+    { auth0Id },
+    {
+      hasCompletedOnboardingForClothes: 1,
+      hasCompletedOnboardingForOutfits: 1,
+      role: 1,
+      creditBalance: 1,
+    },
+  );
+  if (!user) {
+    console.log("user not found");
+    return res.status(404).json({ error: "User not found" });
+  }
+  console.log("user", user);
+  return res.status(200).json({
+    hasCompletedOnboardingForClothes: user.hasCompletedOnboardingForClothes,
+    hasCompletedOnboardingForOutfits: user.hasCompletedOnboardingForOutfits,
+    role: user.role,
+    creditBalance: user.creditBalance,
+  });
+};
 
 export const getOnboardingStatus = async (req, res) => {
   console.log("activate");
@@ -143,12 +176,10 @@ export const getUserRole = async (req, res) => {
   return res.status(200).json({ role: user.role });
 };
 
-export const test = async (req, res) => {
+export const syncUserOnLogin = async (req, res) => {
   console.log("activate");
   // Only allow POST requests
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
+
   console.log("activate1");
 
   try {
@@ -177,6 +208,10 @@ export const test = async (req, res) => {
         auth0Id,
         email,
         Clothes: [],
+        Outfits: [],
+        hasCompletedOnboardingForClothes: false,
+        hasCompletedOnboardingForOutfits: false,
+        role: "user",
       });
     }
     console.log("activate5");
