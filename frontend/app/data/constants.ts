@@ -16,6 +16,15 @@ export const colours_List = [
   "Camo",
 ];
 
+//list of materials for clothes
+export const materials_List = ["Cotton", "Polyester", "Wool", "Silk"];
+
+//list of fits for clothes
+export const fits_List = ["Slim", "Regular", "Relaxed", "Oversized"];
+
+//list of patterns for clothes
+export const patterns_List = ["Solid", "Striped", "Checked", "Polka Dot"];
+
 //type of clothes
 export const type_List = [
   "Shirt",

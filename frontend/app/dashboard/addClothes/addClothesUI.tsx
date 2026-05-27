@@ -3,7 +3,13 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
 import { View } from "../../types/clothes";
-import { colours_List, type_List } from "../../data/constants";
+import {
+  colours_List,
+  fits_List,
+  materials_List,
+  patterns_List,
+  type_List,
+} from "../../data/constants";
 import { goToNextTourStep } from "../../components/OnBoardingTour";
 
 type addClothesUIProm = {
@@ -31,6 +37,23 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [inputColourValue, setInputColourValue] = useState<string>("");
   const [inputTypeValue, setInputTypeValue] = useState<string>("");
 
+  const [inputMaterialValue, setInputMaterialValue] = useState<string>("");
+  const [usersMaterials, setUsersMaterials] = useState<string[]>([]);
+
+  const [filtered_materials_List, set_Filtered_materials_List] = useState(
+    materials_List,
+  );
+  const [filtered_fits_List, set_Filtered_fits_List] = useState(fits_List);
+  const [filtered_patterns_List, set_Filtered_patterns_List] = useState(
+    patterns_List,
+  );
+  const [inputFitValue, setInputFitValue] = useState<string>("");
+  const [inputPatternValue, setInputPatternValue] = useState<string>("");
+  const [validMaterial, setValidMaterial] = useState<boolean | null>(null);
+  const [validFit, setValidFit] = useState<boolean | null>(null);
+  const [validPattern, setValidPattern] = useState<boolean | null>(null);
+  const [usersFits, setUsersFits] = useState<string[]>([]);
+  const [usersPatterns, setUsersPatterns] = useState<string[]>([]);
   //file can either be of type file or type null
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
@@ -66,6 +89,91 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()
     );
   };
+  const validateMaterial = () => {
+    const formatted = formatInput(inputMaterialValue);
+    if (
+      materials_List.includes(formatted) &&
+      !usersMaterials.includes(formatted) &&
+      formatted
+    ) {
+      setValidMaterial(true);
+      return true;
+    } else if (formatted) {
+      setValidMaterial(false);
+    } else if (usersMaterials.length > 0 && !formatted) {
+      setValidMaterial(true);
+      return true;
+    } else {
+      setValidMaterial(false);
+    }
+    return false;
+  };
+  function setUserMaterial() {
+    const formatted = formatInput(inputMaterialValue);
+    const valid = validateMaterial();
+    if (valid && formatted) {
+      setUsersMaterials((usersMaterials) => [...usersMaterials, formatted]);
+      setInputMaterialValue("");
+    }
+  }
+
+  const validateFit = () => {
+    const formatted = formatInput(inputFitValue);
+    if (
+      fits_List.includes(formatted) &&
+      !usersFits.includes(formatted) &&
+      formatted
+    ) {
+      setValidFit(true);
+      return true;
+    } else if (formatted) {
+      setValidFit(false);
+    } else if (usersFits.length > 0 && !formatted) {
+      setValidFit(true);
+      return true;
+    } else {
+      setValidFit(false);
+    }
+    return false;
+  };
+
+  function setUserFit() {
+    const formatted = formatInput(inputFitValue);
+    const valid = validateFit();
+    if (valid && formatted) {
+      setUsersFits((usersFits) => [...usersFits, formatted]);
+      setInputFitValue("");
+    }
+  }
+
+  const validatePattern = () => {
+    const formatted = formatInput(inputPatternValue);
+    if (
+      patterns_List.includes(formatted) &&
+      !usersPatterns.includes(formatted) &&
+      formatted
+    ) {
+      setValidPattern(true);
+      return true;
+    } else if (formatted) {
+      setValidPattern(false);
+    } else if (usersPatterns.length > 0 && !formatted) {
+      setValidPattern(true);
+      return true;
+    } else {
+      setValidPattern(false);
+    }
+    return false;
+  };
+
+  function setUserPattern() {
+    const formatted = formatInput(inputPatternValue);
+    const valid = validatePattern();
+    if (valid && formatted) {
+      setUsersPatterns((usersPatterns) => [...usersPatterns, formatted]);
+      setInputPatternValue("");
+    }
+  }
 
   const validateColour = () => {
     const formatted = formatInput(inputColourValue);
@@ -131,6 +239,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     if (valid) {
       console.log("valid type");
       setUsersClothType(formatted);
+      setInputTypeValue(formatted);
     }
   }
 
@@ -141,6 +250,15 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     }
     if (element === "type") {
       setUserType();
+    }
+    if (element === "material") {
+      setUserMaterial();
+    }
+    if (element === "fit") {
+      setUserFit();
+    }
+    if (element === "pattern") {
+      setUserPattern();
     }
   };
   //when enter is clicked while typing on the colours feild
@@ -153,6 +271,15 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       }
       if (event.currentTarget.id === "add-type-btn") {
         setUserType();
+      }
+      if (event.currentTarget.id === "add-material-btn") {
+        setUserMaterial();
+      }
+      if (event.currentTarget.id === "add-fit-btn") {
+        setUserFit();
+      }
+      if (event.currentTarget.id === "add-pattern-btn") {
+        setUserPattern();
       }
     }
   };
@@ -232,7 +359,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     setOffset({ x: 0, y: 0 });
 
     return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
+  }, [file, drawCropPreview]);
 
   useEffect(() => {
     if (preview) {
@@ -338,6 +465,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("auth0Id", auth0Id ?? "");
     formData.append("type", usersClothType);
     formData.append("colour", JSON.stringify(usersColours));
+    formData.append("material", JSON.stringify(usersMaterials));
+    formData.append("fit", JSON.stringify(usersFits));
+    formData.append("pattern", JSON.stringify(usersPatterns));
     const cropped = await generateCroppedImage();
     if (cropped) {
       formData.append("image", cropped, "cropped.png");
@@ -363,7 +493,14 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     setLoading(true);
     console.log("submit clicked");
 
-    if (validateColour() && validateType() && file) {
+    if (
+      validateColour() &&
+      validateType() &&
+      validateMaterial() &&
+      validateFit() &&
+      validatePattern() &&
+      file
+    ) {
       const response = await pushDB();
 
       if (response && response.ok) {
@@ -389,14 +526,39 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     //toggleForm();
   };
 
-  //delete colour
-  const handleClick = (value: string) => {
-    setUsersColours(
-      usersColours.filter((item) => (item !== value ? item : null)),
-    );
-    if (usersColours.length == 0) {
-      setValidColour(false);
+  const handleDeleteTag = (
+    category: "colour" | "material" | "fit" | "pattern",
+    value: string,
+  ) => {
+    if (category === "colour") {
+      setUsersColours((prev) => {
+        const next = prev.filter((item) => item !== value);
+        if (next.length === 0) setValidColour(false);
+        return next;
+      });
+      return;
     }
+    if (category === "material") {
+      setUsersMaterials((prev) => {
+        const next = prev.filter((item) => item !== value);
+        if (next.length === 0) setValidMaterial(false);
+        return next;
+      });
+      return;
+    }
+    if (category === "fit") {
+      setUsersFits((prev) => {
+        const next = prev.filter((item) => item !== value);
+        if (next.length === 0) setValidFit(false);
+        return next;
+      });
+      return;
+    }
+    setUsersPatterns((prev) => {
+      const next = prev.filter((item) => item !== value);
+      if (next.length === 0) setValidPattern(false);
+      return next;
+    });
   };
   //If a new file is uplaoded, the file state is changed
   //therefore letting us get the url for preview and for
@@ -414,9 +576,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     <div className=" p-1 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky sm:h-full">
       <form
         id="add-clothes-form"
-        className="md:mt-5 mt-2 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1"
+        className="md:mt-5 mt-2 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1 h-full"
       >
-        <div className="w-full mx-auto mb-1 flex justify-start">
+        <div className="w-full mx-auto mb-1 flex justify-start ">
           <button
             onClick={handleBack}
             className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
@@ -424,164 +586,339 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             ← Back
           </button>
         </div>
-        {/* Add Picture */}
-        <div className=" rounded-lg p-2 w-full">
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-            }}
-            className="hidden"
-          />
-          <div
-            id="add-picture-btn"
-            className="relative bg-white border border-indigo-200 rounded-lg md:h-[360px] h-[280px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
-            onClick={() => {
-              if (!preview) fileInputRef.current?.click();
-            }}
-          >
-            {preview ? (
-              <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
-                <canvas
-                  ref={canvasRef}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  className="cursor-grab active:cursor-grabbing touch-none"
-                />
+        <div className="w-full h-full flex flex-col md:gap-4 sm:gap-2 gap-1 mx-auto overflow-y-auto hidden-scrollbar overflow-contain">
+          {/* Add Picture */}
+          <div className=" rounded-lg p-2 w-full">
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null);
+              }}
+              className="hidden"
+            />
+            <div
+              id="add-picture-btn"
+              className="relative bg-white border border-indigo-200 rounded-lg md:h-[360px] h-[280px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
+              onClick={() => {
+                if (!preview) fileInputRef.current?.click();
+              }}
+            >
+              {preview ? (
+                <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+                  <canvas
+                    ref={canvasRef}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    className="cursor-grab active:cursor-grabbing touch-none"
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
-                >
-                  Replace
-                </button>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
-                  Drag to reposition • Zoom to crop
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
+                  >
+                    Replace
+                  </button>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
+                    Drag to reposition • Zoom to crop
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-indigo-900/60 text-sm">
-                Click to add image
-              </div>
-            )}
+              ) : (
+                <div className="text-indigo-900/60 text-sm">
+                  Click to add image
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <input
-          type="range"
-          min="1"
-          max="2.5"
-          step="0.01"
-          value={zoom}
-          onChange={(e) => setZoom(Number(e.target.value))}
-          className="w-full"
-        />
-        <span className="text-xs text-indigo-700">Adjust crop</span>
-        <label
-          htmlFor="input-tag"
-          className="text-sm font-medium text-indigo-900"
-        >
-          Type
-        </label>
-        <input
-          id="add-type-btn"
-          placeholder="Enter clothes type ie. pants"
-          autoComplete="on"
-          required
-          className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          type="text"
-          list="types"
-          value={inputTypeValue}
-          onBlur={() => onBlur("type")}
-          onKeyDown={handleKeyDown}
-          onChange={(e) => {
-            const value = e.target.value;
-            filter(value, type_List, set_Filtered_type_List);
-            setInputTypeValue(value);
-            e.target.className = validType
-              ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-              : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
-          }}
-        ></input>
-        {validType == false && (
-          <span className="text-sm text-red-600">
-            Enter a valid Clothes type
-          </span>
-        )}
-
-        <datalist id="types">
-          {filtered_type_List.map((type, index) => (
-            <option key={index} value={type}></option>
-          ))}{" "}
-        </datalist>
-
-        <label
-          htmlFor="input-colour"
-          className="text-sm font-medium text-indigo-900"
-        >
-          Colour
-        </label>
-        <div className="flex items-center gap-1">
           <input
-            placeholder="Enter multiple colours ie. red"
-            enterKeyHint="next"
+            type="range"
+            min="1"
+            max="2.5"
+            step="0.01"
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full"
+          />
+          <span className="text-xs text-indigo-700">Adjust crop</span>
+          <label
+            htmlFor="input-tag"
+            className="text-sm font-medium text-indigo-900"
+          >
+            Type
+          </label>
+          <input
+            id="add-type-btn"
+            placeholder="Enter clothes type ie. pants"
+            autoComplete="on"
+            required
+            className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             type="text"
-            id="add-colour-btn"
-            list="colours"
-            value={inputColourValue}
-            onBlur={() => onBlur("colour")}
+            list="types"
+            value={inputTypeValue}
+            onBlur={() => onBlur("type")}
             onKeyDown={handleKeyDown}
             onChange={(e) => {
               const value = e.target.value;
-              filter(value, colours_List, set_Filtered_colours_List);
-              setInputColourValue(value);
+              filter(value, type_List, set_Filtered_type_List);
+              setInputTypeValue(value);
+              e.target.className = validType
+                ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+                : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
             }}
-            className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           ></input>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
-            onClick={setUserColour}
+          {validType == false && (
+            <span className="text-sm text-red-600">
+              Enter a valid Clothes type
+            </span>
+          )}
+
+          <datalist id="types">
+            {filtered_type_List.map((type, index) => (
+              <option key={index} value={type}></option>
+            ))}{" "}
+          </datalist>
+
+          <label
+            htmlFor="input-colour"
+            className="text-sm font-medium text-indigo-900"
           >
-            Add
-          </button>
-        </div>
-        {validColour == false && (
-          <span className="text-sm text-red-600">Enter a valid Colour</span>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {usersColours.map((colour, index) => (
-            <div
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-              key={index}
-              id={colour}
-              onClick={(e) => handleClick(e.currentTarget.id)}
+            Colour
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              placeholder="Enter multiple colours ie. red"
+              enterKeyHint="next"
+              type="text"
+              id="add-colour-btn"
+              list="colours"
+              value={inputColourValue}
+              onBlur={() => onBlur("colour")}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                const value = e.target.value;
+                filter(value, colours_List, set_Filtered_colours_List);
+                setInputColourValue(value);
+              }}
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            ></input>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+              onClick={setUserColour}
             >
-              <span
-                className="h-3 w-3 rounded-full border border-indigo-200"
-                style={{ backgroundColor: colour }}
-                aria-hidden="true"
-              />
-              <span>{colour}</span>
-            </div>
-          ))}
-        </div>
+              Add
+            </button>
+          </div>
+          {validColour == false && (
+            <span className="text-sm text-red-600">Enter a valid Colour</span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {usersColours.map((colour, index) => (
+              <div
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
+                key={index}
+                id={colour}
+                onClick={(e) => handleDeleteTag("colour", e.currentTarget.id)}
+              >
+                <span
+                  className="h-3 w-3 rounded-full border border-indigo-200"
+                  style={{ backgroundColor: colour }}
+                  aria-hidden="true"
+                />
+                <span>{colour}</span>
+              </div>
+            ))}
+          </div>
 
-        <datalist id="colours">
-          {filtered_colours_List.map((colour, index) => (
-            <option key={index} value={colour}></option>
-          ))}{" "}
-        </datalist>
+          <datalist id="colours">
+            {filtered_colours_List.map((colour, index) => (
+              <option key={index} value={colour}></option>
+            ))}{" "}
+          </datalist>
 
-        {/* <input
+          <label
+            htmlFor="input-material"
+            className="text-sm font-medium text-indigo-900"
+          >
+            Material
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              placeholder="Enter multiple materials ie. cotton"
+              enterKeyHint="next"
+              type="text"
+              id="add-material-btn"
+              list="materials"
+              value={inputMaterialValue}
+              onBlur={() => onBlur("material")}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                const value = e.target.value;
+                filter(value, materials_List, set_Filtered_materials_List);
+                setInputMaterialValue(value);
+              }}
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            ></input>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+              onClick={setUserMaterial}
+            >
+              Add
+            </button>
+          </div>
+          {validMaterial == false && (
+            <span className="text-sm text-red-600">Enter a valid Material</span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {usersMaterials.map((material, index) => (
+              <div
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
+                key={index}
+                id={material}
+                onClick={(e) => handleDeleteTag("material", e.currentTarget.id)}
+              >
+                <span
+                  className="h-3 w-3 rounded-full border border-indigo-200"
+                  style={{ backgroundColor: material }}
+                  aria-hidden="true"
+                />
+                <span>{material}</span>
+              </div>
+            ))}
+          </div>
+
+          <datalist id="materials">
+            {filtered_materials_List.map((material, index) => (
+              <option key={index} value={material}></option>
+            ))}{" "}
+          </datalist>
+
+          <label
+            htmlFor="input-fit"
+            className="text-sm font-medium text-indigo-900"
+          >
+            Fit
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              placeholder="Enter multiple fits ie. slim"
+              enterKeyHint="next"
+              type="text"
+              id="add-fit-btn"
+              list="fits"
+              value={inputFitValue}
+              onBlur={() => onBlur("fit")}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                const value = e.target.value;
+                filter(value, fits_List, set_Filtered_fits_List);
+                setInputFitValue(value);
+              }}
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            ></input>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+              onClick={setUserFit}
+            >
+              Add
+            </button>
+          </div>
+          {validFit == false && (
+            <span className="text-sm text-red-600">Enter a valid Fit</span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {usersFits.map((fit, index) => (
+              <div
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
+                key={index}
+                id={fit}
+                onClick={(e) => handleDeleteTag("fit", e.currentTarget.id)}
+              >
+                <span
+                  className="h-3 w-3 rounded-full border border-indigo-200"
+                  style={{ backgroundColor: fit }}
+                  aria-hidden="true"
+                />
+                <span>{fit}</span>
+              </div>
+            ))}
+          </div>
+
+          <datalist id="fits">
+            {filtered_fits_List.map((fit, index) => (
+              <option key={index} value={fit}></option>
+            ))}{" "}
+          </datalist>
+
+          <label
+            htmlFor="input-pattern"
+            className="text-sm font-medium text-indigo-900"
+          >
+            Pattern
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              placeholder="Enter multiple patterns ie. striped"
+              enterKeyHint="next"
+              type="text"
+              id="add-pattern-btn"
+              list="patterns"
+              value={inputPatternValue}
+              onBlur={() => onBlur("pattern")}
+              onKeyDown={handleKeyDown}
+              onChange={(e) => {
+                const value = e.target.value;
+                filter(value, patterns_List, set_Filtered_patterns_List);
+                setInputPatternValue(value);
+              }}
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            ></input>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+              onClick={setUserPattern}
+            >
+              Add
+            </button>
+          </div>
+          {validPattern == false && (
+            <span className="text-sm text-red-600">Enter a valid Pattern</span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {usersPatterns.map((pattern, index) => (
+              <div
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
+                key={index}
+                id={pattern}
+                onClick={(e) => handleDeleteTag("pattern", e.currentTarget.id)}
+              >
+                <span
+                  className="h-3 w-3 rounded-full border border-indigo-200"
+                  style={{ backgroundColor: pattern }}
+                  aria-hidden="true"
+                />
+                <span>{pattern}</span>
+              </div>
+            ))}
+          </div>
+
+          <datalist id="patterns">
+            {filtered_patterns_List.map((pattern, index) => (
+              <option key={index} value={pattern}></option>
+            ))}{" "}
+          </datalist>
+
+          {/* <input
          
          
           }}
@@ -593,24 +930,25 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         >
           Add Picture
         </label> */}
-        {validFile == false && (
-          <span className="text-sm text-red-600">Enter a Picture</span>
-        )}
-        <div id="submit-btn" className="mt-2 flex items-center gap-2">
-          {loading ? (
-            <div className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
-              Loading...
-            </div>
-          ) : (
-            <Link
-              href="/"
-              type="button"
-              onClick={(event) => handleSubmit(event)}
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
-            >
-              Submit
-            </Link>
+          {validFile == false && (
+            <span className="text-sm text-red-600">Enter a Picture</span>
           )}
+          <div id="submit-btn" className="mt-2 flex items-center gap-2">
+            {loading ? (
+              <div className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
+                Loading...
+              </div>
+            ) : (
+              <Link
+                href="/"
+                type="button"
+                onClick={(event) => handleSubmit(event)}
+                className=" w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                Submit
+              </Link>
+            )}
+          </div>
         </div>
       </form>
     </div>
