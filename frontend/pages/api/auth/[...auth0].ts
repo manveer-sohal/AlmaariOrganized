@@ -6,10 +6,10 @@ export default handleAuth({
       try {
         const auth0Id = session?.user?.sub;
         const email = session?.user?.email;
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://api:8080";
         if (auth0Id) {
-          const API_BASE_URL =
-            process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-          await fetch(`${API_BASE_URL}/api/users/login`, {
+          await fetch(`${apiBaseUrl}/api/users/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ auth0Id, email }),
