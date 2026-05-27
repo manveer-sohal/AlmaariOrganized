@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [view, setView] = useState<View>("home");
   // const { menuOpen } = useClothesStore();
 
-  useRole(user?.sub || "");
+  useRole();
 
   useEffect(() => {
     if (!user || hasLoaded) return;
@@ -88,7 +88,11 @@ export default function Dashboard() {
           </div>
         </div>
         {/* content area*/}
-        <div className=" h-[calc(100vh-64px)] w-full bg-background md:rounded-tl-3xl  ">
+        <div
+          className={`${
+            view === "createOutfit" ? "bg-indigo-200" : "bg-background"
+          } h-[calc(100vh-64px)] w-full md:rounded-tl-3xl  `}
+        >
           {isLoading ? (
             <div className="flex justify-center items-center h-screen">
               <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
@@ -103,7 +107,7 @@ export default function Dashboard() {
             </>
           )}
           {user && (
-            <div className=" md:rounded-tl-3xl w-full  overflow-y-scroll h-full">
+            <div className=" md:rounded-tl-3xl w-full  overflow-y-scroll h-full ">
               {/* previously had a loading screen here before the whole page loaded*/}
               {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}

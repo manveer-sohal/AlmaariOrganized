@@ -8,8 +8,8 @@ const OutfitPreview = ({
   selectedBySlot: Partial<Record<Slot, ClothingItem[] | null>>;
   setSelectedBySlot: (
     selectedBySlot: (
-      prev: Partial<Record<Slot, ClothingItem[] | null>>
-    ) => Partial<Record<Slot, ClothingItem[] | null>>
+      prev: Partial<Record<Slot, ClothingItem[] | null>>,
+    ) => Partial<Record<Slot, ClothingItem[] | null>>,
   ) => void;
 }) => {
   return (
@@ -63,7 +63,7 @@ const OutfitPreview = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[110px] md:w-[110px] rounded-md bg-indigo-50 border border-indigo-200 ">
+                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[100px] md:w-[89px] rounded-md bg-indigo-50 border border-indigo-200 ">
                     {slot === "head" && (
                       <svg
                         width="48"

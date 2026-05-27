@@ -164,13 +164,9 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
                   ? "bg-indigo-500 text-white"
                   : "bg-indigo-100/70 text-indigo-900"
               }`}
+              onClick={() => setShowFeedback(!showFeedback)}
             >
-              <span
-                className="cursor-pointer"
-                onClick={() => setShowFeedback(!showFeedback)}
-              >
-                Settings
-              </span>
+              <span>Settings</span>
               {showFeedback && (
                 <motion.div
                   initial={{ opacity: 0, x: 10 }}
