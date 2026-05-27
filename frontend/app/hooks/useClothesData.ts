@@ -33,7 +33,7 @@ export const useClothesData = (numberOfClothes: number = 40) => {
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === numberOfClothes ? allPages.length + 1 : undefined,
 
-    staleTime: 1000 * 60 * 5, // 5 minutes → instant on view switch
+    staleTime: 1000 * 60 * 30, // 30 minutes → instant on view switch
     gcTime: 1000 * 60 * 30, // keep cache for 30 minutes
     refetchOnWindowFocus: false, // don’t refetch on tab switch
     refetchOnMount: false,
