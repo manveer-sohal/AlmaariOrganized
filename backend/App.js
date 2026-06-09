@@ -4,6 +4,7 @@ import clothesRoutes from "./routes/clothesRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import aiStylistRoutes from "./routes/aiStylistRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import connectMongoDB from "./libs/mongodb.js";
 import dotenv from "dotenv";
@@ -33,7 +34,7 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 // app.use(bodyParser.json({ limit: "5mb" }));
 // app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
@@ -44,6 +45,7 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
 export default app;
