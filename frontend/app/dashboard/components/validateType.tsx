@@ -1,5 +1,5 @@
 import React, { Dispatch, useState } from "react";
-
+import { Plus } from "lucide-react";
 type ValidateTypeProp = {
   type: Dispatch<React.SetStateAction<string[] | null | undefined>>;
 };
@@ -129,7 +129,7 @@ function ValidateType({ type }: ValidateTypeProp) {
   const filter = (
     input: string,
     list: string[],
-    setState: React.Dispatch<React.SetStateAction<string[]>>
+    setState: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     const filtered = list
       .filter((item) => item.toLowerCase().startsWith(input.toLowerCase()))
@@ -140,7 +140,7 @@ function ValidateType({ type }: ValidateTypeProp) {
   //delete colour
   const handleClick = (value: string) => {
     const filteredTypeVar = usersClothType.filter((item) =>
-      item !== value ? item : null
+      item !== value ? item : null,
     );
     setUsersClothType(filteredTypeVar);
     type(filteredTypeVar);
@@ -157,7 +157,7 @@ function ValidateType({ type }: ValidateTypeProp) {
           placeholder="Enter clothes type ie. pants"
           autoComplete="on"
           required
-          className="valid"
+          className="w-full rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           type="text"
           id="input-tag"
           list="types"
@@ -173,10 +173,10 @@ function ValidateType({ type }: ValidateTypeProp) {
         ></input>
         <button
           type="button"
-          className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+          className="w-1/7 block font-semibold  rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
           onClick={setUserType}
         >
-          +
+          <Plus className="w-4 h-4" />
         </button>
       </div>
       {validType == false && (

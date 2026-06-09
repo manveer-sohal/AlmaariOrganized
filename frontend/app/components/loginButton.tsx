@@ -2,6 +2,7 @@
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useState } from "react";
+import { LogIn, LogOut } from "lucide-react";
 
 /*
 this is a login button component, we leep it seprate as interactable compoents should have the
@@ -34,7 +35,18 @@ function LoginButton() {
         }
       }}
     >
-      {isLoggingOut ? "Logging out..." : "Logout"}
+      {isLoggingOut ? (
+        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500"></div>
+      ) : (
+        <span className="flex items-center gap-2">
+          {user ? (
+            <LogOut className="w-4 h-4" />
+          ) : (
+            <LogIn className="w-4 h-4" />
+          )}
+          {user ? "Logout" : "Login"}
+        </span>
+      )}
     </Link>
   );
 }

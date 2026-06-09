@@ -1,5 +1,6 @@
 import React, { Dispatch, useState } from "react";
 import { colours_List } from "../../data/constants";
+import { Plus } from "lucide-react";
 type ChooseColourProps = {
   colour: Dispatch<React.SetStateAction<string[] | null | undefined>>;
 };
@@ -114,6 +115,7 @@ function ChooseColour({ colour }: ChooseColourProps) {
       <label htmlFor="input-colour">Colour:</label>
       <div className="h-full inline-flex items-center">
         <input
+          className="w-full rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
           placeholder="Enter multiple colours ie. red"
           enterKeyHint="next"
           type="text"
@@ -130,10 +132,10 @@ function ChooseColour({ colour }: ChooseColourProps) {
         ></input>
         <button
           type="button"
-          className="w-1/4 block font-semibold px-4 py-2 rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
+          className="w-1/7 block font-semibold  rounded-3xl m-1 cursor-pointer  hover:bg-indigo-500 hover:text-white transition-colors duration-300"
           onClick={setUserColour}
         >
-          +
+          <Plus className="w-4 h-4" />
         </button>
       </div>
       {validColour == false && (
