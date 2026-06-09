@@ -1,25 +1,42 @@
 import ChooseColour from "../dashboard/components/chooseColour";
 import ValidateType from "../dashboard/components/validateType";
+import TagFilterPicker from "../dashboard/components/TagFilterPicker";
+import {
+  materials_List,
+  fits_List,
+  patterns_List,
+} from "../data/constants";
 import React, { useState } from "react";
 import WeatherCheck from "./weatherCheck";
 import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 import { useCredits } from "../hooks/useCredits";
+import { View } from "../types/clothes";
+import { Coins, Check, Shirt } from "lucide-react";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
-type View = "home" | "outfits" | "createOutfit" | "addClothes";
 type SideBarProp = {
   view: View;
   setView: (view: View) => void;
+  onBuyCredits: () => void;
 };
-function SideBar({ view, setView }: SideBarProp) {
+function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
   const [active, setActive] = useState<boolean>(false);
   const [displayFilterType, setDisplayFilterType] = useState<string>("none");
   const [colour, setColour] = useState<string[] | null | undefined>([]);
   const [type, setType] = useState<string[] | null | undefined>([]);
+  const [material, setMaterial] = useState<string[] | null | undefined>([]);
+  const [fit, setFit] = useState<string[] | null | undefined>([]);
+  const [pattern, setPattern] = useState<string[] | null | undefined>([]);
   const { filters, setFilters } = useClothesStore();
   const { credits, isLoadingCredits } = useCredits();
-  const changeFilter = (colour: string[], type: string[]) => {
-    setFilters({ ...filters, colour, type });
+  const changeFilter = (
+    colour: string[],
+    type: string[],
+    material: string[],
+    fit: string[],
+    pattern: string[],
+  ) => {
+    setFilters({ ...filters, colour, type, material, fit, pattern });
     console.log(filters);
   };
 
@@ -48,7 +65,13 @@ function SideBar({ view, setView }: SideBarProp) {
   const handleSubmit = () => {
     console.log("apply");
 
-    changeFilter(colour ?? [], type ?? []);
+    changeFilter(
+      colour ?? [],
+      type ?? [],
+      material ?? [],
+      fit ?? [],
+      pattern ?? [],
+    );
 
     onClickFilter();
   };
@@ -120,31 +143,42 @@ function SideBar({ view, setView }: SideBarProp) {
               displayFilterType === "block" ? "flex" : "hidden"
             } rounded-lg flex-col`}
           >
-            <div className="relative bg-white/80 backdrop-blur border border-indigo-200 shadow-md p-3 rounded-lg">
+            <div className="relative bg-white/80 backdrop-blur border border-indigo-200 shadow-md p-3 rounded-lg flex flex-col gap-2">
               <ChooseColour colour={setColour}></ChooseColour>
               <ValidateType type={setType}></ValidateType>
+              <TagFilterPicker
+                label="Material:"
+                placeholder="Enter material ie. cotton"
+                inputId="filter-material"
+                datalistId="filter-materials"
+                options={materials_List}
+                onTagsChange={setMaterial}
+              />
+              <TagFilterPicker
+                label="Fit:"
+                placeholder="Enter fit ie. slim"
+                inputId="filter-fit"
+                datalistId="filter-fits"
+                options={fits_List}
+                onTagsChange={setFit}
+              />
+              <TagFilterPicker
+                label="Pattern:"
+                placeholder="Enter pattern ie. striped"
+                inputId="filter-pattern"
+                datalistId="filter-patterns"
+                options={patterns_List}
+                onTagsChange={setPattern}
+              />
             </div>
 
             <button
               className="w-1/2 inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-xl m-1 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors duration-200"
               onClick={handleSubmit}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M20 6L9 17l-5-5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>Apply</span>
+              <span className="flex items-center gap-2">
+                <Check className="w-4 h-4" /> Apply
+              </span>
             </button>
           </div>
           <button className="w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200">
@@ -208,31 +242,30 @@ function SideBar({ view, setView }: SideBarProp) {
                 : "bg-indigo-100/70 text-indigo-900"
             }`}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 5v14M5 12h14"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Create Outfit</span>
+            <span className="flex items-center gap-2">
+              <Shirt className="w-4 h-4" /> Create Outfit
+            </span>
           </button>
         </div>
         {/* credits display */}
         <div className="flex flex-col items-center justify-center ">
-          {credits && (
-            <div className="text-sm w-full text-indigo-900 flex justify-center items-center bg-indigo-100/70 border border-indigo-900 rounded-xl m-1 p-2 py-6 shadow-md ">
-              {/* coin icon svg */}
-
-              <p className="text-center text-lg ml-2">Credits: {credits}</p>
-            </div>
+          {credits != null && (
+            <button
+              type="button"
+              onClick={onBuyCredits}
+              title="Buy more credits"
+              className={`text-sm w-full text-indigo-900 flex flex-col justify-center items-center bg-indigo-100/70 border rounded-xl m-1 p-2 py-1 shadow-md transition-colors duration-200 cursor-pointer hover:bg-indigo-500 hover:text-white hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
+                view === "buyCredits"
+                  ? "border-indigo-600 ring-2 ring-indigo-400/50 bg-indigo-500 text-white"
+                  : "border-indigo-900"
+              }`}
+            >
+              <span className="text-base font-medium flex items-center gap-2">
+                <Coins className="w-4 h-4" />
+                Credits {isLoadingCredits ? "…" : credits}
+              </span>
+              <span className="text-xs mt-1 opacity-80">+ Buy more</span>
+            </button>
           )}
         </div>
       </ul>

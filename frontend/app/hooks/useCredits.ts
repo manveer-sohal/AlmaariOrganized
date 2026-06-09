@@ -1,10 +1,10 @@
 import { useUserData } from "./useUserData";
 
 export const useCredits = () => {
-  const { user } = useUserData();
+  const { user, isLoading } = useUserData();
 
   return {
     credits: user?.creditBalance,
-    isLoadingCredits: user?.isLoadingCredits,
+    isLoadingCredits: isLoading,
   };
 };
