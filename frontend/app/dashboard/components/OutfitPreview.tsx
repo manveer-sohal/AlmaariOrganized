@@ -15,7 +15,7 @@ const OutfitPreview = ({
   return (
     <div
       id="outfit-preview"
-      className=" w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md h-[calc(100vh-200px)]  overflow-hidden min-h-[350px]"
+      className=" w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md h-full  overflow-hidden min-h-[350px]"
     >
       <h3 className=" font-medium text-indigo-900 mb-2">Outfit Preview</h3>
       <div className="flex flex-col gap-3 h-full hidden-scrollbar overflow-y-scroll  overflow-hidden">
@@ -24,12 +24,9 @@ const OutfitPreview = ({
           return (
             <div
               key={slot}
-              className="border border-indigo-200 w-full rounded-lg p-3 md:min-h-[100px] flex items-center  overflow-x-scroll hidden-scrollbar overflow-hidden"
+              className="border border-indigo-200 w-full rounded-lg md:min-h-[100px] flex items-center  overflow-x-scroll hidden-scrollbar overflow-hidden"
             >
-              <div className="flex flex-col md:flex-row items-center ">
-                <div className="text-sm text-indigo-900 capitalize w-10 md:w-12 lg:w-16 shrink-0">
-                  {slot}
-                </div>
+              <div className="flex flex-col md:flex-row items-center">
                 {item && item.length > 0 ? (
                   <div className="relative h-[85px] w-[85px] md:h-[110px] md:w-[110px] ">
                     {item.map((i: ClothingItem, idx: number) => (
@@ -63,121 +60,141 @@ const OutfitPreview = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[100px] md:w-[89px] rounded-md bg-indigo-50 border border-indigo-200 ">
+                  <div className="flex items-center justify-center h-[75px] w-[75px] md:h-[100px] md:w-[89px] rounded-md bg-white border border-indigo-200">
                     {slot === "head" && (
                       <svg
-                        width="48"
-                        height="48"
+                        width="52"
+                        height="52"
                         viewBox="0 0 64 64"
                         fill="none"
                         aria-hidden="true"
                       >
-                        <circle
-                          cx="32"
-                          cy="24"
-                          r="12"
+                        <path
+                          d="M32 4 C23 4 16 11 16 20 V28 C16 33 18.5 37.5 22.5 40.5 L27.5 44 H36.5 L41.5 40.5 C45.5 37.5 48 33 48 28 V20 C48 11 41 4 32 4 Z"
                           stroke="#4f46e5"
-                          strokeWidth="3"
+                          strokeWidth="2.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
-                        <rect
-                          x="24"
-                          y="36"
-                          width="16"
-                          height="6"
-                          rx="3"
-                          fill="#4f46e5"
+                        <path
+                          d="M16 18 H14.5 C13.1 18 12 19.1 12 20.5 V29 C12 30.4 13.1 31.5 14.5 31.5 H16"
+                          stroke="#4f46e5"
+                          strokeWidth="2.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M48 18 H49.5 C50.9 18 52 19.1 52 20.5 V29 C52 30.4 50.9 31.5 49.5 31.5 H48"
+                          stroke="#4f46e5"
+                          strokeWidth="2.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                       </svg>
                     )}
                     {slot === "body" && (
                       <svg
-                        width="60"
-                        height="48"
-                        viewBox="0 0 80 64"
+                        width="58"
+                        height="58"
+                        viewBox="0 0 64 64"
                         fill="none"
                         aria-hidden="true"
                       >
-                        <rect
-                          x="24"
-                          y="8"
-                          width="32"
-                          height="30"
-                          rx="6"
+                        <path
+                          d="M24 10 L20 8 L12 24 V50 H22 V40 H42 V50 H52 V24 L44 8 L40 10"
                           stroke="#4f46e5"
-                          strokeWidth="3"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
-                        <rect
-                          x="6"
-                          y="12"
-                          width="14"
-                          height="18"
-                          rx="6"
+                        <path
+                          d="M24 14 H40"
                           stroke="#4f46e5"
-                          strokeWidth="3"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
                         />
-                        <rect
-                          x="60"
-                          y="12"
-                          width="14"
-                          height="18"
-                          rx="6"
+                        <path
+                          d="M24 10 L24 15"
                           stroke="#4f46e5"
-                          strokeWidth="3"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M40 10 L40 15"
+                          stroke="#4f46e5"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
                         />
                       </svg>
                     )}
                     {slot === "legs" && (
                       <svg
-                        width="60"
-                        height="48"
-                        viewBox="0 0 80 64"
+                        width="48"
+                        height="64"
+                        viewBox="0 0 48 64"
                         fill="none"
                         aria-hidden="true"
                       >
-                        <rect
-                          x="24"
-                          y="8"
-                          width="10"
-                          height="30"
-                          rx="4"
+                        <path
+                          d="M14 8 H34 V50 H26 V20 H22 V50 H14 Z"
                           stroke="#4f46e5"
-                          strokeWidth="3"
-                        />
-                        <rect
-                          x="46"
-                          y="8"
-                          width="10"
-                          height="30"
-                          rx="4"
-                          stroke="#4f46e5"
-                          strokeWidth="3"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                       </svg>
                     )}
                     {slot === "feet" && (
                       <svg
-                        width="60"
-                        height="48"
+                        width="42"
+                        height="42"
                         viewBox="0 0 80 64"
                         fill="none"
                         aria-hidden="true"
                       >
-                        <ellipse
-                          cx="30"
-                          cy="32"
-                          rx="10"
-                          ry="6"
-                          stroke="#4f46e5"
-                          strokeWidth="3"
-                        />
-                        <ellipse
-                          cx="50"
-                          cy="32"
-                          rx="10"
-                          ry="6"
-                          stroke="#4f46e5"
-                          strokeWidth="3"
-                        />
+                        <g transform="translate(64,0) scale(-1,1)">
+                          <path
+                            d="M24 20 V18 H40 V30 L44 36 C55 39 58 44 58 50 C58 55 54 58 49 58 H29 L24 58 V20"
+                            stroke="#4f46e5"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M24 30 H40"
+                            stroke="#4f46e5"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M40 41 L45 36"
+                            stroke="#4f46e5"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        </g>
+
+                        <g transform="translate(15,0)">
+                          <path
+                            d="M24 20 V18 H40 V30 L44 36 C55 39 58 44 58 50 C58 55 54 58 49 58 H29 L24 58 V20"
+                            stroke="#4f46e5"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M24 30 H40"
+                            stroke="#4f46e5"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M40 41 L45 36"
+                            stroke="#4f46e5"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        </g>
                       </svg>
                     )}
                   </div>
