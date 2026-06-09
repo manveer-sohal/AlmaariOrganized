@@ -16,6 +16,7 @@
     "driver.js": "^1.4.0",
     "framer-motion": "^12.23.22",
     "fs": "^0.0.1-security",
+    "lucide-react": "^1.17.0",
     "mongoose": "^8.9.1",
     "next": "^16.1.0",
     "react": "^19.0.0",
