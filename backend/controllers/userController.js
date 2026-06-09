@@ -1,5 +1,10 @@
 import { User } from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
+import { DEFAULT_CREDIT_BALANCE } from "../constants/credits.js";
+import {
+  ensureCreditBalanceField,
+  purchaseCreditPackage,
+} from "../services/credit.service.js";
 
 // export const POST = async (request, response) => {
 //   const { auth0Id, email } = await request.body;
@@ -84,12 +89,28 @@ export const getData = async (req, res) => {
     console.log("user not found");
     return res.status(404).json({ error: "User not found" });
   }
-  console.log("user", user);
+
+  await ensureCreditBalanceField(auth0Id);
+  const refreshed = await User.findOne(
+    { auth0Id },
+    {
+      hasCompletedOnboardingForClothes: 1,
+      hasCompletedOnboardingForOutfits: 1,
+      role: 1,
+      creditBalance: 1,
+    },
+  );
+
+  const creditBalance =
+    typeof refreshed?.creditBalance === "number"
+      ? refreshed.creditBalance
+      : DEFAULT_CREDIT_BALANCE;
+
   return res.status(200).json({
-    hasCompletedOnboardingForClothes: user.hasCompletedOnboardingForClothes,
-    hasCompletedOnboardingForOutfits: user.hasCompletedOnboardingForOutfits,
-    role: user.role,
-    creditBalance: user.creditBalance,
+    hasCompletedOnboardingForClothes: refreshed.hasCompletedOnboardingForClothes,
+    hasCompletedOnboardingForOutfits: refreshed.hasCompletedOnboardingForOutfits,
+    role: refreshed.role,
+    creditBalance,
   });
 };
 
@@ -212,7 +233,11 @@ export const syncUserOnLogin = async (req, res) => {
         hasCompletedOnboardingForClothes: false,
         hasCompletedOnboardingForOutfits: false,
         role: "user",
+        creditBalance: DEFAULT_CREDIT_BALANCE,
       });
+    } else {
+      await ensureCreditBalanceField(auth0Id);
+      dbUser = await User.findOne({ auth0Id });
     }
     console.log("activate5");
 
@@ -220,5 +245,42 @@ export const syncUserOnLogin = async (req, res) => {
   } catch (error) {
     console.error("Error logging in user:", error);
     return res.status(500).json({ error: "Failed to log in" });
+  }
+};
+
+/** Demo purchase — no real payment; grants credits for a validated package id. */
+export const purchaseCredits = async (req, res) => {
+  try {
+    const { auth0Id, packageId } = req.body;
+
+    if (!auth0Id || typeof auth0Id !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "auth0Id is required",
+      });
+    }
+
+    if (!packageId || typeof packageId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "packageId is required",
+      });
+    }
+
+    const result = await purchaseCreditPackage(auth0Id, packageId);
+
+    return res.status(200).json({
+      success: true,
+      message: `Added ${result.creditsAdded} credits to your account`,
+      creditsAdded: result.creditsAdded,
+      creditBalance: result.creditBalance,
+      packageId: result.packageId,
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Failed to purchase credits",
+    });
   }
 };
