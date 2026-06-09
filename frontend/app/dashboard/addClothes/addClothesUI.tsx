@@ -11,12 +11,35 @@ import {
   type_List,
 } from "../../data/constants";
 import { goToNextTourStep } from "../../components/OnBoardingTour";
-
+import { useCredits } from "../../hooks/useCredits";
+import { useAnalyzeClothing } from "../../hooks/useAnalyzeClothing";
+import {
+  ClothingAnalysisTags,
+  ClothingTagField,
+  ColourListTagField,
+} from "../../types/clothingAnalysis";
+import { prepareImagePayloadForAnalysis } from "../../utils/imageAnalysis";
+import {
+  createClientTraceId,
+  isAiAnalyzeTimingEnabled,
+  logAnalyzeGroup,
+  logAnalyzeStep,
+  logAnalyzeTotal,
+} from "../../utils/aiAnalyzeTiming";
+import { Sparkles, Send } from "lucide-react";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
 
 function AddClothesUI({ setView }: addClothesUIProm) {
+  const { credits, isLoadingCredits } = useCredits();
+  const {
+    mutateAsync: analyzeClothing,
+    isPending: isAnalyzing,
+    error: analyzeError,
+    reset: resetAnalyzeError,
+  } = useAnalyzeClothing();
+  const [analyzeMessage, setAnalyzeMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -38,7 +61,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [inputTypeValue, setInputTypeValue] = useState<string>("");
 
   const [inputMaterialValue, setInputMaterialValue] = useState<string>("");
-  const [usersMaterials, setUsersMaterials] = useState<string[]>([]);
+  const [usersClothMaterial, setUsersClothMaterial] = useState<string>("");
 
   const [filtered_materials_List, set_Filtered_materials_List] = useState(
     materials_List,
@@ -52,8 +75,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [validMaterial, setValidMaterial] = useState<boolean | null>(null);
   const [validFit, setValidFit] = useState<boolean | null>(null);
   const [validPattern, setValidPattern] = useState<boolean | null>(null);
-  const [usersFits, setUsersFits] = useState<string[]>([]);
-  const [usersPatterns, setUsersPatterns] = useState<string[]>([]);
+  const [usersClothFit, setUsersClothFit] = useState<string>("");
+  const [usersClothPattern, setUsersClothPattern] = useState<string>("");
   //file can either be of type file or type null
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
@@ -91,46 +114,33 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   };
   const validateMaterial = () => {
     const formatted = formatInput(inputMaterialValue);
-    if (
-      materials_List.includes(formatted) &&
-      !usersMaterials.includes(formatted) &&
-      formatted
-    ) {
+    if (materials_List.includes(formatted) && formatted) {
       setValidMaterial(true);
       return true;
     } else if (formatted) {
       setValidMaterial(false);
-    } else if (usersMaterials.length > 0 && !formatted) {
-      setValidMaterial(true);
-      return true;
     } else {
       setValidMaterial(false);
     }
     return false;
   };
+
   function setUserMaterial() {
     const formatted = formatInput(inputMaterialValue);
     const valid = validateMaterial();
-    if (valid && formatted) {
-      setUsersMaterials((usersMaterials) => [...usersMaterials, formatted]);
-      setInputMaterialValue("");
+    if (valid) {
+      setUsersClothMaterial(formatted);
+      setInputMaterialValue(formatted);
     }
   }
 
   const validateFit = () => {
     const formatted = formatInput(inputFitValue);
-    if (
-      fits_List.includes(formatted) &&
-      !usersFits.includes(formatted) &&
-      formatted
-    ) {
+    if (fits_List.includes(formatted) && formatted) {
       setValidFit(true);
       return true;
     } else if (formatted) {
       setValidFit(false);
-    } else if (usersFits.length > 0 && !formatted) {
-      setValidFit(true);
-      return true;
     } else {
       setValidFit(false);
     }
@@ -140,26 +150,19 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   function setUserFit() {
     const formatted = formatInput(inputFitValue);
     const valid = validateFit();
-    if (valid && formatted) {
-      setUsersFits((usersFits) => [...usersFits, formatted]);
-      setInputFitValue("");
+    if (valid) {
+      setUsersClothFit(formatted);
+      setInputFitValue(formatted);
     }
   }
 
   const validatePattern = () => {
     const formatted = formatInput(inputPatternValue);
-    if (
-      patterns_List.includes(formatted) &&
-      !usersPatterns.includes(formatted) &&
-      formatted
-    ) {
+    if (patterns_List.includes(formatted) && formatted) {
       setValidPattern(true);
       return true;
     } else if (formatted) {
       setValidPattern(false);
-    } else if (usersPatterns.length > 0 && !formatted) {
-      setValidPattern(true);
-      return true;
     } else {
       setValidPattern(false);
     }
@@ -169,9 +172,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   function setUserPattern() {
     const formatted = formatInput(inputPatternValue);
     const valid = validatePattern();
-    if (valid && formatted) {
-      setUsersPatterns((usersPatterns) => [...usersPatterns, formatted]);
-      setInputPatternValue("");
+    if (valid) {
+      setUsersClothPattern(formatted);
+      setInputPatternValue(formatted);
     }
   }
 
@@ -296,7 +299,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   };
 
   const drawCropPreview = useCallback(
-    (imageSrc: string, zoomLevel: number) => {
+    (
+      imageSrc: string,
+      zoomLevel: number,
+      drawOffset: { x: number; y: number },
+    ) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -312,7 +319,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       }
 
       if (!img.complete) {
-        img.onload = () => drawCropPreview(imageSrc, zoomLevel);
+        img.onload = () => drawCropPreview(imageSrc, zoomLevel, drawOffset);
         return;
       }
 
@@ -332,17 +339,17 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       ctx.clearRect(0, 0, size, size);
 
       const minZoom = Math.max(size / img.width, size / img.height);
-      const scale = minZoom * zoom;
+      const scale = minZoom * zoomLevel;
 
       const baseX = (size - img.width * scale) / 2;
       const baseY = (size - img.height * scale) / 2;
 
-      const x = baseX + offset.x;
-      const y = baseY + offset.y;
+      const x = baseX + drawOffset.x;
+      const y = baseY + drawOffset.y;
 
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
     },
-    [canvasRef, imageRef, offset, zoom],
+    [],
   );
 
   useEffect(() => {
@@ -354,16 +361,16 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     setPreview(objectUrl);
 
     imageRef.current = null;
-    // Draw initial crop preview
-    drawCropPreview(objectUrl, 1);
-    setOffset({ x: 0, y: 0 });
+    const initialOffset = { x: 0, y: 0 };
+    setOffset(initialOffset);
+    drawCropPreview(objectUrl, 1, initialOffset);
 
     return () => URL.revokeObjectURL(objectUrl);
-  }, [file, drawCropPreview]);
+  }, [file]);
 
   useEffect(() => {
     if (preview) {
-      drawCropPreview(preview, zoom);
+      drawCropPreview(preview, zoom, offset);
     }
   }, [zoom, preview, offset, drawCropPreview]);
 
@@ -453,6 +460,147 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     });
   };
 
+  /** Source blob for AI only — uses crop canvas when available, else raw file. */
+  const getAnalysisSourceBlob = async (): Promise<Blob | null> => {
+    const cropped = await generateCroppedImage();
+    if (cropped) return cropped;
+    if (file) return file;
+    return null;
+  };
+
+  const getAnalysisImagePayload = async (
+    traceId: string,
+  ): Promise<string | null> => {
+    const sourceStart = performance.now();
+    const source = await getAnalysisSourceBlob();
+    logAnalyzeStep(
+      traceId,
+      "crop/source blob preparation",
+      performance.now() - sourceStart,
+    );
+
+    if (!source) return null;
+    return prepareImagePayloadForAnalysis(source, traceId);
+  };
+
+  const applyTagValue = (
+    tag: ClothingTagField | undefined,
+    apply: (formatted: string) => void,
+  ) => {
+    if (!tag?.value) return;
+    const formatted = formatInput(tag.value);
+    if (!formatted) return;
+    apply(formatted);
+  };
+
+  const applyColourList = (tag: ColourListTagField | undefined) => {
+    if (!tag?.value?.length) return;
+    const normalized: string[] = [];
+    for (const raw of tag.value) {
+      const formatted = formatInput(raw);
+      if (!formatted || !colours_List.includes(formatted)) continue;
+      if (!normalized.includes(formatted)) normalized.push(formatted);
+    }
+    if (normalized.length === 0) return;
+    setUsersColours((prev) => {
+      const merged = [...prev];
+      for (const colour of normalized) {
+        if (!merged.includes(colour)) merged.push(colour);
+      }
+      return merged;
+    });
+    setValidColour(true);
+  };
+
+  const applyAnalysisTags = (tags: ClothingAnalysisTags) => {
+    applyTagValue(tags.type, (formatted) => {
+      setUsersClothType(formatted);
+      setInputTypeValue(formatted);
+      setValidType(type_List.includes(formatted));
+    });
+
+    applyColourList(tags.colour);
+
+    applyTagValue(tags.material, (formatted) => {
+      setUsersClothMaterial(formatted);
+      setInputMaterialValue(formatted);
+      setValidMaterial(materials_List.includes(formatted));
+    });
+
+    applyTagValue(tags.fit, (formatted) => {
+      setUsersClothFit(formatted);
+      setInputFitValue(formatted);
+      setValidFit(fits_List.includes(formatted));
+    });
+
+    applyTagValue(tags.pattern, (formatted) => {
+      setUsersClothPattern(formatted);
+      setInputPatternValue(formatted);
+      setValidPattern(patterns_List.includes(formatted));
+    });
+  };
+
+  const analyzeImage = async () => {
+    resetAnalyzeError();
+    setAnalyzeMessage(null);
+
+    if (!file && !preview) {
+      setValidFile(false);
+      return;
+    }
+
+    if (!user?.sub) {
+      setAnalyzeMessage("You must be logged in to analyze images.");
+      return;
+    }
+
+    if ((credits ?? 0) < 1) {
+      setAnalyzeMessage("You need at least 1 credit to analyze an image.");
+      return;
+    }
+
+    const traceId = createClientTraceId();
+    const flowStart = performance.now();
+    const stepMs: Record<string, number> = {};
+
+    try {
+      const prepStart = performance.now();
+      const image = await getAnalysisImagePayload(traceId);
+      stepMs["image prep (crop + optimize + base64)"] =
+        performance.now() - prepStart;
+
+      if (!image) {
+        setValidFile(false);
+        return;
+      }
+
+      const networkStart = performance.now();
+      const result = await analyzeClothing({
+        image,
+        auth0Id: user.sub,
+        requestId: traceId,
+      });
+      stepMs["network + backend + AI"] = performance.now() - networkStart;
+
+      if (result.tags) {
+        applyAnalysisTags(result.tags);
+      }
+      setAnalyzeMessage(result.message ?? "Analysis completed");
+
+      stepMs["total frontend"] = performance.now() - flowStart;
+      if (isAiAnalyzeTimingEnabled()) {
+        logAnalyzeGroup(traceId, "frontend analyze breakdown", stepMs);
+        logAnalyzeTotal(traceId, "total analyze click → response", flowStart);
+      }
+    } catch {
+      stepMs["total frontend (error)"] = performance.now() - flowStart;
+      if (isAiAnalyzeTimingEnabled()) {
+        logAnalyzeGroup(traceId, "frontend analyze breakdown (error)", stepMs);
+      }
+      // error surfaced via analyzeError from mutation
+    }
+  };
+
   const pushDB = async () => {
     if (!user) {
       console.error("User is not authenticated. Cannot upload a real picture.");
@@ -465,9 +613,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("auth0Id", auth0Id ?? "");
     formData.append("type", usersClothType);
     formData.append("colour", JSON.stringify(usersColours));
-    formData.append("material", JSON.stringify(usersMaterials));
-    formData.append("fit", JSON.stringify(usersFits));
-    formData.append("pattern", JSON.stringify(usersPatterns));
+    formData.append("material", usersClothMaterial);
+    formData.append("fit", usersClothFit);
+    formData.append("pattern", usersClothPattern);
     const cropped = await generateCroppedImage();
     if (cropped) {
       formData.append("image", cropped, "cropped.png");
@@ -501,6 +649,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       validatePattern() &&
       file
     ) {
+      setUserType();
+      setUserMaterial();
+      setUserFit();
+      setUserPattern();
       const response = await pushDB();
 
       if (response && response.ok) {
@@ -526,37 +678,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     //toggleForm();
   };
 
-  const handleDeleteTag = (
-    category: "colour" | "material" | "fit" | "pattern",
-    value: string,
-  ) => {
-    if (category === "colour") {
-      setUsersColours((prev) => {
-        const next = prev.filter((item) => item !== value);
-        if (next.length === 0) setValidColour(false);
-        return next;
-      });
-      return;
-    }
-    if (category === "material") {
-      setUsersMaterials((prev) => {
-        const next = prev.filter((item) => item !== value);
-        if (next.length === 0) setValidMaterial(false);
-        return next;
-      });
-      return;
-    }
-    if (category === "fit") {
-      setUsersFits((prev) => {
-        const next = prev.filter((item) => item !== value);
-        if (next.length === 0) setValidFit(false);
-        return next;
-      });
-      return;
-    }
-    setUsersPatterns((prev) => {
+  const handleDeleteTag = (category: "colour", value: string) => {
+    setUsersColours((prev) => {
       const next = prev.filter((item) => item !== value);
-      if (next.length === 0) setValidPattern(false);
+      if (next.length === 0) setValidColour(false);
       return next;
     });
   };
@@ -573,189 +698,238 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //   margin: 0px 0 0 90px;
   // }
   return (
-    <div className=" p-1 backdrop-blur-sm min-h-screen w-full h-full md:h-120vh sticky sm:h-full">
+    <div className=" p-1 backdrop-blur-md min-h-screen w-full h-full md:h-120vh sticky sm:h-full ">
       <form
         id="add-clothes-form"
-        className="md:mt-5 mt-2 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1 h-full"
+        className="md:mt-16 sm:mt-2 bg-white backdrop-blur border border-indigo-200 rounded-xl w-full max-w-lg md:max-w-4xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1 sm:h-full md:h-auto"
       >
-        <div className="w-full mx-auto mb-1 flex justify-start ">
+        <div className="w-full mx-auto mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <button
+            type="button"
             onClick={handleBack}
-            className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+            className="justify-self-start inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
           >
             ← Back
           </button>
+          <h1 className="text-lg font-semibold text-indigo-900 uppercase tracking-wider text-center">
+            ADD CLOTHES
+          </h1>
+          <div aria-hidden="true" />
         </div>
-        <div className="w-full h-full flex flex-col md:gap-4 sm:gap-2 gap-1 mx-auto overflow-y-auto hidden-scrollbar overflow-contain">
-          {/* Add Picture */}
-          <div className=" rounded-lg p-2 w-full">
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-              }}
-              className="hidden"
-            />
-            <div
-              id="add-picture-btn"
-              className="relative bg-white border border-indigo-200 rounded-lg md:h-[360px] h-[280px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
-              onClick={() => {
-                if (!preview) fileInputRef.current?.click();
-              }}
-            >
-              {preview ? (
-                <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
-                  <canvas
-                    ref={canvasRef}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    className="cursor-grab active:cursor-grabbing touch-none"
-                  />
+        <div className="w-full h-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:items-stretch sm:gap-1 gap-1 mx-auto overflow-y-auto no-scrollbar">
+          {/* Image upload & crop — left on md+, stacked first on small screens */}
+          <div className="flex flex-col md:gap-2 sm:gap-1 gap-1 w-full md:sticky md:top-0  h-full min-h-0">
+            <div className=" rounded-lg p-2 w-full">
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  setFile(e.target.files?.[0] ?? null);
+                }}
+                className="hidden"
+              />
+              <div
+                id="add-picture-btn"
+                className="relative bg-white border border-indigo-200 rounded-lg md:h-[320px] h-[260px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
+                onClick={() => {
+                  if (!preview) fileInputRef.current?.click();
+                }}
+              >
+                {preview ? (
+                  <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+                    <canvas
+                      ref={canvasRef}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      className="cursor-grab active:cursor-grabbing touch-none"
+                    />
 
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
-                  >
-                    Replace
-                  </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
-                    Drag to reposition • Zoom to crop
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
+                    >
+                      Replace
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
+                      Drag to reposition • Zoom to crop
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-indigo-900/60 text-sm">
-                  Click to add image
-                </div>
-              )}
+                ) : (
+                  <div className="text-indigo-900/60 text-sm">
+                    Click to add image
+                  </div>
+                )}
+              </div>
             </div>
+
+            <input
+              type="range"
+              min="1"
+              max="2.5"
+              step="0.01"
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full"
+            />
+            <span className="text-xs text-indigo-700">Adjust crop</span>
+            {validFile == false && (
+              <span className="text-sm text-red-600">Enter a Picture</span>
+            )}
+            <label
+              htmlFor="input-tag"
+              className="text-sm font-medium text-indigo-900"
+            >
+              Fill Form with AI
+            </label>
+            <button
+              type="button"
+              disabled={
+                isAnalyzing || isLoadingCredits || !file || (credits ?? 0) < 1
+              }
+              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+              onClick={() => analyzeImage()}
+            >
+              <Sparkles className="w-4 h-4" />
+              {isAnalyzing ? "Analyzing..." : `Analyze Image (1 credit)`}
+            </button>
+            {analyzeError && (
+              <span className="text-sm text-red-600">
+                {analyzeError.message}
+              </span>
+            )}
+            {analyzeMessage && !analyzeError && (
+              <span className="text-sm text-indigo-700">{analyzeMessage}</span>
+            )}
+            {!isLoadingCredits && (credits ?? 0) < 1 && !analyzeMessage && (
+              <span className="text-sm text-red-600">
+                Insufficient credits for analysis.
+              </span>
+            )}
           </div>
 
-          <input
-            type="range"
-            min="1"
-            max="2.5"
-            step="0.01"
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-full"
-          />
-          <span className="text-xs text-indigo-700">Adjust crop</span>
-          <label
-            htmlFor="input-tag"
-            className="text-sm font-medium text-indigo-900"
-          >
-            Type
-          </label>
-          <input
-            id="add-type-btn"
-            placeholder="Enter clothes type ie. pants"
-            autoComplete="on"
-            required
-            className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            type="text"
-            list="types"
-            value={inputTypeValue}
-            onBlur={() => onBlur("type")}
-            onKeyDown={handleKeyDown}
-            onChange={(e) => {
-              const value = e.target.value;
-              filter(value, type_List, set_Filtered_type_List);
-              setInputTypeValue(value);
-              e.target.className = validType
-                ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
-            }}
-          ></input>
-          {validType == false && (
-            <span className="text-sm text-red-600">
-              Enter a valid Clothes type
-            </span>
-          )}
+          {/* Form inputs — right on md+, below image on small screens */}
 
-          <datalist id="types">
-            {filtered_type_List.map((type, index) => (
-              <option key={index} value={type}></option>
-            ))}{" "}
-          </datalist>
-
-          <label
-            htmlFor="input-colour"
-            className="text-sm font-medium text-indigo-900"
-          >
-            Colour
-          </label>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-col md:gap-2 sm:gap-1 gap-1 w-full min-w-0 h-full min-h-0">
+            <label
+              htmlFor="input-type"
+              className="text-sm font-medium text-indigo-900"
+            >
+              Type
+            </label>
             <input
-              placeholder="Enter multiple colours ie. red"
-              enterKeyHint="next"
+              id="add-type-btn"
+              placeholder="Enter clothes type ie. pants"
+              autoComplete="on"
+              required
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               type="text"
-              id="add-colour-btn"
-              list="colours"
-              value={inputColourValue}
-              onBlur={() => onBlur("colour")}
+              list="types"
+              value={inputTypeValue}
+              onBlur={() => onBlur("type")}
               onKeyDown={handleKeyDown}
               onChange={(e) => {
                 const value = e.target.value;
-                filter(value, colours_List, set_Filtered_colours_List);
-                setInputColourValue(value);
+                filter(value, type_List, set_Filtered_type_List);
+                setInputTypeValue(value);
+                e.target.className = validType
+                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
               }}
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             ></input>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
-              onClick={setUserColour}
+            {validType == false && (
+              <span className="text-sm text-red-600">
+                Enter a valid Clothes type
+              </span>
+            )}
+
+            <datalist id="types">
+              {filtered_type_List.map((type, index) => (
+                <option key={index} value={type}></option>
+              ))}{" "}
+            </datalist>
+
+            <label
+              htmlFor="input-colour"
+              className="text-sm font-medium text-indigo-900"
             >
-              Add
-            </button>
-          </div>
-          {validColour == false && (
-            <span className="text-sm text-red-600">Enter a valid Colour</span>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {usersColours.map((colour, index) => (
-              <div
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-                key={index}
-                id={colour}
-                onClick={(e) => handleDeleteTag("colour", e.currentTarget.id)}
+              Colour
+            </label>
+            <div className="flex items-center gap-1">
+              <input
+                placeholder="Enter multiple colours ie. red"
+                enterKeyHint="next"
+                type="text"
+                id="add-colour-btn"
+                list="colours"
+                value={inputColourValue}
+                onBlur={() => onBlur("colour")}
+                onKeyDown={handleKeyDown}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  filter(value, colours_List, set_Filtered_colours_List);
+                  setInputColourValue(value);
+                }}
+                className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              ></input>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+                onClick={setUserColour}
               >
-                <span
-                  className="h-3 w-3 rounded-full border border-indigo-200"
-                  style={{ backgroundColor: colour }}
-                  aria-hidden="true"
-                />
-                <span>{colour}</span>
-              </div>
-            ))}
-          </div>
+                Add
+              </button>
+            </div>
+            {validColour == false && (
+              <span className="text-sm text-red-600">Enter a valid Colour</span>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {usersColours.map((colour, index) => (
+                <div
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
+                  key={index}
+                  id={colour}
+                  onClick={(e) => handleDeleteTag("colour", e.currentTarget.id)}
+                >
+                  <span
+                    className="h-3 w-3 rounded-full border border-indigo-200"
+                    style={
+                      colour === "Camo"
+                        ? { backgroundColor: "green" }
+                        : { backgroundColor: colour }
+                    }
+                    aria-hidden="true"
+                  />
+                  <span>{colour}</span>
+                </div>
+              ))}
+            </div>
 
-          <datalist id="colours">
-            {filtered_colours_List.map((colour, index) => (
-              <option key={index} value={colour}></option>
-            ))}{" "}
-          </datalist>
+            <datalist id="colours">
+              {filtered_colours_List.map((colour, index) => (
+                <option key={index} value={colour}></option>
+              ))}{" "}
+            </datalist>
 
-          <label
-            htmlFor="input-material"
-            className="text-sm font-medium text-indigo-900"
-          >
-            Material
-          </label>
-          <div className="flex items-center gap-1">
+            <label
+              htmlFor="input-material"
+              className="text-sm font-medium text-indigo-900"
+            >
+              Material
+            </label>
             <input
-              placeholder="Enter multiple materials ie. cotton"
-              enterKeyHint="next"
-              type="text"
               id="add-material-btn"
+              placeholder="Enter material ie. cotton"
+              autoComplete="on"
+              required
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              type="text"
               list="materials"
               value={inputMaterialValue}
               onBlur={() => onBlur("material")}
@@ -764,56 +938,36 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 const value = e.target.value;
                 filter(value, materials_List, set_Filtered_materials_List);
                 setInputMaterialValue(value);
+                e.target.className = validMaterial
+                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
               }}
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             ></input>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
-              onClick={setUserMaterial}
+            {validMaterial == false && (
+              <span className="text-sm text-red-600">
+                Enter a valid Material
+              </span>
+            )}
+
+            <datalist id="materials">
+              {filtered_materials_List.map((material, index) => (
+                <option key={index} value={material}></option>
+              ))}{" "}
+            </datalist>
+
+            <label
+              htmlFor="input-fit"
+              className="text-sm font-medium text-indigo-900"
             >
-              Add
-            </button>
-          </div>
-          {validMaterial == false && (
-            <span className="text-sm text-red-600">Enter a valid Material</span>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {usersMaterials.map((material, index) => (
-              <div
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-                key={index}
-                id={material}
-                onClick={(e) => handleDeleteTag("material", e.currentTarget.id)}
-              >
-                <span
-                  className="h-3 w-3 rounded-full border border-indigo-200"
-                  style={{ backgroundColor: material }}
-                  aria-hidden="true"
-                />
-                <span>{material}</span>
-              </div>
-            ))}
-          </div>
-
-          <datalist id="materials">
-            {filtered_materials_List.map((material, index) => (
-              <option key={index} value={material}></option>
-            ))}{" "}
-          </datalist>
-
-          <label
-            htmlFor="input-fit"
-            className="text-sm font-medium text-indigo-900"
-          >
-            Fit
-          </label>
-          <div className="flex items-center gap-1">
+              Fit
+            </label>
             <input
-              placeholder="Enter multiple fits ie. slim"
-              enterKeyHint="next"
-              type="text"
               id="add-fit-btn"
+              placeholder="Enter fit ie. slim"
+              autoComplete="on"
+              required
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              type="text"
               list="fits"
               value={inputFitValue}
               onBlur={() => onBlur("fit")}
@@ -822,56 +976,34 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 const value = e.target.value;
                 filter(value, fits_List, set_Filtered_fits_List);
                 setInputFitValue(value);
+                e.target.className = validFit
+                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
               }}
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             ></input>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
-              onClick={setUserFit}
+            {validFit == false && (
+              <span className="text-sm text-red-600">Enter a valid Fit</span>
+            )}
+
+            <datalist id="fits">
+              {filtered_fits_List.map((fit, index) => (
+                <option key={index} value={fit}></option>
+              ))}{" "}
+            </datalist>
+
+            <label
+              htmlFor="input-pattern"
+              className="text-sm font-medium text-indigo-900"
             >
-              Add
-            </button>
-          </div>
-          {validFit == false && (
-            <span className="text-sm text-red-600">Enter a valid Fit</span>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {usersFits.map((fit, index) => (
-              <div
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-                key={index}
-                id={fit}
-                onClick={(e) => handleDeleteTag("fit", e.currentTarget.id)}
-              >
-                <span
-                  className="h-3 w-3 rounded-full border border-indigo-200"
-                  style={{ backgroundColor: fit }}
-                  aria-hidden="true"
-                />
-                <span>{fit}</span>
-              </div>
-            ))}
-          </div>
-
-          <datalist id="fits">
-            {filtered_fits_List.map((fit, index) => (
-              <option key={index} value={fit}></option>
-            ))}{" "}
-          </datalist>
-
-          <label
-            htmlFor="input-pattern"
-            className="text-sm font-medium text-indigo-900"
-          >
-            Pattern
-          </label>
-          <div className="flex items-center gap-1">
+              Pattern
+            </label>
             <input
-              placeholder="Enter multiple patterns ie. striped"
-              enterKeyHint="next"
-              type="text"
               id="add-pattern-btn"
+              placeholder="Enter pattern ie. striped"
+              autoComplete="on"
+              required
+              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              type="text"
               list="patterns"
               value={inputPatternValue}
               onBlur={() => onBlur("pattern")}
@@ -880,45 +1012,24 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 const value = e.target.value;
                 filter(value, patterns_List, set_Filtered_patterns_List);
                 setInputPatternValue(value);
+                e.target.className = validPattern
+                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
               }}
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             ></input>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
-              onClick={setUserPattern}
-            >
-              Add
-            </button>
-          </div>
-          {validPattern == false && (
-            <span className="text-sm text-red-600">Enter a valid Pattern</span>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {usersPatterns.map((pattern, index) => (
-              <div
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-                key={index}
-                id={pattern}
-                onClick={(e) => handleDeleteTag("pattern", e.currentTarget.id)}
-              >
-                <span
-                  className="h-3 w-3 rounded-full border border-indigo-200"
-                  style={{ backgroundColor: pattern }}
-                  aria-hidden="true"
-                />
-                <span>{pattern}</span>
-              </div>
-            ))}
-          </div>
+            {validPattern == false && (
+              <span className="text-sm text-red-600">
+                Enter a valid Pattern
+              </span>
+            )}
 
-          <datalist id="patterns">
-            {filtered_patterns_List.map((pattern, index) => (
-              <option key={index} value={pattern}></option>
-            ))}{" "}
-          </datalist>
+            <datalist id="patterns">
+              {filtered_patterns_List.map((pattern, index) => (
+                <option key={index} value={pattern}></option>
+              ))}{" "}
+            </datalist>
 
-          {/* <input
+            {/* <input
          
          
           }}
@@ -930,24 +1041,26 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         >
           Add Picture
         </label> */}
-          {validFile == false && (
-            <span className="text-sm text-red-600">Enter a Picture</span>
-          )}
-          <div id="submit-btn" className="mt-2 flex items-center gap-2">
-            {loading ? (
-              <div className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
-                Loading...
-              </div>
-            ) : (
-              <Link
-                href="/"
-                type="button"
-                onClick={(event) => handleSubmit(event)}
-                className=" w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
-              >
-                Submit
-              </Link>
-            )}
+            <div
+              id="submit-btn"
+              className="mt-auto pt-2 flex items-center gap-2 shrink-0"
+            >
+              {loading ? (
+                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
+                  Loading...
+                </div>
+              ) : (
+                <Link
+                  href="/"
+                  type="button"
+                  onClick={(event) => handleSubmit(event)}
+                  className=" w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </form>
