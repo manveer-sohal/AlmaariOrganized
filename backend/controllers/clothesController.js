@@ -4,8 +4,11 @@ import { deleteOutfit as deleteOutfitService } from "../services/clothes.service
 import { getOutfits as getOutfitsService } from "../services/clothes.service.js";
 import { getData as getDataService } from "../services/clothes.service.js";
 import { createOutfit as createOutfitService } from "../services/clothes.service.js";
+import { updateClothing as updateClothingService } from "../services/clothes.service.js";
+import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
 
 import dotenv from "dotenv";
+import { parseStringField } from "../utils/parseClothesFields.js";
 dotenv.config();
 
 export const removeData = async (request, response) => {
@@ -135,9 +138,9 @@ export const uploadData = async (request, response) => {
       material,
       fit,
       pattern,
-    } = request.body; // Other clothing data
+    } = request.body;
 
-    const file = request.file; // Multer adds the uploaded file in request.file
+    const file = request.file;
 
     if (!file) {
       console.log("No file uploaded");
@@ -159,27 +162,9 @@ export const uploadData = async (request, response) => {
         return Array.isArray(season) ? season : [];
       }
     })();
-    const parseMaterial = (() => {
-      try {
-        return JSON.parse(material || "[]");
-      } catch (_) {
-        return Array.isArray(material) ? material : [];
-      }
-    })();
-    const parseFit = (() => {
-      try {
-        return JSON.parse(fit || "[]");
-      } catch (_) {
-        return Array.isArray(fit) ? fit : [];
-      }
-    })();
-    const parsePattern = (() => {
-      try {
-        return JSON.parse(pattern || "[]");
-      } catch (_) {
-        return Array.isArray(pattern) ? pattern : [];
-      }
-    })();
+    const parseMaterial = parseStringField(material);
+    const parseFit = parseStringField(fit);
+    const parsePattern = parseStringField(pattern);
 
     let result = await uploadDataService({
       auth0Id,
@@ -201,6 +186,68 @@ export const uploadData = async (request, response) => {
     console.error(e);
     return response.status(e.status || 500).json({
       error: e.error || "Failed to add clothes",
+    });
+  }
+};
+
+export const updateData = async (request, response) => {
+  try {
+    const {
+      auth0Id,
+      uniqueId,
+      clothingId,
+      type,
+      colour,
+      material,
+      fit,
+      pattern,
+      slot,
+    } = request.body;
+
+    if (!auth0Id) {
+      return response.status(400).json({ error: "auth0Id is required" });
+    }
+
+    const parseColour = (() => {
+      try {
+        return JSON.parse(colour || "[]");
+      } catch (_) {
+        return Array.isArray(colour) ? colour : [];
+      }
+    })();
+
+    const validation = validateClothingUpdatePayload({
+      type,
+      colour: parseColour,
+      material: parseStringField(material),
+      fit: parseStringField(fit),
+      pattern: parseStringField(pattern),
+      slot,
+    });
+
+    if (!validation.ok) {
+      return response.status(400).json({
+        error: "Invalid clothing metadata",
+        details: validation.errors,
+      });
+    }
+
+    const result = await updateClothingService({
+      auth0Id,
+      uniqueId,
+      clothingId,
+      updates: validation.data,
+    });
+
+    return response.status(result.status || 200).json({
+      message: result.message,
+      clothing: result.clothing,
+    });
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to update clothing item",
+      details: e.details || null,
     });
   }
 };
