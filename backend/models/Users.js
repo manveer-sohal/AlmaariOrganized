@@ -45,7 +45,7 @@ const usersSchema = new mongoose.Schema({
   hasCompletedOnboardingForClothes: { type: Boolean, default: false },
   hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
   role: { type: String, default: "user" },
-  creditBalance: { type: Number, default: 5, $exists: false },
+  creditBalance: { type: Number, default: 5, min: 0 },
 });
 
 const User = mongoose.models.User || mongoose.model("User", usersSchema);
