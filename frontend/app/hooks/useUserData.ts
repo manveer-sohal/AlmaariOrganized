@@ -3,7 +3,7 @@ import { useUser as useUserAuth0 } from "@auth0/nextjs-auth0/client";
 
 export const useUserData = () => {
   const { user: userAuth0 } = useUserAuth0();
-  const { data: user } = useQuery({
+  const { data: user, isLoading } = useQuery({
     queryKey: ["user", userAuth0?.sub],
     queryFn: async () => {
       const response = await fetch(`/api/users/data`, {
@@ -17,5 +17,5 @@ export const useUserData = () => {
     },
     enabled: !!userAuth0?.sub,
   });
-  return { user };
+  return { user, isLoading };
 };
