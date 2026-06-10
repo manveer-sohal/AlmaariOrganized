@@ -697,29 +697,35 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   //   height: 300px;
   //   margin: 0px 0 0 90px;
   // }
+  const inputClassName = (invalid: boolean | null) =>
+    `w-full min-w-0 rounded-xl border bg-white px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 ${
+      invalid === false
+        ? "border-red-300 focus:ring-red-300"
+        : "border-indigo-300 focus:ring-indigo-300"
+    }`;
+
   return (
-    <div className=" p-1 backdrop-blur-md min-h-screen w-full h-full md:h-120vh sticky sm:h-full ">
+    <div className="bg-indigo-200 w-full h-full min-h-0 overflow-x-hidden overflow-y-auto px-2 py-2 pb-24 sm:p-1 sm:pb-4">
       <form
         id="add-clothes-form"
-        className="md:mt-16 sm:mt-2 bg-white backdrop-blur border border-indigo-200 rounded-xl w-full max-w-lg md:max-w-4xl mx-auto p-6 shadow-md text-base flex flex-col md:gap-4 sm:gap-2 gap-1 sm:h-full md:h-auto"
+        className="mt-2 md:mt-16 bg-white border border-indigo-200 rounded-xl w-full max-w-lg md:max-w-4xl mx-auto p-3 sm:p-5 md:p-6 shadow-md text-base flex flex-col gap-3 sm:gap-4"
       >
-        <div className="w-full mx-auto mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="relative flex items-center min-h-10 w-full">
           <button
             type="button"
             onClick={handleBack}
-            className="justify-self-start inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+            className="relative z-10 inline-flex items-center gap-1.5 font-medium px-2.5 sm:px-4 min-h-10 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 text-sm shrink-0"
           >
             ← Back
           </button>
-          <h1 className="text-lg font-semibold text-indigo-900 uppercase tracking-wider text-center">
-            ADD CLOTHES
+          <h1 className="absolute inset-x-0 text-sm sm:text-lg font-semibold text-indigo-900 uppercase tracking-wide text-center truncate px-14 pointer-events-none">
+            Add clothes
           </h1>
-          <div aria-hidden="true" />
         </div>
-        <div className="w-full h-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:items-stretch sm:gap-1 gap-1 mx-auto overflow-y-auto no-scrollbar">
+        <div className="w-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:items-start gap-3 mx-auto">
           {/* Image upload & crop — left on md+, stacked first on small screens */}
-          <div className="flex flex-col md:gap-2 sm:gap-1 gap-1 w-full md:sticky md:top-0  h-full min-h-0">
-            <div className=" rounded-lg p-2 w-full">
+          <div className="flex flex-col gap-2 w-full md:sticky md:top-0 shrink-0">
+            <div className="rounded-lg w-full">
               <input
                 type="file"
                 accept="image/*"
@@ -731,13 +737,13 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               />
               <div
                 id="add-picture-btn"
-                className="relative bg-white border border-indigo-200 rounded-lg md:h-[320px] h-[260px] mx-auto flex items-center overflow-hidden justify-center  cursor-pointer hover:opacity-90 transition"
+                className="relative bg-white border border-indigo-200 rounded-lg h-[min(220px,42vh)] sm:h-[260px] md:h-[320px] w-full max-w-full sm:max-w-sm mx-auto flex items-center overflow-hidden justify-center cursor-pointer hover:opacity-90 transition"
                 onClick={() => {
                   if (!preview) fileInputRef.current?.click();
                 }}
               >
                 {preview ? (
-                  <div className="flex items-center justify-center cursor-pointer hover:opacity-90 transition">
+                  <div className="flex items-center justify-center w-full h-full cursor-pointer hover:opacity-90 transition">
                     <canvas
                       ref={canvasRef}
                       onMouseDown={handleMouseDown}
@@ -747,38 +753,50 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                       onTouchStart={handleTouchStart}
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
-                      className="cursor-grab active:cursor-grabbing touch-none"
+                      className="max-w-full max-h-full cursor-grab active:cursor-grabbing touch-none"
                     />
 
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute top-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="absolute top-2 right-2 bg-white/90 text-xs px-2.5 py-1.5 rounded-lg shadow min-h-8"
                     >
                       Replace
                     </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-indigo-700 bg-white/70 px-2 py-1 rounded">
-                      Drag to reposition • Zoom to crop
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-[90%] text-center text-[11px] sm:text-xs text-indigo-700 bg-white/80 px-2 py-1 rounded">
+                      <span className="sm:hidden">
+                        Drag to reposition • slider to zoom
+                      </span>
+                      <span className="hidden sm:inline">
+                        Drag to reposition • Zoom to crop
+                      </span>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-indigo-900/60 text-sm">
-                    Click to add image
+                  <div className="text-indigo-900/60 text-sm px-4 text-center">
+                    Tap to add image
                   </div>
                 )}
               </div>
             </div>
 
-            <input
-              type="range"
-              min="1"
-              max="2.5"
-              step="0.01"
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full"
-            />
-            <span className="text-xs text-indigo-700">Adjust crop</span>
+            {preview && (
+              <>
+                <input
+                  type="range"
+                  min="1"
+                  max="2.5"
+                  step="0.01"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full min-h-8 accent-indigo-600 touch-manipulation"
+                />
+                <span className="text-xs text-indigo-700">Adjust crop</span>
+              </>
+            )}
             {validFile == false && (
               <span className="text-sm text-red-600">Enter a Picture</span>
             )}
@@ -793,11 +811,20 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               disabled={
                 isAnalyzing || isLoadingCredits || !file || (credits ?? 0) < 1
               }
-              className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+              className="inline-flex items-center justify-center gap-2 font-medium px-3 sm:px-4 min-h-11 h-11 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full text-sm sm:text-base"
               onClick={() => analyzeImage()}
             >
-              <Sparkles className="w-4 h-4" />
-              {isAnalyzing ? "Analyzing..." : `Analyze Image (1 credit)`}
+              <Sparkles className="w-4 h-4 shrink-0" />
+              {isAnalyzing ? (
+                "Analyzing..."
+              ) : (
+                <>
+                  <span className="sm:hidden">Analyze (1 credit)</span>
+                  <span className="hidden sm:inline">
+                    Analyze Image (1 credit)
+                  </span>
+                </>
+              )}
             </button>
             {analyzeError && (
               <span className="text-sm text-red-600">
@@ -816,7 +843,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
           {/* Form inputs — right on md+, below image on small screens */}
 
-          <div className="flex flex-col md:gap-2 sm:gap-1 gap-1 w-full min-w-0 h-full min-h-0">
+          <div className="flex flex-col gap-3 w-full min-w-0">
             <label
               htmlFor="input-type"
               className="text-sm font-medium text-indigo-900"
@@ -825,10 +852,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             </label>
             <input
               id="add-type-btn"
-              placeholder="Enter clothes type ie. pants"
+              placeholder="e.g. pants, shirt"
               autoComplete="on"
               required
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className={inputClassName(validType)}
               type="text"
               list="types"
               value={inputTypeValue}
@@ -838,9 +865,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 const value = e.target.value;
                 filter(value, type_List, set_Filtered_type_List);
                 setInputTypeValue(value);
-                e.target.className = validType
-                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
               }}
             ></input>
             {validType == false && (
@@ -861,9 +885,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             >
               Colour
             </label>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
-                placeholder="Enter multiple colours ie. red"
+                placeholder="e.g. red, blue"
                 enterKeyHint="next"
                 type="text"
                 id="add-colour-btn"
@@ -876,11 +900,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                   filter(value, colours_List, set_Filtered_colours_List);
                   setInputColourValue(value);
                 }}
-                className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className={inputClassName(validColour)}
               ></input>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+                className="inline-flex items-center justify-center font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 sm:shrink-0 sm:w-20"
                 onClick={setUserColour}
               >
                 Add
@@ -917,117 +941,115 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               ))}{" "}
             </datalist>
 
-            <label
-              htmlFor="input-material"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Material
-            </label>
-            <input
-              id="add-material-btn"
-              placeholder="Enter material ie. cotton"
-              autoComplete="on"
-              required
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              type="text"
-              list="materials"
-              value={inputMaterialValue}
-              onBlur={() => onBlur("material")}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => {
-                const value = e.target.value;
-                filter(value, materials_List, set_Filtered_materials_List);
-                setInputMaterialValue(value);
-                e.target.className = validMaterial
-                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
-              }}
-            ></input>
-            {validMaterial == false && (
-              <span className="text-sm text-red-600">
-                Enter a valid Material
-              </span>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-4">
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <label
+                  htmlFor="input-material"
+                  className="text-sm font-medium text-indigo-900"
+                >
+                  Material
+                </label>
+                <input
+                  id="add-material-btn"
+                  placeholder="e.g. cotton"
+                  autoComplete="on"
+                  required
+                  className={inputClassName(validMaterial)}
+                  type="text"
+                  list="materials"
+                  value={inputMaterialValue}
+                  onBlur={() => onBlur("material")}
+                  onKeyDown={handleKeyDown}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    filter(value, materials_List, set_Filtered_materials_List);
+                    setInputMaterialValue(value);
+                  }}
+                ></input>
+                {validMaterial == false && (
+                  <span className="text-xs sm:text-sm text-red-600">
+                    Enter a valid material
+                  </span>
+                )}
+                <datalist id="materials">
+                  {filtered_materials_List.map((material, index) => (
+                    <option key={index} value={material}></option>
+                  ))}{" "}
+                </datalist>
+              </div>
 
-            <datalist id="materials">
-              {filtered_materials_List.map((material, index) => (
-                <option key={index} value={material}></option>
-              ))}{" "}
-            </datalist>
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <label
+                  htmlFor="input-fit"
+                  className="text-sm font-medium text-indigo-900"
+                >
+                  Fit
+                </label>
+                <input
+                  id="add-fit-btn"
+                  placeholder="e.g. slim"
+                  autoComplete="on"
+                  required
+                  className={inputClassName(validFit)}
+                  type="text"
+                  list="fits"
+                  value={inputFitValue}
+                  onBlur={() => onBlur("fit")}
+                  onKeyDown={handleKeyDown}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    filter(value, fits_List, set_Filtered_fits_List);
+                    setInputFitValue(value);
+                  }}
+                ></input>
+                {validFit == false && (
+                  <span className="text-xs sm:text-sm text-red-600">
+                    Enter a valid fit
+                  </span>
+                )}
+                <datalist id="fits">
+                  {filtered_fits_List.map((fit, index) => (
+                    <option key={index} value={fit}></option>
+                  ))}{" "}
+                </datalist>
+              </div>
 
-            <label
-              htmlFor="input-fit"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Fit
-            </label>
-            <input
-              id="add-fit-btn"
-              placeholder="Enter fit ie. slim"
-              autoComplete="on"
-              required
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              type="text"
-              list="fits"
-              value={inputFitValue}
-              onBlur={() => onBlur("fit")}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => {
-                const value = e.target.value;
-                filter(value, fits_List, set_Filtered_fits_List);
-                setInputFitValue(value);
-                e.target.className = validFit
-                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
-              }}
-            ></input>
-            {validFit == false && (
-              <span className="text-sm text-red-600">Enter a valid Fit</span>
-            )}
-
-            <datalist id="fits">
-              {filtered_fits_List.map((fit, index) => (
-                <option key={index} value={fit}></option>
-              ))}{" "}
-            </datalist>
-
-            <label
-              htmlFor="input-pattern"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Pattern
-            </label>
-            <input
-              id="add-pattern-btn"
-              placeholder="Enter pattern ie. striped"
-              autoComplete="on"
-              required
-              className="rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              type="text"
-              list="patterns"
-              value={inputPatternValue}
-              onBlur={() => onBlur("pattern")}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => {
-                const value = e.target.value;
-                filter(value, patterns_List, set_Filtered_patterns_List);
-                setInputPatternValue(value);
-                e.target.className = validPattern
-                  ? "rounded-xl border border-red-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                  : "rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300";
-              }}
-            ></input>
-            {validPattern == false && (
-              <span className="text-sm text-red-600">
-                Enter a valid Pattern
-              </span>
-            )}
-
-            <datalist id="patterns">
-              {filtered_patterns_List.map((pattern, index) => (
-                <option key={index} value={pattern}></option>
-              ))}{" "}
-            </datalist>
+              <div className="flex flex-col gap-1.5 min-w-0 sm:col-span-2">
+                <label
+                  htmlFor="input-pattern"
+                  className="text-sm font-medium text-indigo-900"
+                >
+                  Pattern
+                </label>
+                <input
+                  id="add-pattern-btn"
+                  placeholder="e.g. striped"
+                  autoComplete="on"
+                  required
+                  className={inputClassName(validPattern)}
+                  type="text"
+                  list="patterns"
+                  value={inputPatternValue}
+                  onBlur={() => onBlur("pattern")}
+                  onKeyDown={handleKeyDown}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    filter(value, patterns_List, set_Filtered_patterns_List);
+                    setInputPatternValue(value);
+                  }}
+                ></input>
+                {validPattern == false && (
+                  <span className="text-xs sm:text-sm text-red-600">
+                    Enter a valid pattern
+                  </span>
+                )}
+                <datalist id="patterns">
+                  {filtered_patterns_List.map((pattern, index) => (
+                    <option key={index} value={pattern}></option>
+                  ))}{" "}
+                </datalist>
+              </div>
+            </div>
 
             {/* <input
          
@@ -1043,10 +1065,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         </label> */}
             <div
               id="submit-btn"
-              className="mt-auto pt-2 flex items-center gap-2 shrink-0"
+              className=" bottom-0 z-10 mt-2 pt-3 pb-1 -mx-1 px-1 bg-gradient-to-t from-white via-white/95 to-transparent sm:static sm:mt-auto sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 sm:bg-transparent shrink-0"
             >
               {loading ? (
-                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700">
+                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer bg-indigo-600 text-white">
                   Loading...
                 </div>
               ) : (
@@ -1054,9 +1076,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                   href="/"
                   type="button"
                   onClick={(event) => handleSubmit(event)}
-                  className=" w-full inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+                  className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-md sm:shadow-none"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 shrink-0" />
                   Submit
                 </Link>
               )}

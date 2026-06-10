@@ -38,8 +38,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
     const pattern: string[] = [];
     let count = 0;
 
-    const capitalize = (term: string) =>
-      term[0].toUpperCase() + term.slice(1);
+    const capitalize = (term: string) => term[0].toUpperCase() + term.slice(1);
 
     for (const term of terms) {
       if (term.length > 0) {

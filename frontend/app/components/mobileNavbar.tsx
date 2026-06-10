@@ -1,19 +1,23 @@
 import temp from "../Logo.png";
 import Image from "next/image";
 import React, { Dispatch, SetStateAction, useState } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useClothesStore } from "../store/useClothesStore";
 import { colours_List, type_List } from "../data/constants";
-import LoginButton from "./loginButton";
+import { useCredits } from "../hooks/useCredits";
+import { Coins, Settings } from "lucide-react";
+import Dropdown from "../dashboard/components/Dropdown";
+import { motion } from "framer-motion";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
+  onBuyCredits: () => void;
 };
 
-function MobileNavBar({ onSearchTermChange }: NavBarProps) {
-  const { user, isLoading } = useUser();
+function MobileNavBar({ onSearchTermChange, onBuyCredits }: NavBarProps) {
   const [search, setSearch] = useState("");
   const { filters, setFilters } = useClothesStore();
+  const { credits, isLoadingCredits } = useCredits();
+  const [showFeedback, setShowFeedback] = useState(false);
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
@@ -67,18 +71,47 @@ function MobileNavBar({ onSearchTermChange }: NavBarProps) {
             <li id="icon" className="shrink-0">
               <Image src={temp.src} width={50} height={30} alt="logo"></Image>
             </li>
+
+            {/* credits display */}
+            {credits != null && (
+              <li className="shrink-0 ">
+                <span className="text-indigo-900 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onBuyCredits}
+                    title="Buy more credits"
+                    className="text-sm w-full text-indigo-900 flex flex-col justify-center items-center bg-indigo-100/70 border rounded-xl m-1 p-2 py-1 shadow-md transition-colors duration-200 cursor-pointer hover:bg-indigo-500 hover:text-white hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  >
+                    <Coins className="w-4 h-4" /> Credits{" "}
+                    {isLoadingCredits ? "…" : credits}
+                  </button>
+                </span>
+              </li>
+            )}
           </div>
           <div className=" flex max-w-2xl">
-            <li className="shrink-0">
-              {isLoading ? (
-                <span>Loading...</span>
-              ) : user ? (
-                <div className="inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300">
-                  <LoginButton />
-                </div>
-              ) : (
-                <span>Logged out</span>
-              )}
+            <li className="max-w-2xl">
+              <div
+                className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
+                  showFeedback
+                    ? "bg-indigo-500 text-white"
+                    : "bg-indigo-100/70 text-indigo-900"
+                }`}
+                onClick={() => setShowFeedback(!showFeedback)}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+                {showFeedback && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
+                    className="z-50 fixed right-0 top-16"
+                  >
+                    <Dropdown />
+                  </motion.div>
+                )}
+              </div>
             </li>
           </div>
         </div>

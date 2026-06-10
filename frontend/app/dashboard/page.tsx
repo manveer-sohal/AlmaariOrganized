@@ -98,7 +98,7 @@ export default function Dashboard() {
       {/* top row container, this contains the nav bar and the mobile side bar*/}
       <div className="w-[100vw] ">
         <div className="block md:hidden ">
-          <MobileNavBar></MobileNavBar>
+          <MobileNavBar onBuyCredits={openBuyCredits}></MobileNavBar>
         </div>
 
         <div className="hidden md:block">
