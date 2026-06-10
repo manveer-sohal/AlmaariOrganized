@@ -6,6 +6,8 @@ import weatherRoutes from "./routes/weatherRoutes.js";
 import aiStylistRoutes from "./routes/aiStylistRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import billingRoutes from "./routes/billingRoutes.js";
+import { stripeWebhook } from "./controllers/billingController.js";
 import connectMongoDB from "./libs/mongodb.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -34,7 +36,16 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: "15mb" }));
+
+// Stripe webhook MUST be registered with the raw body parser BEFORE the JSON
+// parser, otherwise signature verification fails. It reads the unparsed body.
+app.post(
+  "/api/billing/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook,
+);
+
+app.use(express.json({ limit: "5mb" }));
 
 // app.use(bodyParser.json({ limit: "5mb" }));
 // app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
@@ -47,5 +58,6 @@ app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/billing", billingRoutes);
 
 export default app;

@@ -1,49 +1,15 @@
+import { authenticateBearerToken } from "./authenticateBearerToken.js";
+
 const DEFAULT_ROLES_CLAIM = "https://almaariorganizer.com/roles";
-
-const decodeJwtPayload = (token) => {
-  const [, payload] = token.split(".");
-  if (!payload) return null;
-
-  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - (normalized.length % 4)) % 4),
-    "=",
-  );
-
-  return JSON.parse(Buffer.from(padded, "base64").toString("utf-8"));
-};
 
 export const requireAdmin = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    const token =
-      authHeader && authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : null;
-
-    if (!token) {
-      return res
-        .status(401)
-        .json({ error: "Missing bearer token in Authorization header" });
+    const result = await authenticateBearerToken(req);
+    if (result.error) {
+      return res.status(result.error.status).json({ error: result.error.message });
     }
 
-    const auth0Domain = process.env.AUTH0_DOMAIN;
-    if (!auth0Domain) {
-      return res
-        .status(500)
-        .json({ error: "AUTH0_DOMAIN is not configured on the API server" });
-    }
-
-    // Validate token against Auth0 before trusting its claims.
-    const auth0Response = await fetch(`https://${auth0Domain}/userinfo`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!auth0Response.ok) {
-      return res.status(401).json({ error: "Invalid or expired access token" });
-    }
-
-    const claims = decodeJwtPayload(token) || {};
+    const { claims } = result.auth;
     const rolesClaimKey = process.env.AUTH0_ROLES_CLAIM || DEFAULT_ROLES_CLAIM;
     const rolesFromClaim = claims[rolesClaimKey];
     const roles =
@@ -58,8 +24,8 @@ export const requireAdmin = async (req, res, next) => {
     }
 
     req.auth = {
-      sub: claims.sub,
-      email: claims.email,
+      sub: result.auth.sub,
+      email: result.auth.email,
       roles,
     };
 

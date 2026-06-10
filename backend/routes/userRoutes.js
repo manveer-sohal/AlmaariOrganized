@@ -7,7 +7,6 @@ import {
   getUserRole,
   syncUserOnLogin,
   getData,
-  purchaseCredits,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -29,5 +28,4 @@ router.post("/onboarding", getOnboardingStatus);
 router.post("/setOnboardingStep", setOnboardingStep);
 router.post("/role", getUserRole);
 router.post("/data", getData);
-router.post("/purchase-credits", purchaseCredits);
 export default router;

@@ -1,10 +1,6 @@
 import { User } from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 import { DEFAULT_CREDIT_BALANCE } from "../constants/credits.js";
-import {
-  CREDIT_PACKAGES,
-  CREDIT_PACKAGE_IDS,
-} from "../constants/creditPackages.js";
 
 const missingCreditBalanceFilter = {
   $or: [{ creditBalance: { $exists: false } }, { creditBalance: null }],
@@ -89,29 +85,29 @@ export const deductOneCredit = async (auth0Id) => {
 };
 
 /**
- * Demo / fake purchase — increments credits for a validated package id only.
- * Replace with payment webhook flow when Stripe is integrated.
+ * Atomically grant credits to a user. This is the ONLY way credits are added,
+ * and it is called exclusively from the verified Stripe webhook fulfillment
+ * path (never from the frontend or a redirect/success page).
+ *
+ * Idempotency is the caller's responsibility: the billing service guards each
+ * grant behind an atomic `pending -> fulfilled` transition on the Purchase
+ * record, so this function is only ever reached once per payment.
  */
-export const purchaseCreditPackage = async (auth0Id, packageId) => {
+export const addCredits = async (auth0Id, credits) => {
   if (!auth0Id) {
     throw { status: 400, message: "auth0Id is required" };
   }
 
-  if (!CREDIT_PACKAGE_IDS.includes(packageId)) {
-    throw {
-      status: 400,
-      message: "Invalid credit package",
-    };
+  if (typeof credits !== "number" || !Number.isFinite(credits) || credits <= 0) {
+    throw { status: 400, message: "credits must be a positive number" };
   }
-
-  const pkg = CREDIT_PACKAGES[packageId];
 
   await connectMongoDB();
   await ensureCreditBalanceField(auth0Id);
 
   const user = await User.findOneAndUpdate(
     { auth0Id },
-    { $inc: { creditBalance: pkg.credits } },
+    { $inc: { creditBalance: credits } },
     { new: true, projection: { creditBalance: 1 } },
   );
 
@@ -120,9 +116,7 @@ export const purchaseCreditPackage = async (auth0Id, packageId) => {
   }
 
   return {
-    packageId,
-    creditsAdded: pkg.credits,
-    price: pkg.price,
+    creditsAdded: credits,
     creditBalance: user.creditBalance,
   };
 };
