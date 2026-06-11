@@ -9,6 +9,7 @@ import {
   ClothingMetadataDraft,
   normalizeClothingItem,
 } from "../utils/validateClothingMetadata";
+import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 type UpdateClothingPayload = ClothingMetadataDraft & {
   uniqueId: string;
@@ -20,20 +21,26 @@ export function useUpdateClothing() {
 
   return useMutation({
     mutationFn: async (payload: UpdateClothingPayload) => {
-      const response = await fetch("/api/clothes/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auth0Id: user?.sub,
-          uniqueId: payload.uniqueId,
-          type: payload.type,
-          colour: payload.colour,
-          material: payload.material,
-          fit: payload.fit,
-          pattern: payload.pattern,
-          slot: payload.slot,
-        }),
-      });
+      const updateClothing = async () =>
+        fetch("/api/clothes/update", {
+          method: "POST",
+          headers: await getAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            uniqueId: payload.uniqueId,
+            type: payload.type,
+            colour: payload.colour,
+            material: payload.material,
+            fit: payload.fit,
+            pattern: payload.pattern,
+            slot: payload.slot,
+          }),
+        });
+
+      let response = await updateClothing();
+      if (response.status === 401) {
+        clearAuthTokenCache();
+        response = await updateClothing();
+      }
 
       const data = await response.json();
       if (!response.ok) {

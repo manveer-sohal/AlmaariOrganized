@@ -27,6 +27,7 @@ import {
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
 import { Sparkles, Send } from "lucide-react";
+import { clearAuthTokenCache, getAuthHeaders } from "../../utils/getAuthHeaders";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -577,7 +578,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       const networkStart = performance.now();
       const result = await analyzeClothing({
         image,
-        auth0Id: user.sub,
         requestId: traceId,
       });
       stepMs["network + backend + AI"] = performance.now() - networkStart;
@@ -607,10 +607,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       return;
     }
 
-    const auth0Id = user.sub;
     const formData = new FormData();
 
-    formData.append("auth0Id", auth0Id ?? "");
     formData.append("type", usersClothType);
     formData.append("colour", JSON.stringify(usersColours));
     formData.append("material", usersClothMaterial);
@@ -623,11 +621,18 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       formData.append("image", file);
     }
 
-    console.log(formData);
-    const response = await fetch(`/api/clothes/upload`, {
-      method: "POST",
-      body: formData,
-    });
+    const uploadClothes = async () =>
+      fetch(`/api/clothes/upload`, {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: formData,
+      });
+
+    let response = await uploadClothes();
+    if (response.status === 401) {
+      clearAuthTokenCache();
+      response = await uploadClothes();
+    }
 
     console.log("response", response);
     return await response;

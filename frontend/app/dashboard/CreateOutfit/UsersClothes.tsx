@@ -26,10 +26,10 @@ const UsersClothes = ({
   return (
     <div
       id="create-outfit-form"
-      className="bg-white/80 backdrop-blur flex flex-col border border-indigo-200 rounded-xl p-3 shadow-md md:h-[calc(100vh-200px)] relative"
+      className="bg-white/80 backdrop-blur flex flex-col border border-indigo-200 rounded-xl p-3 shadow-md lg:h-[calc(100vh-200px)] lg:min-h-0 relative"
     >
       <h3 className="font-medium text-indigo-900 mb-2">Your Clothes</h3>
-      <div className="overflow-y-auto hidden-scrollbar">
+      <div className="overflow-y-auto hidden-scrollbar lg:flex-1 lg:min-h-0">
         {isLoadingClothes ? (
           <div className="grid grid-cols-[repeat(auto-fill,_80px)] md:grid-cols-[repeat(auto-fill,_110px)] gap-3 justify-center  max-h-[200px] sm:max-h-[500px] md:max-h-[800px]">
             {Array.from({ length: 20 }, (_, index) => (

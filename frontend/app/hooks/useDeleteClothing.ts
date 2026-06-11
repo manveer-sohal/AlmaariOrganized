@@ -1,25 +1,28 @@
-import { useUser } from "@auth0/nextjs-auth0/client";
 import {
   InfiniteData,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { ClothingItem } from "../types/clothes";
+import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 export function useDeleteClothing(clothingId: string) {
-  const { user } = useUser();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/clothes/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auth0Id: user?.sub,
-          uniqueId: clothingId,
-        }),
-      });
+      const deleteClothing = async () =>
+        fetch("/api/clothes/remove", {
+          method: "POST",
+          headers: await getAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ uniqueId: clothingId }),
+        });
+
+      let res = await deleteClothing();
+      if (res.status === 401) {
+        clearAuthTokenCache();
+        res = await deleteClothing();
+      }
 
       if (!res.ok) throw new Error("Failed to delete clothing");
     },

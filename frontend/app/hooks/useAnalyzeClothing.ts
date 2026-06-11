@@ -1,39 +1,45 @@
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnalyzeClothingResponse } from "../types/clothingAnalysis";
 import {
   isAiAnalyzeTimingEnabled,
   logAnalyzeStep,
 } from "../utils/aiAnalyzeTiming";
+import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 type AnalyzeClothingInput = {
   image: string;
-  auth0Id: string;
   requestId?: string;
 };
 
 export const useAnalyzeClothing = () => {
   const queryClient = useQueryClient();
+  const { user } = useUser();
 
   return useMutation({
-    mutationFn: async ({ image, auth0Id, requestId }: AnalyzeClothingInput) => {
-      if (!auth0Id) {
+    mutationFn: async ({ image, requestId }: AnalyzeClothingInput) => {
+      if (!user?.sub) {
         throw new Error("You must be logged in to analyze images.");
       }
 
       const traceId = requestId ?? "unknown";
       const fetchStart = performance.now();
 
-      const response = await fetch("/api/ai/analyze-clothing", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(requestId ? { "X-Request-Id": requestId } : {}),
-        },
-        body: JSON.stringify({
-          auth0Id,
-          image,
-        }),
-      });
+      const postAnalyze = async () =>
+        fetch("/api/ai/analyze-clothing", {
+          method: "POST",
+          headers: await getAuthHeaders({
+            "Content-Type": "application/json",
+            ...(requestId ? { "X-Request-Id": requestId } : {}),
+          }),
+          body: JSON.stringify({ image }),
+        });
+
+      let response = await postAnalyze();
+      if (response.status === 401) {
+        clearAuthTokenCache();
+        response = await postAnalyze();
+      }
 
       if (isAiAnalyzeTimingEnabled()) {
         logAnalyzeStep(
@@ -56,9 +62,9 @@ export const useAnalyzeClothing = () => {
 
       return data;
     },
-    onSuccess: (data, variables) => {
-      if (data.creditBalance != null && variables.auth0Id) {
-        queryClient.setQueryData(["user", variables.auth0Id], (old: unknown) => {
+    onSuccess: (data) => {
+      if (data.creditBalance != null && user?.sub) {
+        queryClient.setQueryData(["user", user.sub], (old: unknown) => {
           if (!old || typeof old !== "object") return old;
           return {
             ...old,
@@ -66,7 +72,9 @@ export const useAnalyzeClothing = () => {
           };
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["user", variables.auth0Id] });
+      if (user?.sub) {
+        queryClient.invalidateQueries({ queryKey: ["user", user.sub] });
+      }
     },
   });
 };
