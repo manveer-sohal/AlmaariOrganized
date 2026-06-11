@@ -17,6 +17,9 @@ if (process.env.NODE_ENV !== "test") {
 //!!! unistall mongoose from front end !!!!
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Honor X-Forwarded-For when behind a reverse proxy (rate limits, logs).
+app.set("trust proxy", 1);
 app.all(/^\/(__ok|healthz|health)$/, (_req, res) => res.status(200).send("ok"));
 
 app.get("/__ok", (_req, res) => res.status(200).send("ok"));
