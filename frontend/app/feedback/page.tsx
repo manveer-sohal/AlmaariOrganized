@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
+import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 type FeedbackType = "bug" | "feature" | "improvement" | "other";
 type FeedbackPriority = "low" | "medium" | "high";
@@ -24,18 +25,24 @@ export default function FeedbackPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/feedback/createFeedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          subject: subject.trim(),
-          message: message.trim(),
-          priority,
-          email: user?.email ?? undefined,
-          auth0Id: user?.sub ?? undefined,
-        }),
-      });
+      const submitFeedback = async () =>
+        fetch("/api/feedback/createFeedback", {
+          method: "POST",
+          headers: await getAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            type,
+            subject: subject.trim(),
+            message: message.trim(),
+            priority,
+            email: user?.email ?? undefined,
+          }),
+        });
+
+      let response = await submitFeedback();
+      if (response.status === 401) {
+        clearAuthTokenCache();
+        response = await submitFeedback();
+      }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));

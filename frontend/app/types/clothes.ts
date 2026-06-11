@@ -2,6 +2,9 @@ export type ClothingItem = {
   _id: string; // Unique ID for the clothing item
   colour: string[]; // Array of colours
   type: string; // Type of clothing
+  material?: string;
+  fit?: string;
+  pattern?: string;
   slot: Slot; // Slot of the clothing item
   imageSrc: string; // Base64 encoded image
 };
@@ -13,7 +16,13 @@ export type Outfit = {
 
 export type Slot = "head" | "body" | "legs" | "feet";
 
-export type View = "home" | "outfits" | "createOutfit" | "addClothes";
+export type View =
+  | "home"
+  | "outfits"
+  | "createOutfit"
+  | "addClothes"
+  | "buyCredits"
+  | "clothingDetails";
 
 export type coloursList =
   | "Black"

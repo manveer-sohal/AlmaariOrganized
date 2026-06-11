@@ -2,17 +2,49 @@
 export const colours_List = [
   "Black",
   "White",
+  "Grey",
+  "Blue",
+  "Navy",
   "Brown",
   "Beige",
-  "Grey",
-  "Pink",
-  "Navy",
+  "Cream",
   "Green",
+  "Olive",
   "Red",
-  "Blue",
+  "Pink",
   "Purple",
   "Yellow",
   "Orange",
+  "Camo",
+];
+
+//list of materials for clothes
+export const materials_List = [
+  "Cotton",
+  "Denim",
+  "Knit",
+  "Wool",
+  "Leather",
+  "Linen",
+  "Polyester",
+  "Fleece",
+  "Nylon",
+  "Canvas",
+  "Silk",
+];
+
+//list of fits for clothes
+export const fits_List = ["Slim", "Regular", "Relaxed", "Oversized", "Baggy"];
+
+//list of patterns for clothes
+export const patterns_List = [
+  "Solid",
+  "Striped",
+  "Checked",
+  "Polka Dot",
+  "Graphic",
+  "Plaid",
+  "Floral",
   "Camo",
 ];
 

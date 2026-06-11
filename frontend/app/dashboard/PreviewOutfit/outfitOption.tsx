@@ -6,11 +6,13 @@ export default function OutfitOption({
   activeId,
   setActiveId,
   onDelete,
+  showDelete = true,
 }: {
   outfit: Outfit;
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   onDelete: () => void;
+  showDelete?: boolean;
 }) {
   const [hover, setHover] = useState<boolean>(false);
   return (
@@ -31,7 +33,7 @@ export default function OutfitOption({
 
       <div className="text-xs opacity-80 flex justify-between">
         <p>{outfit.outfit_items.length} items</p>
-        {hover && (
+        {showDelete && hover && (
           <button onClick={onDelete} className="text-red-500">
             <p>delete</p>
           </button>

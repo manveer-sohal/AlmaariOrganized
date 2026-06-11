@@ -1,29 +1,39 @@
 import express from "express";
 import {
-  test,
   getOnboardingStatus,
   updateUserHasCompletedOnboardingForClothes,
   updateUserHasCompletedOnboardingForOutfits,
   setOnboardingStep,
   getUserRole,
+  syncUserOnLogin,
+  getData,
 } from "../controllers/userController.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import { requireInternalApiSecret } from "../middleware/requireInternalApiSecret.js";
+import { loginRateLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-// Define routes
+router.post(
+  "/login",
+  loginRateLimiter,
+  requireInternalApiSecret,
+  syncUserOnLogin,
+);
 
-// router.post("/create", POST);
-// router.post("/get", getData);
-router.post("/login", test);
+router.post("/data", requireAuth, getData);
+router.post("/onboarding", requireAuth, getOnboardingStatus);
+router.post("/setOnboardingStep", requireAuth, setOnboardingStep);
+router.post("/role", requireAuth, getUserRole);
 router.post(
   "/updateUserHasCompletedOnboardingForClothes",
+  requireAuth,
   updateUserHasCompletedOnboardingForClothes,
 );
 router.post(
   "/updateUserHasCompletedOnboardingForOutfits",
+  requireAuth,
   updateUserHasCompletedOnboardingForOutfits,
 );
-router.post("/onboarding", getOnboardingStatus);
-router.post("/setOnboardingStep", setOnboardingStep);
-router.post("/role", getUserRole);
+
 export default router;

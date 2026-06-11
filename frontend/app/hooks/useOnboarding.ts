@@ -1,24 +1,10 @@
-import { useUser } from "@auth0/nextjs-auth0/client";
-import { useQuery } from "@tanstack/react-query";
+import { useUserData } from "./useUserData";
 //hook to get the onboarding status of the user
 
 export const useOnboarding = () => {
-  const { user } = useUser();
-  const { data: onboarding, isLoading: isLoadingOnboarding } = useQuery({
-    queryKey: ["onboarding"],
-    queryFn: async () => {
-      const response = await fetch(`/api/users/onboarding`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ auth0Id: user?.sub }),
-      });
-      if (!response.ok) throw new Error("Failed to fetch onboarding");
-      const data = await response.json();
-      return data;
-    },
-    enabled: !!user,
-  });
-  return { onboarding, isLoadingOnboarding };
+  const { user } = useUserData();
+  return {
+    onboarding: user?.hasCompletedOnboardingForClothes,
+    isLoadingOnboarding: user?.isLoadingOnboarding,
+  };
 };

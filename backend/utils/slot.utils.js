@@ -34,7 +34,8 @@ export const mapTypeToSlot = (type) => {
     t.includes("skirt") ||
     t.includes("cargos") ||
     t.includes("capri") ||
-    t.includes("pajamas")
+    t.includes("pajamas") ||
+    t.includes("belt")
   ) {
     return "legs";
   }
