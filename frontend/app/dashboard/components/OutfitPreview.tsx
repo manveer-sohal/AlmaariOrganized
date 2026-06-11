@@ -15,7 +15,7 @@ const OutfitPreview = ({
   return (
     <div
       id="outfit-preview"
-      className=" w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md h-full  overflow-hidden min-h-[350px]"
+      className="w-full bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 shadow-md lg:h-full overflow-hidden min-h-[350px]"
     >
       <h3 className=" font-medium text-indigo-900 mb-2">Outfit Preview</h3>
       <div className="flex flex-col gap-3 h-full hidden-scrollbar overflow-y-scroll  overflow-hidden">

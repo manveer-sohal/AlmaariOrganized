@@ -110,7 +110,7 @@ export default function Dashboard() {
         </div>
       </div>
       {/* bottom row container, this contains the side bar and the content area*/}
-      <div className=" h-full grid  md:grid-cols-[auto_1fr]">
+      <div className="h-full min-h-0 grid md:grid-cols-[auto_1fr]">
         {/* side bar*/}
         <div className=" z-10 hidden md:block">
           <div
@@ -130,7 +130,7 @@ export default function Dashboard() {
             view === "createOutfit" || view === "clothingDetails"
               ? "bg-indigo-200"
               : "bg-background"
-          } h-[calc(100vh-64px)] w-full md:rounded-tl-3xl  `}
+          } h-full min-h-0 w-full md:rounded-tl-3xl`}
         >
           {isLoading ? (
             <div className="flex justify-center items-center h-screen">
@@ -146,7 +146,7 @@ export default function Dashboard() {
             </>
           )}
           {user && (
-            <div className=" md:rounded-tl-3xl w-full  overflow-y-scroll h-full ">
+            <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0">
               {/* previously had a loading screen here before the whole page loaded*/}
               {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}
