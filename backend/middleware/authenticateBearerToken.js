@@ -21,6 +21,20 @@ export const authenticateBearerToken = async (req) => {
     };
   }
 
+  // Integration tests use a fixed bearer token (see backend/test/testAuth.js).
+  if (
+    process.env.NODE_ENV === "test" &&
+    token === "test-access-token"
+  ) {
+    return {
+      auth: {
+        sub: "test-auth0-id",
+        email: "test@example.com",
+        claims: { sub: "test-auth0-id", email: "test@example.com" },
+      },
+    };
+  }
+
   const auth0Domain = process.env.AUTH0_DOMAIN;
   if (!auth0Domain) {
     return {

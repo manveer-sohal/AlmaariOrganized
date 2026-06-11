@@ -8,24 +8,26 @@ import {
   syncUserOnLogin,
   getData,
 } from "../controllers/userController.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = express.Router();
 
-// Define routes
-
-// router.post("/create", POST);
-// router.post("/get", getData);
+// Bootstrap only — called server-side from Auth0 callback (no bearer token yet).
 router.post("/login", syncUserOnLogin);
+
+router.post("/data", requireAuth, getData);
+router.post("/onboarding", requireAuth, getOnboardingStatus);
+router.post("/setOnboardingStep", requireAuth, setOnboardingStep);
+router.post("/role", requireAuth, getUserRole);
 router.post(
   "/updateUserHasCompletedOnboardingForClothes",
+  requireAuth,
   updateUserHasCompletedOnboardingForClothes,
 );
 router.post(
   "/updateUserHasCompletedOnboardingForOutfits",
+  requireAuth,
   updateUserHasCompletedOnboardingForOutfits,
 );
-router.post("/onboarding", getOnboardingStatus);
-router.post("/setOnboardingStep", setOnboardingStep);
-router.post("/role", getUserRole);
-router.post("/data", getData);
+
 export default router;

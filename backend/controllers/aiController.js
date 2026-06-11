@@ -38,12 +38,13 @@ export const analyzeClothing = async (req, res) => {
 
   try {
     const validationStart = performance.now();
-    const { auth0Id, image } = req.body;
+    const auth0Id = req.auth?.sub;
+    const { image } = req.body;
 
-    if (!auth0Id || typeof auth0Id !== "string") {
-      return res.status(400).json({
+    if (!auth0Id) {
+      return res.status(401).json({
         success: false,
-        message: "auth0Id is required",
+        message: "Unauthorized",
       });
     }
 

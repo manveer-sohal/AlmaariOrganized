@@ -4,16 +4,16 @@ import connectMongoDB from "../libs/mongodb.js";
 
 export const createFeedback = async (req, res) => {
   try {
-    const { auth0Id, type, subject, email, message, priority } = req.body;
-    if (!auth0Id || !type || !subject || !email || !message) {
+    const auth0Id = req.auth?.sub;
+    const { type, subject, message, priority } = req.body;
+    const email = req.body.email || req.auth?.email;
+
+    if (!auth0Id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!type || !subject || !email || !message) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    console.log("auth0Id", auth0Id);
-    console.log("type", type);
-    console.log("subject", subject);
-    console.log("email", email);
-    console.log("message", message);
-    console.log("priority", priority);
 
     await connectMongoDB();
 

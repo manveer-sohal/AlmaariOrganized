@@ -1,4 +1,6 @@
 import { authenticateBearerToken } from "./authenticateBearerToken.js";
+import connectMongoDB from "../libs/mongodb.js";
+import { User } from "../models/Users.js";
 
 const DEFAULT_ROLES_CLAIM = "https://almaariorganizer.com/roles";
 
@@ -9,7 +11,7 @@ export const requireAdmin = async (req, res, next) => {
       return res.status(result.error.status).json({ error: result.error.message });
     }
 
-    const { claims } = result.auth;
+    const { claims, sub, email } = result.auth;
     const rolesClaimKey = process.env.AUTH0_ROLES_CLAIM || DEFAULT_ROLES_CLAIM;
     const rolesFromClaim = claims[rolesClaimKey];
     const roles =
@@ -19,14 +21,22 @@ export const requireAdmin = async (req, res, next) => {
           ? claims.roles
           : [];
 
-    if (!roles.includes("admin")) {
+    let isAdmin = roles.includes("admin");
+
+    if (!isAdmin && sub) {
+      await connectMongoDB();
+      const user = await User.findOne({ auth0Id: sub }, { role: 1 });
+      isAdmin = user?.role === "admin";
+    }
+
+    if (!isAdmin) {
       return res.status(403).json({ error: "Admin role required" });
     }
 
     req.auth = {
-      sub: result.auth.sub,
-      email: result.auth.email,
-      roles,
+      sub,
+      email,
+      roles: roles.length > 0 ? roles : ["admin"],
     };
 
     return next();
