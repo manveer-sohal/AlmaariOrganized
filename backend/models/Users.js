@@ -11,6 +11,9 @@ const ClothesSchema = new mongoose.Schema({
   season: { type: [String], default: [] },
   waterproof: { type: Boolean, default: false },
   slot: { type: String, required: true }, //head, body, legs, feet
+  material: { type: String, required: true }, //Cotton, Polyester, Wool, Silk, etc.
+  fit: { type: String, required: true }, //Slim, Regular, Relaxed, Oversized, Baggy, etc.
+  pattern: { type: String, required: true }, //Solid, Striped, Checked, Polka Dot, etc.
 });
 
 ClothesSchema.index({ userId: 1, createdAt: -1 });
@@ -42,6 +45,7 @@ const usersSchema = new mongoose.Schema({
   hasCompletedOnboardingForClothes: { type: Boolean, default: false },
   hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
   role: { type: String, default: "user" },
+  creditBalance: { type: Number, default: 5, min: 0 },
 });
 
 const User = mongoose.models.User || mongoose.model("User", usersSchema);

@@ -7,25 +7,31 @@ import { Clothes } from "../models/Users.js";
 import { Outfits } from "../models/Users.js";
 import { redis } from "../libs/redis.client.js";
 
+const resolveClothingDoc = async ({ clothingId, uniqueId }) => {
+  if (clothingId) {
+    return Clothes.findById(clothingId);
+  }
+  if (uniqueId) {
+    const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
+    if (objectIdLike.test(String(uniqueId))) {
+      const byId = await Clothes.findById(uniqueId);
+      if (byId) return byId;
+    }
+    return Clothes.findOne({ uniqueId: String(uniqueId) });
+  }
+  return null;
+};
+
 export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
   try {
-    let clothingDoc = null;
-
-    if (clothingId) {
-      clothingDoc = await Clothes.findById(clothingId);
-    } else if (uniqueId) {
-      const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
-      if (objectIdLike.test(String(uniqueId))) {
-        clothingDoc = await Clothes.findById(uniqueId);
-      }
-      if (!clothingDoc) {
-        clothingDoc = await Clothes.findOne({
-          uniqueId: String(uniqueId),
-        });
-      }
+    const user = await User.findOne({ auth0Id });
+    if (!user) {
+      throw { status: 404, message: "User not found" };
     }
 
-    if (!clothingDoc) {
+    const clothingDoc = await resolveClothingDoc({ clothingId, uniqueId });
+
+    if (!clothingDoc || String(clothingDoc.userId) !== String(user._id)) {
       throw { status: 404, message: "Clothing item not found" };
     }
 
@@ -55,6 +61,7 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       Clothes: updatedUser?.clothes || [],
     };
   } catch (e) {
+    if (e.status) throw e;
     throw {
       status: 500,
       message: "Failed to remove clothing item",
@@ -71,6 +78,9 @@ export const uploadData = async ({
   waterproof,
   favourite,
   file,
+  material,
+  fit,
+  pattern,
 }) => {
   try {
     const slot = mapTypeToSlot(type);
@@ -103,6 +113,9 @@ export const uploadData = async ({
       season,
       waterproof: waterproof === "true" || Boolean(waterproof),
       slot,
+      material,
+      fit,
+      pattern,
     });
 
     const user = await User.findOneAndUpdate(
@@ -133,24 +146,45 @@ export const uploadData = async ({
 
 export const deleteOutfit = async ({ auth0Id, uniqueId }) => {
   try {
-    const outfit = await Outfits.findOneAndDelete({ uniqueId });
-    if (!outfit) {
-      throw { status: 404, message: "Outfit not found" };
-    }
-    const user = await User.findOneAndUpdate(
-      { auth0Id },
-      { $pull: { outfits: outfit._id } },
-      { new: true },
-    );
+    const user = await User.findOne({ auth0Id });
     if (!user) {
       throw { status: 404, message: "User not found" };
     }
+
+    const outfit = await Outfits.findOne({ uniqueId });
+    if (!outfit) {
+      throw { status: 404, message: "Outfit not found" };
+    }
+
+    const ownsOutfit = user.outfits.some(
+      (id) => String(id) === String(outfit._id),
+    );
+    if (!ownsOutfit) {
+      throw { status: 404, message: "Outfit not found" };
+    }
+
+    await Promise.all([
+      Outfits.deleteOne({ _id: outfit._id }),
+      User.findOneAndUpdate(
+        { auth0Id },
+        { $pull: { outfits: outfit._id } },
+        { new: true },
+      ),
+    ]);
+
+    try {
+      await redis.del("userOutfits:" + auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after outfit delete:", err);
+    }
+
     return {
       status: 200,
       message: "Outfit deleted successfully",
-      outfit: outfit,
+      outfit,
     };
   } catch (e) {
+    if (e.status) throw e;
     throw {
       status: 500,
       message: "Failed to delete outfit",
@@ -270,6 +304,69 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   };
 };
 
+export const updateClothing = async ({
+  auth0Id,
+  uniqueId,
+  clothingId,
+  updates,
+}) => {
+  try {
+    const user = await User.findOne({ auth0Id });
+    if (!user) {
+      throw { status: 404, message: "User not found" };
+    }
+
+    let clothingDoc = null;
+
+    if (clothingId) {
+      clothingDoc = await Clothes.findById(clothingId);
+    } else if (uniqueId) {
+      const objectIdLike = /^(?=.*[a-f\d])[a-f\d]{24}$/i;
+      if (objectIdLike.test(String(uniqueId))) {
+        clothingDoc = await Clothes.findById(uniqueId);
+      }
+      if (!clothingDoc) {
+        clothingDoc = await Clothes.findOne({
+          uniqueId: String(uniqueId),
+        });
+      }
+    }
+
+    if (!clothingDoc || String(clothingDoc.userId) !== String(user._id)) {
+      throw { status: 404, message: "Clothing item not found" };
+    }
+
+    clothingDoc.type = updates.type;
+    clothingDoc.colour = updates.colour;
+    clothingDoc.material = updates.material;
+    clothingDoc.fit = updates.fit;
+    clothingDoc.pattern = updates.pattern;
+    clothingDoc.slot = updates.slot;
+
+    await clothingDoc.save();
+
+    try {
+      await redis.del("userClothes:" + auth0Id);
+      await redis.del("userOutfits:" + auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after clothing update:", err);
+    }
+
+    return {
+      status: 200,
+      message: "Clothing item updated successfully",
+      clothing: clothingDoc,
+    };
+  } catch (e) {
+    if (e.status) throw e;
+    throw {
+      status: 500,
+      message: "Failed to update clothing item",
+      details: e.message,
+    };
+  }
+};
+
 export const createOutfit = async ({
   auth0Id,
   name,
@@ -303,15 +400,36 @@ export const createOutfit = async ({
       }
     })();
 
+    const user = await User.findOne({ auth0Id });
+    if (!user) {
+      throw { status: 404, message: "User not found" };
+    }
+
     // Extract clothing ObjectIds from provided items (supports _id or uniqueId)
     const stringOrObjectItems = Array.isArray(parsedItems) ? parsedItems : [];
     const candidateObjectIds = [];
     for (const it of stringOrObjectItems) {
-      if (it) {
+      if (it && Array.isArray(it._id)) {
         for (const item of it._id) {
           candidateObjectIds.push(item);
         }
       }
+    }
+
+    const uniqueItemIds = [...new Set(candidateObjectIds.map(String))];
+    if (uniqueItemIds.length === 0) {
+      throw { status: 400, message: "At least one outfit item is required" };
+    }
+
+    const ownedCount = await Clothes.countDocuments({
+      _id: { $in: uniqueItemIds },
+      userId: user._id,
+    });
+    if (ownedCount !== uniqueItemIds.length) {
+      throw {
+        status: 403,
+        message: "One or more clothing items do not belong to you",
+      };
     }
 
     const createdOutfit = await Outfits.create({
@@ -321,10 +439,10 @@ export const createOutfit = async ({
       colour: parsedColour,
       season: parsedSeason,
       waterproof: waterproof === "true" || Boolean(waterproof),
-      outfit_items: candidateObjectIds,
+      outfit_items: uniqueItemIds,
     });
 
-    const user = await User.findOneAndUpdate(
+    const updatedUser = await User.findOneAndUpdate(
       { auth0Id },
       {
         $push: { outfits: createdOutfit._id },
@@ -332,8 +450,14 @@ export const createOutfit = async ({
       },
       { new: true },
     );
-    if (!user) {
+    if (!updatedUser) {
       throw { status: 404, message: "User not found" };
+    }
+
+    try {
+      await redis.del("userOutfits:" + auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after outfit create:", err);
     }
 
     return {
@@ -343,6 +467,7 @@ export const createOutfit = async ({
     };
   } catch (e) {
     console.error(e);
+    if (e.status) throw e;
     throw {
       status: 500,
       message: "Failed to create outfit",

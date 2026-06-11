@@ -4,7 +4,10 @@ import clothesRoutes from "./routes/clothesRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import aiStylistRoutes from "./routes/aiStylistRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import billingRoutes from "./routes/billingRoutes.js";
+import { stripeWebhook } from "./controllers/billingController.js";
 import connectMongoDB from "./libs/mongodb.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -14,6 +17,9 @@ if (process.env.NODE_ENV !== "test") {
 //!!! unistall mongoose from front end !!!!
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Honor X-Forwarded-For when behind a reverse proxy (rate limits, logs).
+app.set("trust proxy", 1);
 app.all(/^\/(__ok|healthz|health)$/, (_req, res) => res.status(200).send("ok"));
 
 app.get("/__ok", (_req, res) => res.status(200).send("ok"));
@@ -33,7 +39,16 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+
+// Stripe webhook MUST be registered with the raw body parser BEFORE the JSON
+// parser, otherwise signature verification fails. It reads the unparsed body.
+app.post(
+  "/api/billing/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook,
+);
+
+app.use(express.json({ limit: "5mb" }));
 
 // app.use(bodyParser.json({ limit: "5mb" }));
 // app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
@@ -44,6 +59,8 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/billing", billingRoutes);
 
 export default app;

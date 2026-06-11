@@ -9,6 +9,10 @@ import OutfitPreview from "../components/OutfitPreview";
 import AiStylist from "./AiStylist";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useInView } from "react-intersection-observer";
+import {
+  clearAuthTokenCache,
+  getAuthHeaders,
+} from "../../utils/getAuthHeaders";
 const DEFAULT_AI_MESSAGE =
   "Select items to start building your outfit. I’ll review color balance and pieces as you go.";
 function CreateOutfitUI() {
@@ -37,12 +41,12 @@ function CreateOutfitUI() {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
   const selectedItems = useMemo(() => {
     return Object.values(selectedBySlot).filter(
-      (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0
+      (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0,
     );
   }, [selectedBySlot]);
 
   const { thoughts, isLoadingThoughts, errorThoughts } = useGenerateAiThoughts(
-    selectedItems
+    selectedItems,
   );
 
   const mascotState = useMemo(() => {
@@ -62,7 +66,7 @@ function CreateOutfitUI() {
 
   const clothesById = useMemo(
     () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
-    [clothes]
+    [clothes],
   );
 
   const toggleSelect = (id: string) => {
@@ -83,7 +87,6 @@ function CreateOutfitUI() {
     setSaving(true);
     try {
       const payload = {
-        auth0Id: user.sub,
         name,
         colour: JSON.stringify([]),
         season: JSON.stringify([]),
@@ -93,11 +96,18 @@ function CreateOutfitUI() {
         })),
       };
 
-      const response = await fetch(`/api/clothes/createOutfit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const createOutfit = async () =>
+        fetch(`/api/clothes/createOutfit`, {
+          method: "POST",
+          headers: await getAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify(payload),
+        });
+
+      let response = await createOutfit();
+      if (response.status === 401) {
+        clearAuthTokenCache();
+        response = await createOutfit();
+      }
       if (!response.ok) throw new Error("Failed to save outfit");
       setSelectedBySlot({ head: null, body: null, legs: null, feet: null });
       setName("");
@@ -110,10 +120,10 @@ function CreateOutfitUI() {
   };
 
   return (
-    <div className="bg-indigo-200 md:rounded-tl-3xl w-full z-10 p-4 h-auto">
+    <div className="md:rounded-tl-3xl w-full z-10 p-4 pb-24 md:pb-8">
       {/* Outfit name and save outfit button */}
       <div className="flex items-center justify-between mb-4 md:mr-40">
-        <div className="flex justify-end w-full gap-2">
+        <div className="flex justify-end w-full gap-2 ">
           <input
             id="create-outfit-form-name"
             type="text"
@@ -132,7 +142,7 @@ function CreateOutfitUI() {
         </div>
       </div>
       {/* Your Clothes, Outfit Preview, AI Stylist */}
-      <div className="grid lg:grid-cols-[0.6fr,0.9fr] gap-4 flex-1 ">
+      <div className="grid lg:grid-cols-[0.6fr,0.9fr] gap-4">
         {/* Users Clothes */}
         <UsersClothes
           isLoadingClothes={isLoadingClothes}
@@ -144,7 +154,7 @@ function CreateOutfitUI() {
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
         />
-        <div className="grid grid-cols-2 lg:grid-cols-[clamp(200px,20vw,330px),1fr] gap-4 h-full">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-[clamp(200px,20vw,330px),1fr] gap-4">
           {/* Outfit Preview */}
           <OutfitPreview
             selectedBySlot={selectedBySlot}

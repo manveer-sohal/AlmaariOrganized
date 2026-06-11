@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { redirect } from "next/navigation";
 import { useFeedback } from "@/app/hooks/useFeedback";
+import { useRole } from "@/app/hooks/useRole";
 
 const PRIORITY_OPTIONS = ["", "low", "medium", "high"];
 const TYPE_OPTIONS = ["", "bug", "feature", "improvement", "other"];
@@ -49,22 +50,14 @@ function truncate(str: string, max: number) {
 
 export default function AdminFeedbackPage() {
   const { user, isLoading: userLoading } = useUser();
-
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    if (storedRole) {
-      setRole(JSON.parse(storedRole));
-    }
-  }, []);
+  const { role, isLoadingRole } = useRole();
+  const isAdmin = role === "admin";
 
   useEffect(() => {
-    if (!userLoading && (!user || role !== "admin")) {
-      return redirect("/dashboard");
+    if (!userLoading && !isLoadingRole && (!user || !isAdmin)) {
+      redirect("/dashboard");
     }
-    console.log("user role2", role);
-  }, [user, userLoading, role]);
+  }, [user, userLoading, isLoadingRole, isAdmin]);
 
   const [type, setType] = useState("");
   const [priority, setPriority] = useState("");
@@ -78,11 +71,12 @@ export default function AdminFeedbackPage() {
     sortOrder,
     type,
     priority,
+    isAdmin,
   );
 
-  return userLoading ? (
+  return userLoading || isLoadingRole ? (
     <div>Loading...</div>
-  ) : role === "admin" ? (
+  ) : isAdmin ? (
     <div className="p-4 md:p-6 backdrop-blur-sm min-h-screen w-full">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

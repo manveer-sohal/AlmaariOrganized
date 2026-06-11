@@ -3,7 +3,7 @@ import ValidateType from "../dashboard/components/validateType";
 import React, { useState } from "react";
 import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
-type View = "home" | "outfits" | "createOutfit" | "addClothes";
+import { View } from "../types/clothes";
 type SideBarProp = {
   view: View;
   setView: (view: View) => void;

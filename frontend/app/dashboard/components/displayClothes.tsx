@@ -6,9 +6,14 @@ import { AnimatePresence } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useInView } from "react-intersection-observer";
-function DisplayClothes() {
+
+type DisplayClothesProps = {
+  onSelectItem?: (item: ClothingItem) => void;
+};
+
+function DisplayClothes({ onSelectItem }: DisplayClothesProps) {
   const { filters } = useClothesStore();
-  const { colour, type, search } = filters;
+  const { colour, type, material, fit, pattern, search } = filters;
   const numberOfClothes = 30; // TODO: make this dynamic
   const {
     clothes,
@@ -34,14 +39,35 @@ function DisplayClothes() {
 
       const matchesType = type.length === 0 || type.includes(item.type);
 
+      const matchesMaterial =
+        material.length === 0 ||
+        (item.material != null && material.includes(item.material));
+
+      const matchesFit =
+        fit.length === 0 || (item.fit != null && fit.includes(item.fit));
+
+      const matchesPattern =
+        pattern.length === 0 ||
+        (item.pattern != null && pattern.includes(item.pattern));
+
       const matchesSearch =
         search.length === 0 ||
         item.type.toLowerCase().includes(search) ||
-        item.colour.some((c) => c.toLowerCase().includes(search));
+        item.colour.some((c) => c.toLowerCase().includes(search)) ||
+        (item.material?.toLowerCase().includes(search) ?? false) ||
+        (item.fit?.toLowerCase().includes(search) ?? false) ||
+        (item.pattern?.toLowerCase().includes(search) ?? false);
 
-      return matchesColour && matchesType && matchesSearch;
+      return (
+        matchesColour &&
+        matchesType &&
+        matchesMaterial &&
+        matchesFit &&
+        matchesPattern &&
+        matchesSearch
+      );
     });
-  }, [clothes, colour, type, search]);
+  }, [clothes, colour, type, material, fit, pattern, search]);
 
   return (
     <div className="justify-self-center w-full grid justify-center  p-2 text-center order-first grid-cols-[repeat(auto-fill,90px)] sm:grid-cols-[repeat(auto-fill,120px)] md:grid-cols-[repeat(auto-fill,150px)] lg:grid-cols-[repeat(auto-fill,200px)]">
@@ -58,11 +84,8 @@ function DisplayClothes() {
           {filteredClothes.map((item: ClothingItem) => (
             <ClothesCard
               key={item._id}
-              colour={item.colour}
-              type={item.type}
-              imageSrc={item.imageSrc}
-              _id={item._id}
-              slot={item.slot}
+              {...item}
+              onSelect={onSelectItem}
             />
           ))}
           {isFetchingNextPage &&

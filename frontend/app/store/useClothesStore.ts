@@ -2,6 +2,9 @@ import { create } from "zustand";
 type Filters = {
   colour: string[];
   type: string[];
+  material: string[];
+  fit: string[];
+  pattern: string[];
   search: string;
 };
 type ClothesStore = {
@@ -17,6 +20,9 @@ export const useClothesStore = create<ClothesStore>((set) => ({
   filters: {
     colour: [],
     type: [],
+    material: [],
+    fit: [],
+    pattern: [],
     search: "",
   },
   menuOpen: false,

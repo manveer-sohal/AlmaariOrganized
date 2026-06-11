@@ -18,6 +18,14 @@
     animation: wiggle 2s ease-in-out infinite;
   }
 }
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+}
 * {
   touch-action: manipulation;
 }

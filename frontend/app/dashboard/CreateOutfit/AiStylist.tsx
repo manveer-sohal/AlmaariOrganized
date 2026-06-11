@@ -31,7 +31,7 @@ const AiStylist = ({
           Refresh
         </button>
       </div>
-      <div className="h-[260px] overflow-auto space-y-2 pr-1">
+      <div className="h-auto overflow-auto space-y-2 pr-1">
         {aiMessages.map((m, idx) => (
           <div
             key={`ai-${idx}`}

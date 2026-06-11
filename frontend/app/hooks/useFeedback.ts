@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 type FeedbackItem = {
   _id: string;
@@ -17,6 +18,7 @@ export const useFeedback = (
   sortOrder: string,
   type: string,
   priority: string,
+  enabled = true,
 ) => {
   const { data, isLoading, error } = useQuery<{
     feedback: FeedbackItem[];
@@ -27,10 +29,28 @@ export const useFeedback = (
     sortOrder: string;
   }>({
     queryKey: ["feedback", page, limit, sortBy, sortOrder, type, priority],
+    enabled,
     queryFn: async () => {
-      const res = await fetch(
-        `/api/feedback/getPaginatedFeedback?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}&type=${type}&priority=${priority}`,
-      );
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortBy,
+        sortOrder,
+        type,
+        priority,
+      });
+
+      const fetchFeedback = async () =>
+        fetch(`/api/feedback/getPaginatedFeedback?${params}`, {
+          headers: await getAuthHeaders(),
+        });
+
+      let res = await fetchFeedback();
+      if (res.status === 401) {
+        clearAuthTokenCache();
+        res = await fetchFeedback();
+      }
+
       if (!res.ok) throw new Error("Failed to load feedback");
       return res.json();
     },
