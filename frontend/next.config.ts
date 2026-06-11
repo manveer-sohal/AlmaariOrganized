@@ -25,6 +25,14 @@ const nextConfig = {
         destination: `${API_BASE_URL}/api/feedback/:path*`,
       },
       {
+        source: "/api/billing/:path*",
+        destination: `${API_BASE_URL}/api/billing/:path*`,
+      },
+      {
+        source: "/api/weather/:path*",
+        destination: `${API_BASE_URL}/api/weather/:path*`,
+      },
+      {
         source: "/api/users/role",
         destination: `${API_BASE_URL}/api/users/role`,
       },
