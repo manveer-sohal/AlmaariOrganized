@@ -10,7 +10,11 @@ import {
   logAnalyzeTotal,
   measureAnalyzeStep,
 } from "../utils/aiAnalyzeTiming.js";
-import { deductOneCredit, getCreditBalance } from "./credit.service.js";
+import {
+  deductOneCredit,
+  getCreditBalance,
+  refundCredits,
+} from "./credit.service.js";
 
 dotenv.config();
 
@@ -133,51 +137,88 @@ export const warmupAiClothingService = async (requestId) => {
 export const analyzeClothingForUser = async ({ auth0Id, image, requestId }) => {
   const serviceStart = performance.now();
 
-  const creditBalance = await measureAnalyzeStep(
-    requestId,
-    "credit lookup (getCreditBalance)",
-    () => getCreditBalance(auth0Id),
-  );
-
-  if (creditBalance < 1) {
+  // Reserve one credit BEFORE the expensive AI call to prevent parallel abuse.
+  let deduction;
+  try {
+    deduction = await measureAnalyzeStep(
+      requestId,
+      "credit reservation (deductOneCredit)",
+      () => deductOneCredit(auth0Id),
+    );
+  } catch (error) {
+    const balance = await getCreditBalance(auth0Id).catch(() => undefined);
     throw {
-      status: 402,
-      message: "Insufficient credits. At least 1 credit is required.",
-      creditBalance,
+      status: error.status || 402,
+      message: error.message || "Insufficient credits",
+      creditBalance: balance,
     };
   }
 
-  const { tags, validTagCount } = await callAiClothingService(image, requestId);
-
-  let creditsDeducted = 0;
-  let updatedBalance = creditBalance;
-
-  if (validTagCount >= 1) {
-    const deduction = await measureAnalyzeStep(
+  try {
+    const { tags, validTagCount } = await callAiClothingService(
+      image,
       requestId,
-      "credit deduction (deductOneCredit)",
-      () => deductOneCredit(auth0Id),
     );
-    creditsDeducted = deduction.creditsDeducted;
-    updatedBalance = deduction.creditBalance;
-  } else {
-    logAnalyzeStep(
+
+    if (validTagCount < 1) {
+      const refund = await measureAnalyzeStep(
+        requestId,
+        "credit refund (no confident tags)",
+        () => refundCredits(auth0Id, 1),
+      );
+      logAnalyzeStep(
+        requestId,
+        "credit charge waived (validTagCount < 1)",
+        0,
+      );
+
+      logAnalyzeTotal(
+        requestId,
+        "total service (analyzeClothingForUser)",
+        serviceStart,
+      );
+
+      return {
+        tags,
+        validTagCount,
+        creditsDeducted: 0,
+        creditBalance: refund.creditBalance,
+      };
+    }
+
+    logAnalyzeTotal(
       requestId,
-      "credit deduction skipped (validTagCount < 1)",
-      0,
+      "total service (analyzeClothingForUser)",
+      serviceStart,
     );
+
+    return {
+      tags,
+      validTagCount,
+      creditsDeducted: deduction.creditsDeducted,
+      creditBalance: deduction.creditBalance,
+    };
+  } catch (error) {
+    try {
+      await refundCredits(auth0Id, 1);
+    } catch (refundError) {
+      console.error("[analyze] failed to refund reserved credit:", refundError);
+    }
+
+    const balance = await getCreditBalance(auth0Id).catch(
+      () => deduction.creditBalance,
+    );
+
+    logAnalyzeTotal(
+      requestId,
+      "total service (analyzeClothingForUser, error)",
+      serviceStart,
+    );
+
+    throw {
+      status: error.status || 500,
+      message: error.message || "Failed to analyze clothing image",
+      creditBalance: balance,
+    };
   }
-
-  logAnalyzeTotal(
-    requestId,
-    "total service (analyzeClothingForUser)",
-    serviceStart,
-  );
-
-  return {
-    tags,
-    validTagCount,
-    creditsDeducted,
-    creditBalance: updatedBalance,
-  };
 };

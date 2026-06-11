@@ -4,11 +4,21 @@ import {
   warmupAiClothing,
 } from "../controllers/aiController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import {
+  aiAnalyzeRateLimiter,
+  aiRateLimiter,
+} from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-// No user data — optional pre-warm; left unauthenticated.
+router.use(aiRateLimiter);
+
 router.get("/warmup", warmupAiClothing);
-router.post("/analyze-clothing", requireAuth, analyzeClothing);
+router.post(
+  "/analyze-clothing",
+  aiAnalyzeRateLimiter,
+  requireAuth,
+  analyzeClothing,
+);
 
 export default router;

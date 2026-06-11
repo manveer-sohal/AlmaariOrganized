@@ -84,6 +84,35 @@ export const deductOneCredit = async (auth0Id) => {
   };
 };
 
+/** Refund credits after a reserved analyze charge (e.g. AI failure or no confident tags). */
+export const refundCredits = async (auth0Id, credits = 1) => {
+  if (!auth0Id) {
+    throw { status: 400, message: "auth0Id is required" };
+  }
+
+  if (typeof credits !== "number" || !Number.isFinite(credits) || credits <= 0) {
+    throw { status: 400, message: "credits must be a positive number" };
+  }
+
+  await connectMongoDB();
+  await ensureCreditBalanceField(auth0Id);
+
+  const user = await User.findOneAndUpdate(
+    { auth0Id },
+    { $inc: { creditBalance: credits } },
+    { new: true, projection: { creditBalance: 1 } },
+  );
+
+  if (!user) {
+    throw { status: 404, message: "User not found" };
+  }
+
+  return {
+    creditsRefunded: credits,
+    creditBalance: user.creditBalance,
+  };
+};
+
 /**
  * Atomically grant credits to a user. This is the ONLY way credits are added,
  * and it is called exclusively from the verified Stripe webhook fulfillment

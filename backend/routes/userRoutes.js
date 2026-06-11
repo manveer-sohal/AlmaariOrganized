@@ -9,11 +9,17 @@ import {
   getData,
 } from "../controllers/userController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { requireInternalApiSecret } from "../middleware/requireInternalApiSecret.js";
+import { loginRateLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-// Bootstrap only — called server-side from Auth0 callback (no bearer token yet).
-router.post("/login", syncUserOnLogin);
+router.post(
+  "/login",
+  loginRateLimiter,
+  requireInternalApiSecret,
+  syncUserOnLogin,
+);
 
 router.post("/data", requireAuth, getData);
 router.post("/onboarding", requireAuth, getOnboardingStatus);

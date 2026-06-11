@@ -116,6 +116,22 @@ export const fulfillPaymentIntent = async (event) => {
     return { handled: false, reason: "unrecognized_payment_intent" };
   }
 
+  const amountReceived =
+    paymentIntent.amount_received ?? paymentIntent.amount ?? 0;
+  if (
+    amountReceived !== pkg.amount ||
+    (paymentIntent.currency && paymentIntent.currency !== pkg.currency)
+  ) {
+    console.error("[billing] Payment amount/currency mismatch", {
+      paymentIntentId: paymentIntent.id,
+      amountReceived,
+      expectedAmount: pkg.amount,
+      currency: paymentIntent.currency,
+      expectedCurrency: pkg.currency,
+    });
+    return { handled: false, reason: "amount_mismatch" };
+  }
+
   const stripeSummary = {
     paymentIntentId: paymentIntent.id,
     amountReceived: paymentIntent.amount_received,
