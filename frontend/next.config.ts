@@ -1,42 +1,29 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api:8080";
 
+// Backend API segments proxied to Cloud Run. `/api/auth/*` stays on Next.js
+// (Auth0 + access-token). On Vercel, each proxied prefix must appear here —
+// unlisted `/api/*` paths 404 at the edge before reaching the backend.
+const BACKEND_API_SEGMENTS = [
+  "clothes",
+  "users",
+  "ai",
+  "aiStylist",
+  "feedback",
+  "billing",
+  "weather",
+].join("|");
+
 const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
-    return [
-      {
-        source: "/api/clothes/:path*",
-        destination: `${API_BASE_URL}/api/clothes/:path*`,
-      },
-      {
-        source: "/api/users/:path*",
-        destination: `${API_BASE_URL}/api/users/:path*`,
-      },
-      {
-        source: "/api/ai/:path*",
-        destination: `${API_BASE_URL}/api/ai/:path*`,
-      },
-      {
-        source: "/api/aiStylist/:path*",
-        destination: `${API_BASE_URL}/api/aiStylist/:path*`,
-      },
-      {
-        source: "/api/feedback/:path*",
-        destination: `${API_BASE_URL}/api/feedback/:path*`,
-      },
-      {
-        source: "/api/billing/:path*",
-        destination: `${API_BASE_URL}/api/billing/:path*`,
-      },
-      {
-        source: "/api/weather/:path*",
-        destination: `${API_BASE_URL}/api/weather/:path*`,
-      },
-      {
-        source: "/api/users/role",
-        destination: `${API_BASE_URL}/api/users/role`,
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: `/api/:segment(${BACKEND_API_SEGMENTS})/:path*`,
+          destination: `${API_BASE_URL}/api/:segment/:path*`,
+        },
+      ],
+    };
   },
 };
 
