@@ -1,10 +1,16 @@
 import { useUserData } from "./useUserData";
-//hook to get the onboarding status of the user
 
 export const useOnboarding = () => {
-  const { user } = useUserData();
+  const { user, isLoading } = useUserData();
   return {
-    onboarding: user?.hasCompletedOnboardingForClothes,
-    isLoadingOnboarding: user?.isLoadingOnboarding,
+    onboarding: user
+      ? {
+          hasCompletedOnboardingForClothes:
+            user.hasCompletedOnboardingForClothes,
+          hasCompletedOnboardingForOutfits:
+            user.hasCompletedOnboardingForOutfits,
+        }
+      : undefined,
+    isLoadingOnboarding: isLoading,
   };
 };

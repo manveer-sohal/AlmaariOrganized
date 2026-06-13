@@ -111,7 +111,7 @@ function CreateOutfitUI() {
       if (!response.ok) throw new Error("Failed to save outfit");
       setSelectedBySlot({ head: null, body: null, legs: null, feet: null });
       setName("");
-      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
+      queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
     } catch (e) {
       console.error(e);
     } finally {

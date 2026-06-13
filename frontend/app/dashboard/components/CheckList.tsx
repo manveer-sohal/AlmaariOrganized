@@ -39,7 +39,7 @@ function CheckList() {
     onboarding,
   ]);
 
-  if (isLoadingOnboarding || isLoadingOnboarding == undefined) {
+  if (isLoadingOnboarding) {
     return <div></div>;
   }
 

@@ -667,7 +667,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         });
         setView("home");
         goToNextTourStep();
-        queryClient.invalidateQueries({ queryKey: ["onboarding"] });
+        queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
       } else {
         console.error("Failed to upload picture");
       }
