@@ -81,6 +81,7 @@ export const uploadData = async ({
   material,
   fit,
   pattern,
+  imageAlreadyCropped = false,
 }) => {
   try {
     const slot = mapTypeToSlot(type);
@@ -92,15 +93,17 @@ export const uploadData = async ({
     let imageSrc = await toBase64(file.buffer);
     console.log("imageSrc", imageSrc);
 
-    try {
-      imageSrc = await cropImage(imageSrc);
-      imageSrc = "data:image/png;base64," + imageSrc;
-    } catch (e) {
-      throw {
-        status: 500,
-        message: "Error cropping image",
-        details: e.message,
-      };
+    if (!imageAlreadyCropped) {
+      try {
+        imageSrc = await cropImage(imageSrc);
+        imageSrc = "data:image/png;base64," + imageSrc;
+      } catch (e) {
+        throw {
+          status: 500,
+          message: "Error cropping image",
+          details: e.message,
+        };
+      }
     }
 
     const clothingDoc = await Clothes.create({

@@ -7,6 +7,7 @@ import {
   createOutfit,
   getOutfits,
   deleteOutfit,
+  cropImageForClient,
 } from "../controllers/clothesController.js";
 import uploadMiddleware from "../middleware/upload.middleware.js";
 import { validateImageFile } from "../middleware/validateImageFile.js";
@@ -25,6 +26,13 @@ router.post(
   uploadMiddleware,
   validateImageFile,
   uploadData,
+);
+router.post(
+  "/crop",
+  uploadRateLimiter,
+  uploadMiddleware,
+  validateImageFile,
+  cropImageForClient,
 );
 router.post("/remove", removeData);
 router.post("/update", updateData);
