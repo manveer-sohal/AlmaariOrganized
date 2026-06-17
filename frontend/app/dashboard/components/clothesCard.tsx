@@ -41,7 +41,7 @@ export default function ClothesCard({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.2, rotate: -10 }}
       transition={{ duration: 0.1 }}
-      className="border border-indigo-300 p-1 bg-slate-100 rounded-sm w-[90px] h-[90px] sm:w-[120px] sm:h-[120px] md:w-[150px] md:h-[150px] lg:w-[200px] lg:h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl group"
+      className="border border-indigo-300 p-1 bg-slate-100 rounded-sm w-[120px] h-[120px] sm:w-[120px] sm:h-[120px] md:w-[150px] md:h-[150px] lg:w-[200px] lg:h-[200px] shadow-lg relative overflow-hidden cursor-pointer transition-transform ease-in-out duration-300 hover:scale-105 hover:shadow-2xl group"
     >
       {/* Delete on desktop only — mobile delete lives in ClothingDetailsView */}
       <button
