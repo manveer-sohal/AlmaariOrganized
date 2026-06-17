@@ -1,11 +1,7 @@
 import ChooseColour from "../dashboard/components/chooseColour";
 import ValidateType from "../dashboard/components/validateType";
 import TagFilterPicker from "../dashboard/components/TagFilterPicker";
-import {
-  materials_List,
-  fits_List,
-  patterns_List,
-} from "../data/constants";
+import { materials_List, fits_List, patterns_List } from "../data/constants";
 import React, { useState } from "react";
 import WeatherCheck from "./weatherCheck";
 import { useClothesStore } from "../store/useClothesStore";

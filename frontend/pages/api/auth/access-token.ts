@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   getAccessToken,
-  getSession,
   withApiAuthRequired,
 } from "@auth0/nextjs-auth0";
 
@@ -18,26 +17,20 @@ export default withApiAuthRequired(async function accessToken(
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
 
+  const audience = process.env.AUTH0_AUDIENCE;
+  if (!audience) {
+    return res.status(500).json({
+      error:
+        "AUTH0_AUDIENCE is not configured. Set it to your Auth0 API identifier.",
+    });
+  }
+
   try {
-    const session = await getSession(req, res);
-    let token: string | undefined;
-
-    // Prefer getAccessToken so Auth0 can refresh an expired access token.
-    try {
-      const refreshed = await getAccessToken(req, res);
-      token = refreshed.accessToken;
-    } catch {
-      // Without AUTH0_AUDIENCE this may throw; fall back to session tokens.
-    }
-
-    if (!token) {
-      token = session?.accessToken as string | undefined;
-    }
-
-    // ID token is a stable JWT for the session lifetime; backend verifies via JWKS.
-    if (!token) {
-      token = session?.idToken as string | undefined;
-    }
+    // getAccessToken refreshes the API access token when needed (requires
+    // offline_access in AUTH0_SCOPE at login).
+    const { accessToken: token } = await getAccessToken(req, res, {
+      authorizationParams: { audience },
+    });
 
     if (!token) {
       return res.status(401).json({ error: "No access token in session" });

@@ -1,7 +1,7 @@
-import ChooseColour from "../dashboard/components/chooseColour";
-import ValidateType from "../dashboard/components/validateType";
-import React, { useState } from "react";
-import { useClothesStore } from "../store/useClothesStore";
+// // import ChooseColour from "../dashboard/components/chooseColour";
+// // import ValidateType from "../dashboard/components/validateType";
+// import React, { useState } from "react";
+// import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 import { View } from "../types/clothes";
 type SideBarProp = {
@@ -9,27 +9,27 @@ type SideBarProp = {
   setView: (view: View) => void;
 };
 function MobileSideBar({ view, setView }: SideBarProp) {
-  const [active, setActive] = useState<boolean>(false);
-  const [displayFilterType, setDisplayFilterType] = useState<string>("none");
-  const [colour, setColour] = useState<string[] | null | undefined>([]);
-  const [type, setType] = useState<string[] | null | undefined>([]);
-  const { filters, setFilters } = useClothesStore();
+  // const [active, setActive] = useState<boolean>(false);
+  // const [displayFilterType, setDisplayFilterType] = useState<string>("none");
+  // const [colour, setColour] = useState<string[] | null | undefined>([]);
+  // const [type, setType] = useState<string[] | null | undefined>([]);
+  // const { filters, setFilters } = useClothesStore();
 
-  const changeFilter = (colour: string[], type: string[]) => {
-    setFilters({ ...filters, colour, type });
-    console.log(filters);
-  };
+  // const changeFilter = (colour: string[], type: string[]) => {
+  //   setFilters({ ...filters, colour, type });
+  //   console.log(filters);
+  // };
 
-  const onClickFilter = () => {
-    if (displayFilterType == "none") {
-      setDisplayFilterType("block");
-      setActive(true);
-    } else {
-      setDisplayFilterType("none");
-      setActive(false);
-    }
-    console.log(active);
-  };
+  // const onClickFilter = () => {
+  //   if (displayFilterType == "none") {
+  //     setDisplayFilterType("block");
+  //     setActive(true);
+  //   } else {
+  //     setDisplayFilterType("none");
+  //     setActive(false);
+  //   }
+  //   console.log(active);
+  // };
 
   const onClickOutfits = () => {
     setView("outfits");
@@ -42,13 +42,13 @@ function MobileSideBar({ view, setView }: SideBarProp) {
     setView("home");
   };
 
-  const handleSubmit = () => {
-    console.log("apply");
+  // const handleSubmit = () => {
+  //   console.log("apply");
 
-    changeFilter(colour ?? [], type ?? []);
+  //   changeFilter(colour ?? [], type ?? []);
 
-    onClickFilter();
-  };
+  //   onClickFilter();
+  // };
 
   return (
     <div className="w-full">
@@ -89,7 +89,7 @@ function MobileSideBar({ view, setView }: SideBarProp) {
             </svg>
             <span>Home</span>
           </button>
-          <button
+          {/* <button
             className={` inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2.5 rounded-xl m-1 cursor-pointer border ${
               active === true
                 ? "bg-white text-indigo-900 border-indigo-300"
@@ -147,9 +147,9 @@ function MobileSideBar({ view, setView }: SideBarProp) {
               </svg>
               <span>Apply</span>
             </button>
-          </div>
+          </div> */}
 
-          <button className="w-1/3 inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200">
+          {/* <button className="w-1/3 inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200">
             <svg
               width="18"
               height="18"
@@ -164,7 +164,7 @@ function MobileSideBar({ view, setView }: SideBarProp) {
               />
             </svg>
             <span>Random</span>
-          </button>
+          </button> */}
           <button
             onClick={() => onClickOutfits()}
             className={`inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${

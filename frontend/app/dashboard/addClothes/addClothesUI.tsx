@@ -82,6 +82,12 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
   const [preview, setPreview] = useState<string | null>(null);
+  const [pythonCropStatus, setPythonCropStatus] = useState<
+    "idle" | "pending" | "ready" | "failed"
+  >("idle");
+  const [pythonCroppedBlob, setPythonCroppedBlob] = useState<Blob | null>(null);
+  const pythonCropJobIdRef = useRef(0);
+  const pythonCropPromiseRef = useRef<Promise<Blob | null> | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
   const [filtered_colours_List, set_Filtered_colours_List] = useState(
     colours_List,
@@ -98,6 +104,69 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const lastPosRef = useRef({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
   // const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+
+  const startPythonCrop = useCallback(
+    (nextFile: File | null): Promise<Blob | null> => {
+      pythonCropJobIdRef.current += 1;
+      const jobId = pythonCropJobIdRef.current;
+
+      setPythonCroppedBlob(null);
+      if (!nextFile) {
+        setPythonCropStatus("idle");
+        pythonCropPromiseRef.current = null;
+        return Promise.resolve(null);
+      }
+
+      setPythonCropStatus("pending");
+
+      const work = (async (): Promise<Blob | null> => {
+        const formData = new FormData();
+        formData.append("image", nextFile);
+
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 20000);
+
+        try {
+          const postCrop = async () =>
+            fetch("/api/clothes/crop", {
+              method: "POST",
+              headers: await getAuthHeaders(),
+              body: formData,
+              signal: controller.signal,
+            });
+
+          let response = await postCrop();
+          if (response.status === 401) {
+            clearAuthTokenCache();
+            response = await postCrop();
+          }
+
+          if (!response.ok) return null;
+
+          const blob = await response.blob();
+
+          if (pythonCropJobIdRef.current !== jobId) return null;
+          setPythonCroppedBlob(blob);
+          setPythonCropStatus("ready");
+          return blob;
+        } catch {
+          if (pythonCropJobIdRef.current === jobId) {
+            setPythonCropStatus("failed");
+          }
+          return null;
+        } finally {
+          window.clearTimeout(timeout);
+          if (pythonCropJobIdRef.current === jobId) {
+            pythonCropPromiseRef.current = null;
+          }
+        }
+      })();
+
+      pythonCropPromiseRef.current = work;
+      return work;
+    },
+    [],
+  );
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -365,9 +434,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     const initialOffset = { x: 0, y: 0 };
     setOffset(initialOffset);
     drawCropPreview(objectUrl, 1, initialOffset);
+    startPythonCrop(file);
 
     return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
+  }, [file, drawCropPreview, startPythonCrop]);
 
   useEffect(() => {
     if (preview) {
@@ -463,6 +533,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   /** Source blob for AI only — uses crop canvas when available, else raw file. */
   const getAnalysisSourceBlob = async (): Promise<Blob | null> => {
+    if (pythonCropStatus === "ready" && pythonCroppedBlob) {
+      return pythonCroppedBlob;
+    }
     const cropped = await generateCroppedImage();
     if (cropped) return cropped;
     if (file) return file;
@@ -614,11 +687,29 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("material", usersClothMaterial);
     formData.append("fit", usersClothFit);
     formData.append("pattern", usersClothPattern);
-    const cropped = await generateCroppedImage();
-    if (cropped) {
-      formData.append("image", cropped, "cropped.png");
-    } else if (file) {
-      formData.append("image", file);
+
+    // Submit must wait for python crop completion if pending.
+    let pythonBlob: Blob | null = null;
+    if (file) {
+      if (pythonCropStatus === "pending" && pythonCropPromiseRef.current) {
+        pythonBlob = await pythonCropPromiseRef.current;
+      } else if (pythonCropStatus === "ready" && pythonCroppedBlob) {
+        pythonBlob = pythonCroppedBlob;
+      } else if (pythonCropStatus === "idle") {
+        pythonBlob = await startPythonCrop(file);
+      }
+    }
+
+    if (pythonBlob) {
+      formData.append("image", pythonBlob, "python-cropped.png");
+      formData.append("imageAlreadyCropped", "true");
+    } else {
+      const cropped = await generateCroppedImage();
+      if (cropped) {
+        formData.append("image", cropped, "cropped.png");
+      } else if (file) {
+        formData.append("image", file);
+      }
     }
 
     const uploadClothes = async () =>

@@ -6,6 +6,7 @@ import { getData as getDataService } from "../services/clothes.service.js";
 import { createOutfit as createOutfitService } from "../services/clothes.service.js";
 import { updateClothing as updateClothingService } from "../services/clothes.service.js";
 import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
+import { cropImage, toBase64 } from "../services/image.service.js";
 
 import dotenv from "dotenv";
 import { parseStringField } from "../utils/parseClothesFields.js";
@@ -136,6 +137,7 @@ export const uploadData = async (request, response) => {
     material,
     fit,
     pattern,
+    imageAlreadyCropped,
   } = request.body;
 
   const file = request.file;
@@ -167,6 +169,8 @@ export const uploadData = async (request, response) => {
     const parseMaterial = parseStringField(material);
     const parseFit = parseStringField(fit);
     const parsePattern = parseStringField(pattern);
+    const alreadyCropped =
+      imageAlreadyCropped === true || String(imageAlreadyCropped) === "true";
 
     const result = await uploadDataService({
       auth0Id,
@@ -179,6 +183,7 @@ export const uploadData = async (request, response) => {
       material: parseMaterial,
       fit: parseFit,
       pattern: parsePattern,
+      imageAlreadyCropped: alreadyCropped,
     });
 
     return response
@@ -188,6 +193,34 @@ export const uploadData = async (request, response) => {
     console.error(e);
     return response.status(e.status || 500).json({
       error: e.error || "Failed to add clothes",
+    });
+  }
+};
+
+export const cropImageForClient = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  const file = request.file;
+
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  if (!file) {
+    return response.status(400).json({ error: "No file uploaded" });
+  }
+
+  try {
+    const base64 = await toBase64(file.buffer);
+    const croppedBase64 = await cropImage(base64);
+    const buffer = Buffer.from(String(croppedBase64), "base64");
+
+    response.setHeader("Content-Type", "image/png");
+    response.setHeader("Cache-Control", "no-store");
+    return response.status(200).send(buffer);
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to crop image",
+      details: e.details || null,
     });
   }
 };

@@ -304,10 +304,10 @@ export default function ClothingDetailsView({
             }`}
           >
             <div
-              className={`relative shrink-0 rounded-xl overflow-hidden border border-indigo-200 shadow-md ${
+              className={`relative shrink-0 aspect-square rounded-lg  border border-indigo-200 shadow-md ${
                 isEditing
-                  ? "w-full max-w-xs mx-auto aspect-square"
-                  : "w-28 h-28 sm:w-36 sm:h-36 md:w-full md:max-w-80 md:aspect-square md:mx-auto"
+                  ? "w-full max-w-xs mx-auto"
+                  : "w-full max-w-xs mx-auto md:h-full md:w-full md:max-w-80 md:max-h-80 md:mx-auto"
               }`}
             >
               <Image
@@ -342,7 +342,7 @@ export default function ClothingDetailsView({
             <ClothingMetadataEditor value={draft} onChange={setDraft} />
           ) : (
             <>
-              <dl className="hidden md:block space-y-4">
+              <dl className="md:block hidden space-y-4">
                 {metadataRows.map((row) => (
                   <MetadataRow key={row.label} label={row.label}>
                     {row.render()}
