@@ -44,6 +44,7 @@ const usersSchema = new mongoose.Schema({
   outfits: [{ type: mongoose.Schema.Types.ObjectId, ref: "Outfits" }],
   hasCompletedOnboardingForClothes: { type: Boolean, default: false },
   hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
+  onboardingTourSeenAt: { type: Date, default: null },
   role: { type: String, default: "user" },
   creditBalance: { type: Number, default: 5, min: 0 },
 });

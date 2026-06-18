@@ -27,7 +27,10 @@ import {
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
 import { Sparkles, Send } from "lucide-react";
-import { clearAuthTokenCache, getAuthHeaders } from "../../utils/getAuthHeaders";
+import {
+  clearAuthTokenCache,
+  getAuthHeaders,
+} from "../../utils/getAuthHeaders";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -903,6 +906,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               Fill Form with AI
             </label>
             <button
+              id="AI_analyze_button"
               type="button"
               disabled={
                 isAnalyzing || isLoadingCredits || !file || (credits ?? 0) < 1
