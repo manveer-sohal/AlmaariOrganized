@@ -9,6 +9,7 @@ export const useOnboarding = () => {
             user.hasCompletedOnboardingForClothes,
           hasCompletedOnboardingForOutfits:
             user.hasCompletedOnboardingForOutfits,
+          onboardingTourSeenAt: user.onboardingTourSeenAt ?? null,
         }
       : undefined,
     isLoadingOnboarding: isLoading,

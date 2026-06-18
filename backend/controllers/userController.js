@@ -46,6 +46,7 @@ export const getData = async (req, res) => {
     {
       hasCompletedOnboardingForClothes: 1,
       hasCompletedOnboardingForOutfits: 1,
+      onboardingTourSeenAt: 1,
       role: 1,
       creditBalance: 1,
     },
@@ -60,6 +61,7 @@ export const getData = async (req, res) => {
     {
       hasCompletedOnboardingForClothes: 1,
       hasCompletedOnboardingForOutfits: 1,
+      onboardingTourSeenAt: 1,
       role: 1,
       creditBalance: 1,
     },
@@ -73,8 +75,32 @@ export const getData = async (req, res) => {
   return res.status(200).json({
     hasCompletedOnboardingForClothes: refreshed.hasCompletedOnboardingForClothes,
     hasCompletedOnboardingForOutfits: refreshed.hasCompletedOnboardingForOutfits,
+    onboardingTourSeenAt: refreshed.onboardingTourSeenAt ?? null,
     role: refreshed.role,
     creditBalance,
+  });
+};
+
+export const markOnboardingTourSeen = async (req, res) => {
+  const auth0Id = req.auth?.sub;
+
+  if (!auth0Id) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  await connectMongoDB();
+  const user = await User.findOneAndUpdate(
+    { auth0Id },
+    { $set: { onboardingTourSeenAt: new Date() } },
+    { new: true, select: "onboardingTourSeenAt" },
+  );
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  return res.status(200).json({
+    onboardingTourSeenAt: user.onboardingTourSeenAt,
   });
 };
 

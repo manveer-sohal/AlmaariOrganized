@@ -7,6 +7,7 @@ import {
   getUserRole,
   syncUserOnLogin,
   getData,
+  markOnboardingTourSeen,
 } from "../controllers/userController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireInternalApiSecret } from "../middleware/requireInternalApiSecret.js";
@@ -22,6 +23,7 @@ router.post(
 );
 
 router.post("/data", requireAuth, getData);
+router.patch("/onboarding-tour-seen", requireAuth, markOnboardingTourSeen);
 router.post("/onboarding", requireAuth, getOnboardingStatus);
 router.post("/setOnboardingStep", requireAuth, setOnboardingStep);
 router.post("/role", requireAuth, getUserRole);

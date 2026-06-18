@@ -1,12 +1,23 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useOnboarding } from "../../hooks/useOnboarding";
+import { useClothesData } from "../../hooks/useClothesData";
 import { startOnboardingTourOutfit } from "../../components/OnBoardingTourOutfit";
-import { startOnboardingTour } from "../../components/OnBoardingTour";
-import { useEffect } from "react";
+import {
+  isOnboardingTourRunning,
+  startOnboardingTour,
+} from "../../components/OnBoardingTour";
+import { markOnboardingTourSeen } from "../../utils/markOnboardingTourSeen";
 import { AnimatePresence, motion } from "framer-motion";
+
 function CheckList() {
+  const { user: authUser } = useUser();
+  const queryClient = useQueryClient();
   const { onboarding, isLoadingOnboarding } = useOnboarding();
+  const { clothes, isLoadingClothes } = useClothesData(1);
   const [active, setActive] = useState(true);
+  const hasTriggeredAutoTourRef = useRef(false);
 
   const startOnboardingOutfit = useMemo(() => {
     return () => {
@@ -14,29 +25,60 @@ function CheckList() {
     };
   }, []);
 
-  const startOnboardingClothes = useMemo(() => {
+  const startOnboardingClothesManual = useMemo(() => {
     return () => {
       startOnboardingTour();
     };
   }, []);
 
   useEffect(() => {
-    if (!isLoadingOnboarding) {
-      if (onboarding?.hasCompletedOnboardingForClothes == false) {
-        startOnboardingClothes();
-      } else if (
-        onboarding?.hasCompletedOnboardingForOutfits == true &&
-        onboarding?.hasCompletedOnboardingForClothes == true
-      ) {
-        setActive(false);
-      }
-      // startOnboardingClothes();
+    if (
+      onboarding?.hasCompletedOnboardingForOutfits &&
+      onboarding?.hasCompletedOnboardingForClothes
+    ) {
+      setActive(false);
     }
   }, [
     onboarding?.hasCompletedOnboardingForClothes,
-    startOnboardingClothes,
+    onboarding?.hasCompletedOnboardingForOutfits,
+  ]);
+
+  useEffect(() => {
+    const clothingCount = clothes.length;
+    const shouldAutoStartTour =
+      !!authUser &&
+      !isLoadingOnboarding &&
+      !isLoadingClothes &&
+      !onboarding?.onboardingTourSeenAt &&
+      clothingCount === 0 &&
+      !isOnboardingTourRunning() &&
+      !hasTriggeredAutoTourRef.current;
+
+    if (!shouldAutoStartTour) {
+      return;
+    }
+
+    hasTriggeredAutoTourRef.current = true;
+    startOnboardingTour();
+
+    markOnboardingTourSeen()
+      .then((seenAt) => {
+        if (!authUser?.sub) return;
+        queryClient.setQueryData(["user", authUser.sub], (current: unknown) => {
+          if (!current || typeof current !== "object") return current;
+          return { ...current, onboardingTourSeenAt: seenAt };
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to persist onboarding tour seen state:", error);
+      });
+  }, [
+    authUser,
     isLoadingOnboarding,
-    onboarding,
+    isLoadingClothes,
+    onboarding?.onboardingTourSeenAt,
+    clothes.length,
+    queryClient,
   ]);
 
   if (isLoadingOnboarding) {
@@ -93,7 +135,7 @@ function CheckList() {
                     <button
                       onClick={() => {
                         setActive(false);
-                        startOnboardingClothes();
+                        startOnboardingClothesManual();
                       }}
                       className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-300 ${
                         onboarding?.hasCompletedOnboardingForClothes
