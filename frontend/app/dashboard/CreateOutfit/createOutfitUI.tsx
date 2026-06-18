@@ -24,7 +24,7 @@ function CreateOutfitUI() {
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [aiMessages, setAiMessages] = useState<string[]>([DEFAULT_AI_MESSAGE]);
-  const numberOfClothes = 30;
+  const numberOfClothes = 20;
   const {
     clothes,
     fetchNextPage,

@@ -95,7 +95,7 @@ function CheckList() {
                         setActive(false);
                         startOnboardingClothes();
                       }}
-                      className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
+                      className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-300 ${
                         onboarding?.hasCompletedOnboardingForClothes
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
                           : ""
@@ -127,7 +127,7 @@ function CheckList() {
                         setActive(false);
                         startOnboardingOutfit();
                       }}
-                      className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
+                      className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-300 ${
                         onboarding?.hasCompletedOnboardingForOutfits
                           ? "opacity-50 cursor-not-allowed text-green-300 border-green-300 bg-green-100/70"
                           : ""
@@ -145,7 +145,7 @@ function CheckList() {
             </div>
           ) : (
             <div
-              className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-3 shadow-md text-base flex flex-col cursor-pointer hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
+              className="bg-white/80 backdrop-blur border border-indigo-200 rounded-xl w-full max-w-xl mx-auto p-3 shadow-md text-base flex flex-col cursor-pointer hover:bg-indigo-500 hover:text-white transition-colors duration-300"
               onClick={() => {
                 setActive((prev) => !prev);
               }}
