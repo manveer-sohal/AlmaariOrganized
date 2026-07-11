@@ -216,6 +216,8 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
     submitFeedback({
       recommendationId: recommendation.id,
       outfitItemIds: recommendation.itemIds,
+      outfitSignature: [...recommendation.itemIds].map(String).sort().join("|"),
+      label: recommendation.label,
       rating,
       occasion: preferences.occasion,
       style: preferences.style,

@@ -54,6 +54,8 @@ export type StylistFeedback = {
   rating: "positive" | "negative";
   occasion?: string;
   style?: string;
+  label?: string;
+  outfitSignature?: string;
   createdAt: string;
 };
 

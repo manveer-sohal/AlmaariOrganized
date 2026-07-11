@@ -7,16 +7,22 @@ type SubmitFeedbackInput = {
   rating: "positive" | "negative";
   occasion?: string;
   style?: string;
+  label?: string;
+  outfitSignature?: string;
 };
 
 export const useStylistFeedback = () => {
   return useMutation({
     mutationFn: async (payload: SubmitFeedbackInput) => {
+      const outfitSignature =
+        payload.outfitSignature ||
+        [...payload.outfitItemIds].map(String).sort().join("|");
+
       const postFeedback = async () =>
         fetch("/api/ai-stylist/feedback", {
           method: "POST",
           headers: await getAuthHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, outfitSignature }),
         });
 
       let response = await postFeedback();

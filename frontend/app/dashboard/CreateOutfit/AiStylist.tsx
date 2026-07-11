@@ -164,6 +164,11 @@ export default function AiStylistPanel({
 
       {status === "success" && (
         <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+          {Object.keys(feedbackSubmitted).length > 0 && (
+            <p className="text-xs text-indigo-700/80">
+              Thanks — we&apos;ll use this on your next generation.
+            </p>
+          )}
           {recommendations.map((recommendation) => {
             const items = recommendation.itemIds
               .map((id) => clothesById.get(id))
