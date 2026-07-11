@@ -8,6 +8,7 @@ const BACKEND_API_SEGMENTS = [
   "users",
   "ai",
   "aiStylist",
+  "ai-stylist",
   "feedback",
   "billing",
   "weather",
