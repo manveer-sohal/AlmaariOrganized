@@ -59,6 +59,7 @@ app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
+app.use("/api/ai-stylist", aiStylistRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/billing", billingRoutes);
