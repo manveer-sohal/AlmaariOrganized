@@ -8,7 +8,7 @@ import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 import { useCredits } from "../hooks/useCredits";
 import { View } from "../types/clothes";
-import { Coins, Check, Shirt } from "lucide-react";
+import { Coins, Check, Shirt, Briefcase } from "lucide-react";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 type SideBarProp = {
   view: View;
@@ -56,6 +56,10 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
   };
   const onClickHome = () => {
     setView("home");
+  };
+
+  const onClickTravelMode = () => {
+    setView("travelMode");
   };
 
   const handleSubmit = () => {
@@ -240,6 +244,21 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
           >
             <span className="flex items-center gap-2">
               <Shirt className="w-4 h-4" /> Create Outfit
+            </span>
+          </button>
+
+          <button
+            id="desktop-sidebar-button"
+            onClick={() => onClickTravelMode()}
+            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
+              view === "travelMode"
+                ? "bg-indigo-500 text-white"
+                : "bg-indigo-100/70 text-indigo-900"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              Travel Mode
             </span>
           </button>
         </div>

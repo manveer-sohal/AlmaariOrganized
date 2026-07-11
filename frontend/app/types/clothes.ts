@@ -22,7 +22,8 @@ export type View =
   | "createOutfit"
   | "addClothes"
   | "buyCredits"
-  | "clothingDetails";
+  | "clothingDetails"
+  | "travelMode";
 
 export type coloursList =
   | "Black"

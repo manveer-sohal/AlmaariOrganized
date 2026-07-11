@@ -148,7 +148,9 @@ export default function Dashboard() {
           {user && (
             <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0">
               {/* previously had a loading screen here before the whole page loaded*/}
-              {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
+              {view === "createOutfit" && (
+                <CreateOutfitUI onBuyCredits={openBuyCredits} />
+              )}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}
               {view === "clothingDetails" && selectedClothingItem && (
                 <ClothingDetailsView
