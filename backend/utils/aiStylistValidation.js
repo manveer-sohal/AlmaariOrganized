@@ -62,9 +62,18 @@ export const validateFeedbackRequest = (body) => {
   if (!["positive", "negative"].includes(body.rating)) {
     return { error: "rating must be positive or negative" };
   }
+
+  const outfitItemIds = body.outfitItemIds.map(String);
+  const outfitSignature =
+    typeof body.outfitSignature === "string" && body.outfitSignature.trim()
+      ? body.outfitSignature.trim()
+      : [...outfitItemIds].sort().join("|");
+
   return {
     recommendationId: body.recommendationId,
-    outfitItemIds: body.outfitItemIds.map(String),
+    outfitItemIds,
+    outfitSignature,
+    label: typeof body.label === "string" ? body.label : undefined,
     rating: body.rating,
     occasion: body.occasion,
     style: body.style,

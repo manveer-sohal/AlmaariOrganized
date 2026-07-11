@@ -60,6 +60,8 @@ export const submitStylistFeedback = async (req, res) => {
       auth0Id,
       recommendationId: parsed.recommendationId,
       outfitItemIds: parsed.outfitItemIds,
+      outfitSignature: parsed.outfitSignature,
+      label: parsed.label,
       rating: parsed.rating,
       occasion: parsed.occasion,
       style: parsed.style,

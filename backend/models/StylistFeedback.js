@@ -4,6 +4,8 @@ const stylistFeedbackSchema = new mongoose.Schema({
   auth0Id: { type: String, required: true, index: true },
   recommendationId: { type: String, required: true },
   outfitItemIds: [{ type: String }],
+  outfitSignature: { type: String, index: true },
+  label: { type: String },
   rating: { type: String, enum: ["positive", "negative"], required: true },
   occasion: { type: String },
   style: { type: String },

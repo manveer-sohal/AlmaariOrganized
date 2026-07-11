@@ -110,16 +110,68 @@ const formalityConsistency = (items) => {
   return 0.85;
 };
 
-export const scoreOutfit = (items, preferences) => {
+/**
+ * Maps a preference profile onto an outfit. Empty/cold-start profiles
+ * return a neutral 0.5 so ranking matches the baseline weights.
+ */
+export const preferenceMatch = (items, profile) => {
+  if (!profile || profile.isEmpty) return 0.5;
+
+  const {
+    typeWeights = {},
+    colourWeights = {},
+    itemWeights = {},
+  } = profile;
+
+  if (
+    !Object.keys(typeWeights).length &&
+    !Object.keys(colourWeights).length &&
+    !Object.keys(itemWeights).length
+  ) {
+    return 0.5;
+  }
+
+  const affinities = [];
+
+  items.forEach((item) => {
+    const itemId = item._id?.toString?.() || String(item._id || "");
+    if (itemWeights[itemId] != null) {
+      // Item-level signal is strongest (especially for downvoted pieces).
+      affinities.push(itemWeights[itemId] * 1.25);
+    }
+
+    const typeKey = String(item.type || "").toLowerCase();
+    if (typeWeights[typeKey] != null) {
+      affinities.push(typeWeights[typeKey]);
+    }
+
+    flattenColours(item).forEach((colour) => {
+      const colourKey = String(colour).toLowerCase();
+      if (colourWeights[colourKey] != null) {
+        affinities.push(colourWeights[colourKey]);
+      }
+    });
+  });
+
+  if (affinities.length === 0) return 0.5;
+
+  const avg =
+    affinities.reduce((sum, value) => sum + value, 0) / affinities.length;
+  // Convert [-1, 1]-ish affinity into [0, 1] score.
+  return Math.max(0, Math.min(1, 0.5 + avg * 0.5));
+};
+
+export const scoreOutfit = (items, preferences, profile) => {
   const { occasion = "Everyday", weather = "Mild", style = "Casual" } =
     preferences;
 
   return (
-    colourCompatibility(items) * 0.25 +
-    occasionScore(items, occasion) * 0.25 +
-    weatherScore(items, weather) * 0.2 +
-    formalityConsistency(items) * 0.15 +
-    styleScore(items, style) * 0.1 +
+    colourCompatibility(items) * 0.22 +
+    occasionScore(items, occasion) * 0.22 +
+    weatherScore(items, weather) * 0.18 +
+    formalityConsistency(items) * 0.13 +
+    styleScore(items, style) * 0.08 +
+    preferenceMatch(items, profile) * 0.12 +
     0.05
   );
 };
@@ -192,13 +244,19 @@ export const outfitSignature = (items) =>
     .sort()
     .join("|");
 
-export const pickDiverseOutfits = (scoredCandidates, count = 3) => {
+export const pickDiverseOutfits = (
+  scoredCandidates,
+  count = 3,
+  excludedSignatures = [],
+) => {
   const selected = [];
   const usedSignatures = new Set();
+  const blocked = new Set(excludedSignatures || []);
 
   for (const candidate of scoredCandidates) {
     const signature = outfitSignature(candidate.items);
     if (usedSignatures.has(signature)) continue;
+    if (blocked.has(signature)) continue;
 
     const overlapsTooMuch = selected.some((existing) => {
       const existingIds = new Set(
@@ -214,6 +272,29 @@ export const pickDiverseOutfits = (scoredCandidates, count = 3) => {
     selected.push(candidate);
     usedSignatures.add(signature);
     if (selected.length >= count) break;
+  }
+
+  // If exclusions left us short, fill from remaining non-blocked candidates first.
+  if (selected.length < count) {
+    for (const candidate of scoredCandidates) {
+      if (selected.length >= count) break;
+      const signature = outfitSignature(candidate.items);
+      if (usedSignatures.has(signature) || blocked.has(signature)) continue;
+      selected.push(candidate);
+      usedSignatures.add(signature);
+    }
+  }
+
+  // Last resort: only then allow previously blocked signatures so we still
+  // return `count` outfits when the wardrobe is tiny.
+  if (selected.length < count) {
+    for (const candidate of scoredCandidates) {
+      if (selected.length >= count) break;
+      const signature = outfitSignature(candidate.items);
+      if (usedSignatures.has(signature)) continue;
+      selected.push(candidate);
+      usedSignatures.add(signature);
+    }
   }
 
   return selected;
