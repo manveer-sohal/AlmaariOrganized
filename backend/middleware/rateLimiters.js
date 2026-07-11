@@ -24,6 +24,12 @@ export const aiAnalyzeRateLimiter = buildLimiter({
   message: "Too many image analyses. Please wait before trying again.",
 });
 
+export const aiStylistRateLimiter = buildLimiter({
+  windowMs: 60_000,
+  max: Number(process.env.RATE_LIMIT_AI_STYLIST_PER_MIN || 10),
+  message: "Too many stylist requests. Please wait before trying again.",
+});
+
 export const uploadRateLimiter = buildLimiter({
   windowMs: 60_000,
   max: Number(process.env.RATE_LIMIT_UPLOAD_PER_MIN || 15),
