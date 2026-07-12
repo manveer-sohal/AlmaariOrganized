@@ -91,3 +91,30 @@ export const type_List = [
   "Underwear",
   "Shoes",
 ];
+
+export const styleCategories_List = [
+  "Casual",
+  "Smart Casual",
+  "Formal",
+  "Athletic",
+] as const;
+
+export const occasionTags_List = [
+  "Everyday",
+  "Work",
+  "Going Out",
+  "Event",
+  "Formal Event",
+  "Travel",
+  "Active",
+] as const;
+
+export const stylistNegativeReasons_List = [
+  "Too formal",
+  "Too casual",
+  "Colours do not match",
+  "Not my style",
+  "Wrong season",
+  "Poor item combination",
+] as const;
+

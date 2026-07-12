@@ -211,6 +211,7 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
   const handleFeedback = (
     recommendation: OutfitRecommendation,
     rating: "positive" | "negative",
+    reasons?: string[],
   ) => {
     setFeedbackSubmitted((prev) => ({ ...prev, [recommendation.id]: rating }));
     submitFeedback({
@@ -219,6 +220,7 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
       outfitSignature: [...recommendation.itemIds].map(String).sort().join("|"),
       label: recommendation.label,
       rating,
+      reasons: rating === "negative" ? reasons : undefined,
       occasion: preferences.occasion,
       style: preferences.style,
     });

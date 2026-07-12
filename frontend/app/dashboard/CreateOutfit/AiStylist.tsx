@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { ClothingItem } from "../../types/clothes";
 import {
   OutfitRecommendation,
   SLOT_LABELS,
 } from "../../types/aiStylist";
+import { stylistNegativeReasons_List } from "../../data/constants";
 
 type AiStylistPanelProps = {
   status: "idle" | "loading" | "success" | "error";
@@ -23,6 +25,7 @@ type AiStylistPanelProps = {
   onFeedback: (
     recommendation: OutfitRecommendation,
     rating: "positive" | "negative",
+    reasons?: string[],
   ) => void;
   onBuyCredits?: () => void;
 };
@@ -58,6 +61,14 @@ export default function AiStylistPanel({
   onBuyCredits,
 }: AiStylistPanelProps) {
   const hasCredits = credits == null || credits >= 1;
+  const [reasonPickerId, setReasonPickerId] = useState<string | null>(null);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+
+  const submitNegative = (recommendation: OutfitRecommendation) => {
+    onFeedback(recommendation, "negative", selectedReasons);
+    setReasonPickerId(null);
+    setSelectedReasons([]);
+  };
 
   if (clothesCount === 0) {
     return (
@@ -204,7 +215,10 @@ export default function AiStylistPanel({
                     <button
                       type="button"
                       aria-label="Thumbs down"
-                      onClick={() => onFeedback(recommendation, "negative")}
+                      onClick={() => {
+                        setReasonPickerId(recommendation.id);
+                        setSelectedReasons([]);
+                      }}
                       className={`rounded-md border px-2 py-1 text-xs ${
                         feedbackSubmitted[recommendation.id] === "negative"
                           ? "border-red-300 bg-red-50"
@@ -215,6 +229,58 @@ export default function AiStylistPanel({
                     </button>
                   </div>
                 </div>
+                {reasonPickerId === recommendation.id &&
+                  feedbackSubmitted[recommendation.id] !== "negative" && (
+                    <div className="mb-2 rounded-lg border border-indigo-100 bg-white p-2">
+                      <p className="mb-2 text-xs text-indigo-700">
+                        Optional — why didn&apos;t this work?
+                      </p>
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {stylistNegativeReasons_List.map((reason) => {
+                          const selected = selectedReasons.includes(reason);
+                          return (
+                            <button
+                              key={reason}
+                              type="button"
+                              onClick={() =>
+                                setSelectedReasons((prev) =>
+                                  selected
+                                    ? prev.filter((item) => item !== reason)
+                                    : [...prev, reason],
+                                )
+                              }
+                              className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                                selected
+                                  ? "border-indigo-500 bg-indigo-600 text-white"
+                                  : "border-indigo-200 text-indigo-800"
+                              }`}
+                            >
+                              {reason}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => submitNegative(recommendation)}
+                          className="rounded-md bg-indigo-600 px-2 py-1 text-[11px] text-white"
+                        >
+                          Submit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReasonPickerId(null);
+                            setSelectedReasons([]);
+                          }}
+                          className="rounded-md border border-indigo-200 px-2 py-1 text-[11px] text-indigo-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 <p className="mb-2 text-sm text-indigo-800">
                   {recommendation.explanation}
                 </p>

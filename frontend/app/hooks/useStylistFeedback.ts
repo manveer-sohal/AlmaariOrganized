@@ -9,6 +9,7 @@ type SubmitFeedbackInput = {
   style?: string;
   label?: string;
   outfitSignature?: string;
+  reasons?: string[];
 };
 
 export const useStylistFeedback = () => {

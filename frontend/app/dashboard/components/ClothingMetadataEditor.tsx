@@ -9,14 +9,17 @@ import {
   patterns_List,
   type_List,
 } from "../../data/constants";
-import { Slot } from "../../types/clothes";
+import { Slot, EnrichmentStatus } from "../../types/clothes";
 import { formatClothingInput } from "../../utils/formatClothingInput";
 import { mapTypeToSlot } from "../../utils/mapTypeToSlot";
 import { ClothingMetadataDraft } from "../../utils/validateClothingMetadata";
+import StyleDetailsSection from "./StyleDetailsSection";
 
 type ClothingMetadataEditorProps = {
   value: ClothingMetadataDraft;
   onChange: (next: ClothingMetadataDraft) => void;
+  enrichmentStatus?: EnrichmentStatus | null;
+  userReviewedAt?: string | null;
 };
 
 function filterOptions(input: string, list: string[]) {
@@ -36,6 +39,8 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
 export default function ClothingMetadataEditor({
   value,
   onChange,
+  enrichmentStatus,
+  userReviewedAt,
 }: ClothingMetadataEditorProps) {
   const [colourInput, setColourInput] = useState("");
   const [colourError, setColourError] = useState<string | null>(null);
@@ -244,6 +249,22 @@ export default function ClothingMetadataEditor({
           ))}
         </select>
       </div>
+
+      <StyleDetailsSection
+        value={{
+          styleCategory: value.styleCategory,
+          occasionTags: value.occasionTags,
+        }}
+        enrichmentStatus={enrichmentStatus}
+        userReviewedAt={userReviewedAt}
+        onChange={(next) =>
+          onChange({
+            ...value,
+            styleCategory: next.styleCategory,
+            occasionTags: next.occasionTags,
+          })
+        }
+      />
     </div>
   );
 }

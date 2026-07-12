@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { View } from "../../types/clothes";
+import { View, OccasionTag, StyleCategory } from "../../types/clothes";
 import {
   colours_List,
   fits_List,
   materials_List,
   patterns_List,
+  styleCategories_List,
+  occasionTags_List,
   type_List,
 } from "../../data/constants";
 import { goToNextTourStep } from "../../components/OnBoardingTour";
@@ -31,6 +33,7 @@ import {
   clearAuthTokenCache,
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
+import StyleDetailsSection from "../components/StyleDetailsSection";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -81,6 +84,13 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [validPattern, setValidPattern] = useState<boolean | null>(null);
   const [usersClothFit, setUsersClothFit] = useState<string>("");
   const [usersClothPattern, setUsersClothPattern] = useState<string>("");
+  const [styleCategory, setStyleCategory] = useState<StyleCategory | null>(
+    null,
+  );
+  const [occasionTags, setOccasionTags] = useState<OccasionTag[]>([]);
+  const [styleFromAi, setStyleFromAi] = useState(false);
+  const [analysisSnapshot, setAnalysisSnapshot] =
+    useState<ClothingAnalysisTags | null>(null);
   //file can either be of type file or type null
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
@@ -615,6 +625,27 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       setInputPatternValue(formatted);
       setValidPattern(patterns_List.includes(formatted));
     });
+
+    if (tags.styleCategory?.value) {
+      const match = styleCategories_List.find(
+        (item) =>
+          item.toLowerCase() === String(tags.styleCategory?.value).toLowerCase(),
+      );
+      if (match) {
+        setStyleCategory(match);
+        setStyleFromAi(true);
+      }
+    }
+
+    if (Array.isArray(tags.occasionTags?.value)) {
+      const next = tags.occasionTags.value.filter((tag): tag is OccasionTag =>
+        occasionTags_List.includes(tag as OccasionTag),
+      );
+      if (next.length > 0) {
+        setOccasionTags(next);
+        setStyleFromAi(true);
+      }
+    }
   };
 
   const analyzeImage = async () => {
@@ -660,6 +691,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       if (result.tags) {
         applyAnalysisTags(result.tags);
+        setAnalysisSnapshot(result.tags);
       }
       setAnalyzeMessage(result.message ?? "Analysis completed");
 
@@ -690,6 +722,15 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("material", usersClothMaterial);
     formData.append("fit", usersClothFit);
     formData.append("pattern", usersClothPattern);
+    if (styleCategory) {
+      formData.append("styleCategory", styleCategory);
+    }
+    if (occasionTags.length > 0) {
+      formData.append("occasionTags", JSON.stringify(occasionTags));
+    }
+    if (analysisSnapshot) {
+      formData.append("analysisSnapshot", JSON.stringify(analysisSnapshot));
+    }
 
     // Submit must wait for python crop completion if pending.
     let pythonBlob: Blob | null = null;
@@ -1149,6 +1190,16 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                   ))}{" "}
                 </datalist>
               </div>
+
+              <StyleDetailsSection
+                value={{ styleCategory, occasionTags }}
+                userReviewedAt={styleFromAi ? null : "local"}
+                onChange={(next) => {
+                  setStyleCategory(next.styleCategory);
+                  setOccasionTags(next.occasionTags);
+                  setStyleFromAi(false);
+                }}
+              />
             </div>
 
             {/* <input

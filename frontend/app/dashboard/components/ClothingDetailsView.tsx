@@ -7,6 +7,8 @@ import { ClothingItem } from "../../types/clothes";
 import { useOutfits } from "../../hooks/useOutfits";
 import { useUpdateClothing } from "../../hooks/useUpdateClothing";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
+import { useClothingEnrichmentPoll } from "../../hooks/useClothingEnrichmentPoll";
+import { useClothesData } from "../../hooks/useClothesData";
 import OutfitBrowser from "../PreviewOutfit/OutfitBrowser";
 import ClothingMetadataEditor from "./ClothingMetadataEditor";
 import {
@@ -65,8 +67,37 @@ export default function ClothingDetailsView({
   );
 
   const { data: outfits = [], isLoading } = useOutfits();
+  const { clothes } = useClothesData();
   const updateClothing = useUpdateClothing();
   const deleteClothing = useDeleteClothing(displayItem._id);
+
+  useClothingEnrichmentPoll(
+    displayItem.stylingMetadata?.enrichmentStatus,
+    !isEditing,
+  );
+
+  useEffect(() => {
+    const fresh = clothes.find((entry) => entry._id === item._id);
+    if (!fresh?.stylingMetadata) return;
+
+    const prevMeta = displayItem.stylingMetadata;
+    const nextMeta = fresh.stylingMetadata;
+    if (
+      prevMeta?.enrichmentStatus === nextMeta?.enrichmentStatus &&
+      prevMeta?.styleCategory === nextMeta?.styleCategory &&
+      prevMeta?.userReviewedAt === nextMeta?.userReviewedAt &&
+      JSON.stringify(prevMeta?.occasionTags || []) ===
+        JSON.stringify(nextMeta?.occasionTags || [])
+    ) {
+      return;
+    }
+
+    setDisplayItem(fresh);
+    if (!isEditing) {
+      setDraft(clothingItemToDraft(fresh));
+    }
+    onItemUpdated?.(fresh);
+  }, [clothes, item._id, displayItem.stylingMetadata, isEditing, onItemUpdated]);
 
   useEffect(() => {
     setDisplayItem(item);
@@ -125,6 +156,21 @@ export default function ClothingDetailsView({
           }
         />
       ),
+    },
+    {
+      label: "Style",
+      value: displayItem.stylingMetadata?.styleCategory,
+      render: () => (
+        <MetadataChip label={displayItem.stylingMetadata!.styleCategory!} />
+      ),
+    },
+    {
+      label: "Occasions",
+      value: displayItem.stylingMetadata?.occasionTags?.length,
+      render: () =>
+        (displayItem.stylingMetadata?.occasionTags || []).map((tag) => (
+          <MetadataChip key={tag} label={tag} />
+        )),
     },
   ].filter((row) => {
     if (Array.isArray(row.value)) return row.value.length > 0;
@@ -339,7 +385,16 @@ export default function ClothingDetailsView({
           </h3>
 
           {isEditing ? (
-            <ClothingMetadataEditor value={draft} onChange={setDraft} />
+            <ClothingMetadataEditor
+              value={draft}
+              onChange={setDraft}
+              enrichmentStatus={
+                displayItem.stylingMetadata?.enrichmentStatus ?? null
+              }
+              userReviewedAt={
+                displayItem.stylingMetadata?.userReviewedAt ?? null
+              }
+            />
           ) : (
             <>
               <dl className="md:block hidden space-y-4">
@@ -349,6 +404,16 @@ export default function ClothingDetailsView({
                   </MetadataRow>
                 ))}
               </dl>
+              {displayItem.stylingMetadata?.enrichmentStatus &&
+                ["pending", "processing", "failed"].includes(
+                  displayItem.stylingMetadata.enrichmentStatus,
+                ) && (
+                  <p className="mt-3 text-xs text-indigo-600/80">
+                    {displayItem.stylingMetadata.enrichmentStatus === "failed"
+                      ? "Style analysis unavailable"
+                      : "Analyzing style…"}
+                  </p>
+                )}
             </>
           )}
         </div>
