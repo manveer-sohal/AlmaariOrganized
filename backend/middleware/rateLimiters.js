@@ -36,6 +36,12 @@ export const uploadRateLimiter = buildLimiter({
   message: "Too many uploads. Please try again shortly.",
 });
 
+export const styleEnrichmentRetryLimiter = buildLimiter({
+  windowMs: 60_000,
+  max: Number(process.env.RATE_LIMIT_STYLE_ENRICHMENT_RETRY_PER_MIN || 5),
+  message: "Too many style enrichment retries. Please wait before trying again.",
+});
+
 export const weatherRateLimiter = buildLimiter({
   windowMs: 60_000,
   max: Number(process.env.RATE_LIMIT_WEATHER_PER_MIN || 30),

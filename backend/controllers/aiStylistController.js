@@ -63,6 +63,7 @@ export const submitStylistFeedback = async (req, res) => {
       outfitSignature: parsed.outfitSignature,
       label: parsed.label,
       rating: parsed.rating,
+      reasons: parsed.reasons,
       occasion: parsed.occasion,
       style: parsed.style,
     });

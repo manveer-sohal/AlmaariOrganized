@@ -6,6 +6,20 @@ import mongoose from "mongoose";
 import { Clothes } from "../models/Users.js";
 import { Outfits } from "../models/Users.js";
 import { redis } from "../libs/redis.client.js";
+import {
+  scheduleStylingEnrichment,
+  updateUserStyleDetails,
+  applyAiStylingEnrichment,
+} from "./stylingEnrichment.service.js";
+import {
+  OCCASION_TAGS,
+  STYLE_CATEGORIES,
+} from "../constants/clothingMetadata.js";
+import {
+  defaultStylingMetadata,
+  normalizeClothingAnalysisResponse,
+  clampFormalityToStyleCategory,
+} from "../utils/normalizeClothingAnalysisResponse.js";
 
 const resolveClothingDoc = async ({ clothingId, uniqueId }) => {
   if (clothingId) {
@@ -82,6 +96,9 @@ export const uploadData = async ({
   fit,
   pattern,
   imageAlreadyCropped = false,
+  styleCategory = undefined,
+  occasionTags = undefined,
+  analysisSnapshot = undefined,
 }) => {
   try {
     const slot = mapTypeToSlot(type);
@@ -106,6 +123,49 @@ export const uploadData = async ({
       }
     }
 
+    const stylingMetadata = defaultStylingMetadata();
+
+    // User edits from the form (override AI snapshot for those fields).
+    const userSetCategory =
+      styleCategory != null && styleCategory !== "";
+    const userSetOccasions = Array.isArray(occasionTags);
+
+    if (userSetCategory) {
+      if (!STYLE_CATEGORIES.includes(styleCategory)) {
+        throw { status: 400, message: "Invalid styleCategory" };
+      }
+      stylingMetadata.styleCategory = styleCategory;
+      stylingMetadata.styleCategorySource = "user";
+      stylingMetadata.formalityScore = clampFormalityToStyleCategory(
+        styleCategory,
+        stylingMetadata.formalityScore,
+      );
+    }
+
+    if (userSetOccasions) {
+      const cleaned = [];
+      const seen = new Set();
+      for (const tag of occasionTags) {
+        if (!OCCASION_TAGS.includes(tag)) {
+          throw { status: 400, message: `Invalid occasionTag: ${tag}` };
+        }
+        if (seen.has(tag)) continue;
+        seen.add(tag);
+        cleaned.push(tag);
+      }
+      stylingMetadata.occasionTags = cleaned;
+      stylingMetadata.occasionTagsSource = "user";
+    }
+
+    if (userSetCategory || userSetOccasions) {
+      stylingMetadata.userReviewedAt = new Date();
+    }
+
+    let normalizedSnapshot = null;
+    if (analysisSnapshot && typeof analysisSnapshot === "object") {
+      normalizedSnapshot = normalizeClothingAnalysisResponse(analysisSnapshot);
+    }
+
     const clothingDoc = await Clothes.create({
       userId: userId._id,
       uniqueId: new mongoose.Types.ObjectId().toString(),
@@ -119,6 +179,7 @@ export const uploadData = async ({
       material,
       fit,
       pattern,
+      stylingMetadata,
     });
 
     const user = await User.findOneAndUpdate(
@@ -134,10 +195,30 @@ export const uploadData = async ({
       throw { status: 404, error: "User Not Found" };
     }
 
+    try {
+      await redis.del("userClothes:" + auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after clothing upload:", err);
+    }
+
+    // Reuse the pre-upload FastAPI analysis when present — never call FastAPI twice.
+    if (normalizedSnapshot) {
+      await applyAiStylingEnrichment({
+        clothingId: clothingDoc._id,
+        analysis: normalizedSnapshot,
+      });
+      // Legacy snapshot without rich fields stays pending; do not re-call FastAPI.
+    } else {
+      // No prior analysis — one background FastAPI call for rich styling.
+      scheduleStylingEnrichment(clothingDoc._id);
+    }
+
+    const refreshed = await Clothes.findById(clothingDoc._id);
+
     return {
       status: 200,
       message: "Clothes added successfully",
-      clothing: clothingDoc,
+      clothing: refreshed || clothingDoc,
     };
   } catch (e) {
     if (e.status) throw e;
@@ -347,6 +428,18 @@ export const updateClothing = async ({
     clothingDoc.slot = updates.slot;
 
     await clothingDoc.save();
+
+    if (
+      updates.styleCategory !== undefined ||
+      updates.occasionTags !== undefined
+    ) {
+      clothingDoc = await updateUserStyleDetails({
+        clothingId: clothingDoc._id,
+        userId: user._id,
+        styleCategory: updates.styleCategory,
+        occasionTags: updates.occasionTags,
+      });
+    }
 
     try {
       await redis.del("userClothes:" + auth0Id);

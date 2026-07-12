@@ -1,9 +1,6 @@
 import dotenv from "dotenv";
 import { performance } from "node:perf_hooks";
-import {
-  countValidTags,
-  sanitizeTagsPayload,
-} from "../utils/tagValidation.utils.js";
+import { normalizeClothingAnalysisResponse } from "../utils/normalizeClothingAnalysisResponse.js";
 import {
   logAnalyzeStep,
   logAnalyzeTotal,
@@ -42,6 +39,29 @@ const stripDataUrl = (image) => {
   return trimmed;
 };
 
+/** Raw FastAPI response (no sanitize). Used by async styling enrichment. */
+export const fetchClothingAnalysisRaw = async (
+  image,
+  { workflow = WORKFLOW } = {},
+) => {
+  const payloadImage = stripDataUrl(image);
+  if (!payloadImage) {
+    throw { status: 400, message: "image is required" };
+  }
+
+  const { data, durationMs } = await callDownstream({
+    service: "fastapi-ai",
+    method: "POST",
+    url: `${AI_CLOTHING_SERVICE_URL}/analyze-clothing`,
+    data: { image: payloadImage },
+    timeout: AI_CLOTHING_TIMEOUT_MS,
+    workflow,
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return { data, durationMs };
+};
+
 export const callAiClothingService = async (image, requestId) => {
   const stripStart = performance.now();
   const payloadImage = stripDataUrl(image);
@@ -68,14 +88,8 @@ export const callAiClothingService = async (image, requestId) => {
   });
 
   try {
-    const { data, durationMs } = await callDownstream({
-      service: "fastapi-ai",
-      method: "POST",
-      url: `${AI_CLOTHING_SERVICE_URL}/analyze-clothing`,
-      data: { image: payloadImage },
-      timeout: AI_CLOTHING_TIMEOUT_MS,
+    const { data, durationMs } = await fetchClothingAnalysisRaw(image, {
       workflow: WORKFLOW,
-      headers: { "Content-Type": "application/json" },
     });
 
     logAnalyzeStep(
@@ -85,8 +99,31 @@ export const callAiClothingService = async (image, requestId) => {
     );
 
     const sanitizeStart = performance.now();
-    const tags = sanitizeTagsPayload(data);
-    const validTagCount = countValidTags(tags);
+    const normalized = normalizeClothingAnalysisResponse(data);
+    const tags = {
+      ...normalized.core,
+      styleCategory: {
+        value: normalized.styling.styleCategory,
+        confidence: normalized.styling.confidence.styleCategory ?? 0,
+      },
+      occasionTags: {
+        value: normalized.styling.occasionTags,
+        confidence: normalized.styling.confidence.occasionTags ?? 0,
+      },
+      formalityScore: {
+        value: normalized.styling.formalityScore,
+        confidence: normalized.styling.confidence.formalityScore ?? 0,
+      },
+      statementLevel: {
+        value: normalized.styling.statementLevel,
+        confidence: normalized.styling.confidence.statementLevel ?? 0,
+      },
+      outfitRole: {
+        value: normalized.styling.outfitRole,
+        confidence: normalized.styling.confidence.outfitRole ?? 0,
+      },
+    };
+    const validTagCount = normalized.validTagCount;
     const sanitizeMs = performance.now() - sanitizeStart;
     logAnalyzeStep(
       requestId,
@@ -108,7 +145,7 @@ export const callAiClothingService = async (image, requestId) => {
       });
     }
 
-    return { tags, validTagCount };
+    return { tags, validTagCount, styling: normalized.styling };
   } catch (error) {
     if (error.status && error.classification) throw error;
 

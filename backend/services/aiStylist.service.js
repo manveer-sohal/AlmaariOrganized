@@ -7,6 +7,7 @@ import {
   filterWardrobe,
   generateCandidateOutfits,
   groupBySlot,
+  isDress,
   outfitSignature,
   pickDiverseOutfits,
   scoreOutfit,
@@ -27,6 +28,7 @@ import { updateRequestContext } from "../observability/requestContext.js";
 import { createTimer, measureAsync } from "../observability/timer.js";
 import { classifyAiError } from "../observability/errors.js";
 import { incMetric, observeMs } from "../observability/metrics.js";
+import { serializeWardrobeItemForStylist } from "../utils/serializeWardrobeItem.js";
 
 const LABELS = ["Safe Choice", "Styled Choice", "Alternative"];
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -82,12 +84,44 @@ const rerankWithOpenAI = async (
     candidateId: `c${index}`,
     itemIds: candidate.items.map((item) => item._id.toString()),
     score: Number(candidate.score.toFixed(3)),
-    summary: candidate.items
-      .map((item) => `${item.type} (${item.slot}, ${item.colour?.join("/")})`)
-      .join("; "),
+    items: candidate.items.map(serializeWardrobeItemForStylist),
   }));
 
+  // Temporary diagnostics: confirm legacy items serialize without rich fields.
+  logInfo("ai.outfit.pipeline.llm_payload", {
+    workflow: WORKFLOW,
+    stage: "before_llm",
+    candidateCount: compactCandidates.length,
+    serializedSample: compactCandidates.slice(0, 2),
+    missingStyleCategoryCount: compactCandidates.reduce(
+      (count, candidate) =>
+        count +
+        candidate.items.filter((item) => item && !item.styleCategory).length,
+      0,
+    ),
+  });
+
   const prompt = `You are a wardrobe stylist. Pick exactly 3 distinct outfit recommendations using ONLY the candidate itemIds provided.
+
+Rules:
+1. Build complete outfits with valid slot coverage.
+2. Respect the selected anchor item when provided.
+3. Prefer items with compatible styleCategory values.
+4. Prefer user-sourced styleCategory and occasionTags over AI formalityScore, statementLevel, and outfitRole when sources conflict.
+5. Keep formalityScore reasonably consistent across the outfit (use provided formalityScore values as already aligned).
+6. Use occasionTags to match the requested use case.
+7. Avoid combining too many high-statement items.
+8. Prefer one Statement outfitRole item at most unless a bold look was requested.
+9. Use Base and Layer pieces to support Accent or Statement pieces.
+10. Respect colour compatibility.
+11. Respect fit and silhouette compatibility using available fit data.
+12. Respect season when present.
+13. Never fabricate clothing items that are not present in the wardrobe.
+14. Return item IDs exactly as provided.
+15. Avoid duplicate items within the same outfit.
+16. Produce three meaningfully different outfit options when enough inventory exists.
+17. Gracefully degrade when richer styling metadata is missing — legacy wardrobe items without styleCategory, occasionTags, formalityScore, statementLevel, or outfitRole remain fully valid.
+
 Occasion: ${preferences.occasion}
 Weather: ${preferences.weather}
 Style: ${preferences.style}
@@ -122,7 +156,7 @@ Return strict JSON:
         {
           role: "system",
           content:
-            "Return only valid JSON. Never invent clothing item IDs outside the provided candidates. Prefer candidates that align with learned user preferences when provided.",
+            "Return only valid JSON. Never invent clothing item IDs outside the provided candidates. Prefer candidates that align with learned user preferences when provided. Prefer outfits with compatible styleCategory, formalityScore, and occasionTags when those fields are present. Missing styling metadata is allowed — never reject an item only because styleCategory, occasionTags, formalityScore, statementLevel, or outfitRole is absent.",
         },
         { role: "user", content: prompt },
       ],
@@ -251,7 +285,40 @@ export const generateRecommendationsForUser = async ({
   const filtered = filterWardrobe(wardrobe, { ...preferences, anchorItem });
   const bySlot = groupBySlot(filtered);
 
+  const legacyCount = filtered.filter((item) => !item.stylingMetadata).length;
+  const enrichedCount = filtered.filter((item) =>
+    Boolean(item.stylingMetadata?.styleCategory || item.stylingMetadata?.formalityScore),
+  ).length;
+
+  logInfo("ai.outfit.pipeline.stage", {
+    workflow: WORKFLOW,
+    stage: "after_filter",
+    wardrobeCount: wardrobe.length,
+    filteredCount: filtered.length,
+    legacyCount,
+    enrichedCount,
+    slotCounts: {
+      head: bySlot.head.length,
+      body: bySlot.body.length,
+      legs: bySlot.legs.length,
+      feet: bySlot.feet.length,
+    },
+    hasAnchor: Boolean(anchorItem),
+    anchorSlot: anchorItem?.slot || null,
+    canFormOutfits: canFormOutfits(bySlot),
+  });
+
   if (!canFormOutfits(bySlot)) {
+    logInfo("ai.outfit.pipeline.empty", {
+      workflow: WORKFLOW,
+      firstEmptyStage: "can_form_outfits",
+      slotCounts: {
+        head: bySlot.head.length,
+        body: bySlot.body.length,
+        legs: bySlot.legs.length,
+        feet: bySlot.feet.length,
+      },
+    });
     throw {
       status: 400,
       code: "INSUFFICIENT_WARDROBE",
@@ -270,8 +337,25 @@ export const generateRecommendationsForUser = async ({
     candidateCount: combinations.length,
     durationMs: candidateTimed.durationMs,
   });
+  logInfo("ai.outfit.pipeline.stage", {
+    workflow: WORKFLOW,
+    stage: "after_generate_candidates",
+    candidateCount: combinations.length,
+  });
 
   if (combinations.length === 0) {
+    logInfo("ai.outfit.pipeline.empty", {
+      workflow: WORKFLOW,
+      firstEmptyStage: "generate_candidate_outfits",
+      slotCounts: {
+        head: bySlot.head.length,
+        body: bySlot.body.length,
+        legs: bySlot.legs.length,
+        feet: bySlot.feet.length,
+      },
+      hasAnchor: Boolean(anchorItem),
+      bodyDressCount: bySlot.body.filter(isDress).length,
+    });
     throw {
       status: 400,
       code: "NO_VALID_COMBINATIONS",
@@ -306,6 +390,19 @@ export const generateRecommendationsForUser = async ({
     scoredCount: candidatesForRanking.length,
     durationMs: scoringTimed.durationMs,
   });
+  logInfo("ai.outfit.pipeline.stage", {
+    workflow: WORKFLOW,
+    stage: "after_scoring",
+    scoredCount: candidatesForRanking.length,
+    topScore: candidatesForRanking[0]?.score ?? null,
+  });
+
+  if (candidatesForRanking.length === 0) {
+    logInfo("ai.outfit.pipeline.empty", {
+      workflow: WORKFLOW,
+      firstEmptyStage: "scoring",
+    });
+  }
 
   const allowedIds = new Set(wardrobe.map((item) => item._id.toString()));
 

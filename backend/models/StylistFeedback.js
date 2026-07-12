@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { STYLIST_NEGATIVE_REASONS } from "../constants/clothingMetadata.js";
 
 const stylistFeedbackSchema = new mongoose.Schema({
   auth0Id: { type: String, required: true, index: true },
@@ -7,6 +8,11 @@ const stylistFeedbackSchema = new mongoose.Schema({
   outfitSignature: { type: String, index: true },
   label: { type: String },
   rating: { type: String, enum: ["positive", "negative"], required: true },
+  reasons: {
+    type: [String],
+    enum: STYLIST_NEGATIVE_REASONS,
+    default: undefined,
+  },
   occasion: { type: String },
   style: { type: String },
   createdAt: { type: Date, default: Date.now },

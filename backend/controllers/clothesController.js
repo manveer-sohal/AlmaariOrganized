@@ -5,6 +5,7 @@ import { getOutfits as getOutfitsService } from "../services/clothes.service.js"
 import { getData as getDataService } from "../services/clothes.service.js";
 import { createOutfit as createOutfitService } from "../services/clothes.service.js";
 import { updateClothing as updateClothingService } from "../services/clothes.service.js";
+import { retryStyleEnrichmentForUser } from "../services/stylingEnrichment.service.js";
 import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
 import { cropImage, toBase64 } from "../services/image.service.js";
 
@@ -138,6 +139,9 @@ export const uploadData = async (request, response) => {
     fit,
     pattern,
     imageAlreadyCropped,
+    styleCategory,
+    occasionTags,
+    analysisSnapshot,
   } = request.body;
 
   const file = request.file;
@@ -172,6 +176,25 @@ export const uploadData = async (request, response) => {
     const alreadyCropped =
       imageAlreadyCropped === true || String(imageAlreadyCropped) === "true";
 
+    const parseOccasionTags = (() => {
+      if (occasionTags == null || occasionTags === "") return undefined;
+      try {
+        return JSON.parse(occasionTags);
+      } catch (_) {
+        return Array.isArray(occasionTags) ? occasionTags : undefined;
+      }
+    })();
+
+    const parseAnalysisSnapshot = (() => {
+      if (analysisSnapshot == null || analysisSnapshot === "") return undefined;
+      if (typeof analysisSnapshot === "object") return analysisSnapshot;
+      try {
+        return JSON.parse(analysisSnapshot);
+      } catch (_) {
+        return undefined;
+      }
+    })();
+
     const result = await uploadDataService({
       auth0Id,
       type,
@@ -184,6 +207,12 @@ export const uploadData = async (request, response) => {
       fit: parseFit,
       pattern: parsePattern,
       imageAlreadyCropped: alreadyCropped,
+      styleCategory:
+        styleCategory != null && styleCategory !== ""
+          ? parseStringField(styleCategory)
+          : undefined,
+      occasionTags: parseOccasionTags,
+      analysisSnapshot: parseAnalysisSnapshot,
     });
 
     return response
@@ -192,7 +221,7 @@ export const uploadData = async (request, response) => {
   } catch (e) {
     console.error(e);
     return response.status(e.status || 500).json({
-      error: e.error || "Failed to add clothes",
+      error: e.error || e.message || "Failed to add clothes",
     });
   }
 };
@@ -227,8 +256,18 @@ export const cropImageForClient = async (request, response) => {
 
 export const updateData = async (request, response) => {
   const auth0Id = request.auth?.sub;
-  const { uniqueId, clothingId, type, colour, material, fit, pattern, slot } =
-    request.body;
+  const {
+    uniqueId,
+    clothingId,
+    type,
+    colour,
+    material,
+    fit,
+    pattern,
+    slot,
+    styleCategory,
+    occasionTags,
+  } = request.body;
 
   if (!auth0Id) {
     return response.status(401).json({ error: "Unauthorized" });
@@ -243,6 +282,18 @@ export const updateData = async (request, response) => {
       }
     })();
 
+    const parseOccasionTags = (() => {
+      if (occasionTags === undefined) return undefined;
+      if (typeof occasionTags === "string") {
+        try {
+          return JSON.parse(occasionTags);
+        } catch (_) {
+          return occasionTags;
+        }
+      }
+      return occasionTags;
+    })();
+
     const validation = validateClothingUpdatePayload({
       type,
       colour: parseColour,
@@ -250,6 +301,8 @@ export const updateData = async (request, response) => {
       fit: parseStringField(fit),
       pattern: parseStringField(pattern),
       slot,
+      styleCategory,
+      occasionTags: parseOccasionTags,
     });
 
     if (!validation.ok) {
@@ -275,6 +328,34 @@ export const updateData = async (request, response) => {
     return response.status(e.status || 500).json({
       error: e.message || "Failed to update clothing item",
       details: e.details || null,
+    });
+  }
+};
+
+export const retryStyleEnrichment = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  const clothingId = request.params.id;
+
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+
+  if (!clothingId) {
+    return response.status(400).json({ error: "Clothing id is required" });
+  }
+
+  try {
+    const result = await retryStyleEnrichmentForUser({
+      auth0Id,
+      clothingId,
+    });
+    return response.status(202).json(result);
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to retry style enrichment",
+      code: e.code,
+      retryAfterMs: e.retryAfterMs,
     });
   }
 };
