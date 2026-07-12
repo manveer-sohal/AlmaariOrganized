@@ -44,47 +44,7 @@ export const PATTERNS_LIST = [
   "Camo",
 ];
 
-export const TYPE_LIST = [
-  "Shirt",
-  "Jeans",
-  "Sweater",
-  "Jacket",
-  "T-shirt",
-  "Shorts",
-  "Skirt",
-  "Dress",
-  "Blouse",
-  "Trousers",
-  "Hoodie",
-  "Coat",
-  "Cardigan",
-  "Tank Top",
-  "Pajamas",
-  "Socks",
-  "Scarf",
-  "Hat",
-  "Gloves",
-  "Cargos",
-  "Dress Shirt",
-  "Leggings",
-  "Vest",
-  "Swimsuit",
-  "Raincoat",
-  "Overalls",
-  "Jumper",
-  "Blazer",
-  "Crop Top",
-  "Pants",
-  "Capri Pants",
-  "Suit",
-  "Tie",
-  "Belt",
-  "Tunic",
-  "Poncho",
-  "Robe",
-  "Underwear",
-  "Shoes",
-];
+export { TYPE_LIST } from "../utils/slot.utils.js";
 
 export const SLOTS_LIST = ["head", "body", "legs", "feet"];
 

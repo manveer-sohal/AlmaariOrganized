@@ -108,23 +108,37 @@ export const claimEnrichmentJob = async (
 /**
  * Applies AI enrichment without overwriting user-sourced fields.
  * Legacy responses without rich styling fields leave status pending.
+ * Uses a targeted update so legacy documents missing required core fields
+ * (material/fit/pattern) do not fail full-document validation.
  */
 export const applyAiStylingEnrichment = async ({
   clothingId,
   analysis,
   force = false,
 }) => {
-  const clothing = await Clothes.findById(clothingId);
+  const clothing = await Clothes.findById(clothingId).lean();
   if (!clothing) {
     return { clothing: null, skipped: true, reason: "deleted" };
   }
 
-  const meta = ensureStylingMetadata(clothing);
+  const meta = {
+    ...defaultStylingMetadata(),
+    ...(clothing.stylingMetadata || {}),
+    confidence: {
+      ...defaultStylingMetadata().confidence,
+      ...(clothing.stylingMetadata?.confidence || {}),
+    },
+    occasionTags: Array.isArray(clothing.stylingMetadata?.occasionTags)
+      ? [...clothing.stylingMetadata.occasionTags]
+      : [],
+  };
+
   const styling = analysis?.styling || {};
   const rich = hasRichStylingFields(styling);
 
   if (meta.enrichmentStatus === "completed" && !force && rich) {
-    return { clothing, skipped: true, reason: "already_completed" };
+    const current = await Clothes.findById(clothingId);
+    return { clothing: current, skipped: true, reason: "already_completed" };
   }
 
   if (meta.styleCategorySource !== "user") {
@@ -177,12 +191,19 @@ export const applyAiStylingEnrichment = async ({
     meta.enrichedAt = null;
   }
 
-  clothing.markModified("stylingMetadata");
-  await clothing.save();
-  await invalidateClothesCache(clothing.userId);
+  const updated = await Clothes.findByIdAndUpdate(
+    clothingId,
+    { $set: { stylingMetadata: meta } },
+    { new: true, runValidators: false },
+  );
+  if (!updated) {
+    return { clothing: null, skipped: true, reason: "deleted" };
+  }
+
+  await invalidateClothesCache(updated.userId);
 
   return {
-    clothing,
+    clothing: updated,
     skipped: false,
     rich,
     reason: rich ? "completed" : "legacy_no_rich_fields",
@@ -267,14 +288,31 @@ export const updateUserStyleDetails = async ({
 };
 
 const markEnrichmentFailed = async (clothingId, safeMessage) => {
-  const failed = await Clothes.findById(clothingId);
+  const existing = await Clothes.findById(clothingId).lean();
+  if (!existing) return null;
+
+  const failedMeta = {
+    ...defaultStylingMetadata(),
+    ...(existing.stylingMetadata || {}),
+    confidence: {
+      ...defaultStylingMetadata().confidence,
+      ...(existing.stylingMetadata?.confidence || {}),
+    },
+    occasionTags: Array.isArray(existing.stylingMetadata?.occasionTags)
+      ? [...existing.stylingMetadata.occasionTags]
+      : [],
+    enrichmentStatus: "failed",
+    enrichmentError: safeMessage,
+    processingStartedAt: null,
+  };
+
+  const failed = await Clothes.findByIdAndUpdate(
+    clothingId,
+    { $set: { stylingMetadata: failedMeta } },
+    { new: true, runValidators: false },
+  );
   if (!failed) return null;
-  const failedMeta = ensureStylingMetadata(failed);
-  failedMeta.enrichmentStatus = "failed";
-  failedMeta.enrichmentError = safeMessage;
-  failedMeta.processingStartedAt = null;
-  failed.markModified("stylingMetadata");
-  await failed.save();
+
   await invalidateClothesCache(failed.userId);
   return failed;
 };
@@ -340,6 +378,21 @@ export const enrichClothingStyling = async (
         clothingId: String(clothingId),
       });
       return null;
+    }
+
+    // A completed FastAPI call that still lacks rich fields should not stay
+    // forever in "pending" (UI shows Analyzing…). Mark failed so the user can
+    // retry later after the model is upgraded.
+    if (result.reason === "legacy_no_rich_fields") {
+      await markEnrichmentFailed(clothingId, "Style analysis unavailable");
+      logInfo("styling.enrichment.completed", {
+        workflow: WORKFLOW,
+        clothingId: String(clothingId),
+        rich: false,
+        validTagCount: analysis.validTagCount,
+        outcome: "legacy_marked_failed",
+      });
+      return Clothes.findById(clothingId);
     }
 
     logInfo("styling.enrichment.completed", {
@@ -451,13 +504,14 @@ export const retryStyleEnrichmentForUser = async ({
   }
 
   const retryable =
+    meta.enrichmentStatus === "pending" ||
     meta.enrichmentStatus === "failed" ||
     (meta.enrichmentStatus === "processing" && stale);
 
   if (!retryable) {
     throw {
       status: 409,
-      message: "Style enrichment can only be retried when failed or stale",
+      message: "Style enrichment can only be retried when pending, failed, or stale",
       code: "NOT_RETRYABLE",
     };
   }

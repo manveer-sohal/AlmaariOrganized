@@ -38,7 +38,7 @@ export const validateClothingUpdatePayload = ({
   material,
   fit,
   pattern,
-  slot,
+  slot: _slot,
   styleCategory,
   occasionTags,
 }) => {
@@ -69,10 +69,8 @@ export const validateClothingUpdatePayload = ({
     errors.push("Invalid pattern");
   }
 
-  let normalizedSlot = formatScalar(slot).toLowerCase();
-  if (!normalizedSlot) {
-    normalizedSlot = mapTypeToSlot(normalizedType);
-  }
+  // Always derive slot from type so mismatches (e.g. Belt → body) cannot persist.
+  let normalizedSlot = mapTypeToSlot(normalizedType);
   if (!SLOTS_LIST.includes(normalizedSlot)) {
     errors.push("Invalid slot");
   }

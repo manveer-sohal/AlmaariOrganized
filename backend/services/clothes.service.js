@@ -21,6 +21,26 @@ import {
   clampFormalityToStyleCategory,
 } from "../utils/normalizeClothingAnalysisResponse.js";
 
+// Helper to invalidate all userClothes cache keys for a user (any page/limit)
+const invalidateUserClothesCache = async (auth0Id) => {
+  try {
+    const matchingKeys = [];
+    for await (const key of redis.scanIterator({
+      MATCH: `userClothes:${auth0Id}:*`,
+      COUNT: 100,
+    })) {
+      matchingKeys.push(key);
+    }
+    if (matchingKeys.length > 0) {
+      await redis.del(matchingKeys);
+    }
+    // Remove the pre-pagination legacy key as well.
+    await redis.del(`userClothes:${auth0Id}`);
+  } catch (err) {
+    console.warn("Redis clothes cache invalidation failed:", err);
+  }
+};
+
 const resolveClothingDoc = async ({ clothingId, uniqueId }) => {
   if (clothingId) {
     return Clothes.findById(clothingId);
@@ -68,7 +88,7 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       { _id: 0, clothes: 1 },
     ).populate("clothes");
 
-    await redis.del("userClothes:" + auth0Id);
+    await invalidateUserClothesCache(auth0Id);
     await redis.del("userOutfits:" + auth0Id);
     return {
       message: "Clothing item removed successfully",
@@ -126,8 +146,7 @@ export const uploadData = async ({
     const stylingMetadata = defaultStylingMetadata();
 
     // User edits from the form (override AI snapshot for those fields).
-    const userSetCategory =
-      styleCategory != null && styleCategory !== "";
+    const userSetCategory = styleCategory != null && styleCategory !== "";
     const userSetOccasions = Array.isArray(occasionTags);
 
     if (userSetCategory) {
@@ -196,18 +215,22 @@ export const uploadData = async ({
     }
 
     try {
-      await redis.del("userClothes:" + auth0Id);
+      await invalidateUserClothesCache(auth0Id);
     } catch (err) {
       console.warn("Redis delete failed after clothing upload:", err);
     }
 
-    // Reuse the pre-upload FastAPI analysis when present — never call FastAPI twice.
+    // Reuse the pre-upload FastAPI analysis when present — never charge credits twice.
+    // If the snapshot has no rich styling fields, still schedule background enrichment
+    // so pending items do not stay stuck forever.
     if (normalizedSnapshot) {
-      await applyAiStylingEnrichment({
+      const applied = await applyAiStylingEnrichment({
         clothingId: clothingDoc._id,
         analysis: normalizedSnapshot,
       });
-      // Legacy snapshot without rich fields stays pending; do not re-call FastAPI.
+      if (!applied.rich) {
+        scheduleStylingEnrichment(clothingDoc._id);
+      }
     } else {
       // No prior analysis — one background FastAPI call for rich styling.
       scheduleStylingEnrichment(clothingDoc._id);
@@ -334,7 +357,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   console.log("List clothes");
 
   // Redis cache key
-  const redisKey = `userClothes:${auth0Id}`;
+  const redisKey = `userClothes:${auth0Id}:page:${page}:limit:${numberOfClothes}`;
 
   // Check cache for the data (safe fallback if Redis unavailable)
   let cachedData = null;
@@ -345,7 +368,19 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   }
   if (cachedData) {
     console.log("Cache hit: Returning cached data");
-    return { status: 200, clothes: JSON.parse(cachedData) }; // Send cached data
+
+    const parsedCache = JSON.parse(cachedData);
+    const cachedClothes = Array.isArray(parsedCache)
+      ? parsedCache
+      : Array.isArray(parsedCache?.Clothes)
+      ? parsedCache.Clothes
+      : [];
+
+    return {
+      status: 200,
+      clothes: cachedClothes,
+      message: "Clothes fetched successfully",
+    };
   }
 
   const skip = (page - 1) * numberOfClothes;
@@ -370,7 +405,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
 
   // Store the data in Redis cache with a TTL (best-effort)
   try {
-    await redis.set(redisKey, JSON.stringify({ Clothes: userData || [] }), {
+    await redis.set(redisKey, JSON.stringify(userData || []), {
       EX: 600,
     });
     console.log("Cache miss: Queried MongoDB and cached the result");
@@ -442,7 +477,7 @@ export const updateClothing = async ({
     }
 
     try {
-      await redis.del("userClothes:" + auth0Id);
+      await invalidateUserClothesCache(auth0Id);
       await redis.del("userOutfits:" + auth0Id);
     } catch (err) {
       console.warn("Redis delete failed after clothing update:", err);
