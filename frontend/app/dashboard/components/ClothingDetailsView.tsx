@@ -72,6 +72,7 @@ export default function ClothingDetailsView({
   const deleteClothing = useDeleteClothing(displayItem._id);
 
   useClothingEnrichmentPoll(
+    displayItem._id,
     displayItem.stylingMetadata?.enrichmentStatus,
     !isEditing,
   );

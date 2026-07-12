@@ -1,4 +1,6 @@
-import React, { RefObject, useCallback, useMemo, useState } from "react";
+"use client";
+
+import React, { RefObject, useCallback, useEffect, useMemo, useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../../types/clothes";
@@ -8,9 +10,12 @@ import {
   StylistPreferences,
 } from "../../types/aiStylist";
 import UsersClothes from "./UsersClothes";
-import OutfitPreview from "../components/OutfitPreview";
+import BuilderOutfitPreview from "./BuilderOutfitPreview";
 import AiStylistPanel from "./AiStylist";
 import StylistConfigModal from "./StylistConfigModal";
+import OutfitBuilderHeader from "./OutfitBuilderHeader";
+import BuilderMobileTabs, { BuilderTab } from "./BuilderMobileTabs";
+import MobileSaveBar from "./MobileSaveBar";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useCredits } from "../../hooks/useCredits";
 import { useStylistRecommendations } from "../../hooks/useStylistRecommendations";
@@ -25,6 +30,7 @@ type StylistUiStatus = "idle" | "loading" | "success" | "error";
 
 type CreateOutfitUIProps = {
   onBuyCredits?: () => void;
+  onAddClothes?: () => void;
 };
 
 const emptySlots = (): Partial<Record<Slot, ClothingItem[] | null>> => ({
@@ -47,7 +53,7 @@ const applyRecommendationToSlots = (
   return next;
 };
 
-function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
+function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
   const { user } = useUser();
   const queryClient = useQueryClient();
   const { credits } = useCredits();
@@ -79,9 +85,12 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
     Record<string, "positive" | "negative">
   >({});
   const [swapMode, setSwapMode] = useState(false);
-  const [activeRecommendationId, setActiveRecommendationId] = useState<
-    string | null
-  >(null);
+  const [swapTargetSlot, setSwapTargetSlot] = useState<Slot | null>(null);
+  const [mobileTab, setMobileTab] = useState<BuilderTab>("clothes");
+  const [previewHighlight, setPreviewHighlight] = useState(false);
+  const [appliedConfirmation, setAppliedConfirmation] = useState<string | null>(
+    null,
+  );
 
   const {
     clothes,
@@ -105,10 +114,29 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  useEffect(() => {
+    if (!appliedConfirmation) return;
+    const timer = window.setTimeout(() => setAppliedConfirmation(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [appliedConfirmation]);
+
+  useEffect(() => {
+    if (!previewHighlight) return;
+    const timer = window.setTimeout(() => setPreviewHighlight(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [previewHighlight]);
+
   const selectedItems = useMemo(() => {
     return Object.values(selectedBySlot).filter(
       (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0,
     );
+  }, [selectedBySlot]);
+
+  const filledSlotCount = useMemo(() => {
+    return (["body", "legs", "feet", "head"] as Slot[]).filter((slot) => {
+      const items = selectedBySlot[slot];
+      return Array.isArray(items) && items.length > 0;
+    }).length;
   }, [selectedBySlot]);
 
   const clothesById = useMemo(
@@ -118,6 +146,20 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
 
   const anchorItem = anchorItemId ? clothesById.get(anchorItemId) : undefined;
 
+  const enterSwapMode = useCallback((slot?: Slot) => {
+    setSwapMode(true);
+    setSwapTargetSlot(slot ?? null);
+    if (slot) {
+      setCategoryFilter(slot);
+    }
+    setMobileTab("clothes");
+  }, []);
+
+  const exitSwapMode = useCallback(() => {
+    setSwapMode(false);
+    setSwapTargetSlot(null);
+  }, []);
+
   const toggleSelect = useCallback(
     (id: string) => {
       const item = clothesById.get(id) as ClothingItem | undefined;
@@ -126,13 +168,17 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
       setLastSelectedItemId(id);
 
       if (swapMode) {
+        if (swapTargetSlot && item.slot !== swapTargetSlot) {
+          return;
+        }
         setSelectedBySlot((prev) => {
           const next = { ...prev };
           const slot = item.slot as Slot;
           next[slot] = [item];
           return next;
         });
-        setSwapMode(false);
+        exitSwapMode();
+        setMobileTab("preview");
         return;
       }
 
@@ -147,7 +193,7 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
         return { ...prev, [item.slot]: [...(current || []), item] };
       });
     },
-    [clothesById, swapMode],
+    [clothesById, swapMode, swapTargetSlot, exitSwapMode],
   );
 
   const openGenerateModal = (mode: "generate" | "style-item") => {
@@ -156,12 +202,13 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
       return;
     }
     setConfigMode(mode);
-    if (mode === "style-item" && lastSelectedItemId) {
-      setAnchorItemId(lastSelectedItemId);
+    if (mode === "style-item") {
+      setAnchorItemId((prev) => lastSelectedItemId || prev);
     } else {
       setAnchorItemId(undefined);
     }
     setConfigOpen(true);
+    setMobileTab("ai");
   };
 
   const runGeneration = async () => {
@@ -174,6 +221,7 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
     setStylistStatus("loading");
     setStylistError("");
     setStylistErrorCode(undefined);
+    setMobileTab("ai");
 
     try {
       const result = await generateRecommendations({
@@ -204,8 +252,10 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
 
   const handleUseOutfit = (recommendation: OutfitRecommendation) => {
     setSelectedBySlot(applyRecommendationToSlots(recommendation, clothesById));
-    setActiveRecommendationId(recommendation.id);
-    setSwapMode(false);
+    exitSwapMode();
+    setPreviewHighlight(true);
+    setAppliedConfirmation("Outfit added to preview");
+    setMobileTab("preview");
   };
 
   const handleFeedback = (
@@ -255,7 +305,7 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
       if (!response.ok) throw new Error("Failed to save outfit");
       setSelectedBySlot(emptySlots());
       setName("");
-      setActiveRecommendationId(null);
+      setAppliedConfirmation(null);
       queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
     } catch (e) {
       console.error(e);
@@ -264,8 +314,12 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
     }
   };
 
+  const canSave = selectedItems.length > 0;
+  const panelHeightClass =
+    "md:h-[calc(100vh-220px)] md:max-h-[calc(100vh-220px)] xl:h-[min(760px,calc(100vh-220px))]";
+
   return (
-    <div className="md:rounded-tl-3xl w-full z-10 p-4 pb-24 md:pb-8">
+    <div className="z-10 w-full p-4 pb-28 md:rounded-tl-3xl md:pb-8">
       <StylistConfigModal
         open={configOpen}
         mode={configMode}
@@ -278,74 +332,123 @@ function CreateOutfitUI({ onBuyCredits }: CreateOutfitUIProps) {
         credits={credits}
       />
 
-      <div className="flex items-center justify-between mb-4 md:mr-40">
-        <div className="flex justify-end w-full gap-2 ">
-          <input
-            id="create-outfit-form-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Outfit name (optional)"
-            className=" w-full md:w-1/2 rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
-          <button
-            disabled={saving || selectedItems.length === 0}
-            onClick={saveOutfit}
-            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Outfit"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-[0.6fr,0.9fr] gap-4">
-        <UsersClothes
-          isLoadingClothes={isLoadingClothes}
-          error={error}
-          clothes={clothes}
-          selectedItems={selectedItems}
-          toggleSelect={toggleSelect}
-          ref={(ref as unknown) as RefObject<HTMLDivElement>}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          categoryFilter={categoryFilter}
-          onCategoryFilterChange={setCategoryFilter}
-          lastSelectedItemId={lastSelectedItemId}
-          onStyleThisItem={() => openGenerateModal("style-item")}
-          swapMode={swapMode}
+      <div className="mx-auto w-full max-w-[1400px]">
+        <OutfitBuilderHeader
+          name={name}
+          onNameChange={setName}
+          selectedCount={filledSlotCount}
+          saving={saving}
+          canSave={canSave}
+          onSave={saveOutfit}
+          hideSaveOnMobile
         />
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-[clamp(200px,20vw,330px),1fr] gap-4">
-          <OutfitPreview
-            selectedBySlot={selectedBySlot}
-            setSelectedBySlot={setSelectedBySlot}
-          />
+        <BuilderMobileTabs activeTab={mobileTab} onChange={setMobileTab} />
 
-          <AiStylistPanel
-            status={isGenerating ? "loading" : stylistStatus}
-            recommendations={recommendations}
-            clothesById={clothesById}
-            errorMessage={stylistError}
-            errorCode={stylistErrorCode}
-            credits={credits}
-            clothesCount={clothes.length}
-            feedbackSubmitted={feedbackSubmitted}
-            onGenerateClick={() => openGenerateModal("generate")}
-            onTryAnother={() => openGenerateModal("generate")}
-            onUseOutfit={handleUseOutfit}
-            onSwapItem={() => setSwapMode(true)}
-            onFeedback={handleFeedback}
-            onBuyCredits={onBuyCredits}
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(340px,1.1fr)_minmax(280px,0.72fr)_minmax(360px,1fr)] xl:items-start">
+          <section
+            id="builder-panel-clothes"
+            role="tabpanel"
+            aria-labelledby="builder-tab-clothes"
+            className={`min-h-0 ${
+              mobileTab === "clothes" ? "block" : "hidden"
+            } md:block ${panelHeightClass}`}
+          >
+            <UsersClothes
+              isLoadingClothes={isLoadingClothes}
+              error={error}
+              clothes={clothes}
+              selectedItems={selectedItems}
+              toggleSelect={toggleSelect}
+              ref={(ref as unknown) as RefObject<HTMLDivElement>}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              lastSelectedItemId={lastSelectedItemId}
+              onStyleThisItem={() => openGenerateModal("style-item")}
+              swapMode={swapMode}
+              swapTargetSlot={swapTargetSlot}
+              onCancelSwap={exitSwapMode}
+              onAddClothes={onAddClothes}
+              className="h-full"
+            />
+          </section>
+
+          <section
+            id="builder-panel-preview"
+            role="tabpanel"
+            aria-labelledby="builder-tab-preview"
+            className={`min-h-0 ${
+              mobileTab === "preview" ? "block" : "hidden"
+            } md:block xl:sticky xl:top-4 ${panelHeightClass}`}
+          >
+            <div className="mb-3 md:hidden">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-indigo-800">
+                  Outfit name (optional)
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Outfit name (optional)"
+                  className="h-10 w-full rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </label>
+            </div>
+            <BuilderOutfitPreview
+              selectedBySlot={selectedBySlot}
+              setSelectedBySlot={setSelectedBySlot}
+              swapMode={swapMode}
+              swapTargetSlot={swapTargetSlot}
+              onReplaceSlot={enterSwapMode}
+              highlightApplied={previewHighlight}
+              className="h-full min-h-[420px] md:min-h-0"
+            />
+          </section>
+
+          <section
+            id="builder-panel-ai"
+            role="tabpanel"
+            aria-labelledby="builder-tab-ai"
+            className={`min-h-0 md:col-span-2 xl:col-span-1 ${
+              mobileTab === "ai" ? "block" : "hidden"
+            } md:block ${panelHeightClass}`}
+          >
+            <AiStylistPanel
+              status={isGenerating ? "loading" : stylistStatus}
+              recommendations={recommendations}
+              clothesById={clothesById}
+              errorMessage={stylistError}
+              errorCode={stylistErrorCode}
+              credits={credits}
+              clothesCount={clothes.length}
+              feedbackSubmitted={feedbackSubmitted}
+              onGenerateClick={() =>
+                openGenerateModal(anchorItemId ? "style-item" : "generate")
+              }
+              onTryAnother={() => openGenerateModal("generate")}
+              onUseOutfit={handleUseOutfit}
+              onSwapItem={enterSwapMode}
+              onFeedback={handleFeedback}
+              onBuyCredits={onBuyCredits}
+              anchorItem={anchorItem ?? null}
+              appliedConfirmation={appliedConfirmation}
+              className="h-full"
+            />
+          </section>
         </div>
       </div>
 
-      {activeRecommendationId && (
-        <p className="mt-2 text-xs text-indigo-700/80">
-          Recommendation applied to preview. Adjust items manually or save when
-          ready.
-        </p>
-      )}
+      {mobileTab === "preview" ? (
+        <MobileSaveBar
+          selectedCount={filledSlotCount}
+          saving={saving}
+          canSave={canSave}
+          onSave={saveOutfit}
+        />
+      ) : null}
     </div>
   );
 }

@@ -149,7 +149,10 @@ export default function Dashboard() {
             <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0">
               {/* previously had a loading screen here before the whole page loaded*/}
               {view === "createOutfit" && (
-                <CreateOutfitUI onBuyCredits={openBuyCredits} />
+                <CreateOutfitUI
+                  onBuyCredits={openBuyCredits}
+                  onAddClothes={() => setView("addClothes")}
+                />
               )}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}
               {view === "clothingDetails" && selectedClothingItem && (
