@@ -63,6 +63,23 @@ export const validateFeedbackRequest = (body) => {
     return { error: "rating must be positive or negative" };
   }
 
+  const allowedReasons = [
+    "Too formal",
+    "Too casual",
+    "Colours do not match",
+    "Not my style",
+    "Wrong season",
+    "Poor item combination",
+  ];
+
+  let reasons;
+  if (body.reasons !== undefined) {
+    if (!Array.isArray(body.reasons)) {
+      return { error: "reasons must be an array" };
+    }
+    reasons = body.reasons.filter((reason) => allowedReasons.includes(reason));
+  }
+
   const outfitItemIds = body.outfitItemIds.map(String);
   const outfitSignature =
     typeof body.outfitSignature === "string" && body.outfitSignature.trim()
@@ -75,6 +92,7 @@ export const validateFeedbackRequest = (body) => {
     outfitSignature,
     label: typeof body.label === "string" ? body.label : undefined,
     rating: body.rating,
+    reasons,
     occasion: body.occasion,
     style: body.style,
   };
