@@ -12,6 +12,7 @@ const ConfidenceSchema = new mongoose.Schema(
     formalityScore: { type: Number, min: 0, max: 1, default: null },
     statementLevel: { type: Number, min: 0, max: 1, default: null },
     outfitRole: { type: Number, min: 0, max: 1, default: null },
+    subtype: { type: Number, min: 0, max: 1, default: null },
   },
   { _id: false },
 );
@@ -43,6 +44,8 @@ const StylingMetadataSchema = new mongoose.Schema(
       enum: ["Base", "Layer", "Accent", "Statement", null],
       default: null,
     },
+    /** Optional normalized garment subtype (e.g. button_up, polo, jorts). */
+    subtype: { type: String, default: null },
     confidence: { type: ConfidenceSchema, default: () => ({}) },
     styleCategorySource: {
       type: String,
@@ -91,6 +94,7 @@ const ClothesSchema = new mongoose.Schema({
       formalityScore: null,
       statementLevel: null,
       outfitRole: null,
+      subtype: null,
       confidence: {},
       styleCategorySource: null,
       occasionTagsSource: null,

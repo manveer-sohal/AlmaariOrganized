@@ -28,7 +28,10 @@ export const TYPE_TO_SLOT = {
   // Tops / full pieces worn on torso (body)
   Shirt: "body",
   "T-shirt": "body",
+  "T-Shirt": "body",
   "Dress Shirt": "body",
+  "Button-Up": "body",
+  "Button-Up Shirt": "body",
   Polo: "body",
   Blouse: "body",
   "Tank Top": "body",
@@ -42,6 +45,9 @@ export const TYPE_TO_SLOT = {
   Vest: "body",
   "Sweater Vest": "body",
   Jacket: "body",
+  "Denim Jacket": "body",
+  "Bomber Jacket": "body",
+  "Leather Jacket": "body",
   Blazer: "body",
   Coat: "body",
   Raincoat: "body",
@@ -68,9 +74,11 @@ export const TYPE_TO_SLOT = {
   Waistcoat: "body",
   Overshirt: "body",
   Shacket: "body",
+  Flannel: "body",
 
   // Bottoms (legs)
   Jeans: "legs",
+  Jorts: "legs",
   Trousers: "legs",
   Pants: "legs",
   Chinos: "legs",
@@ -94,10 +102,12 @@ export const TYPE_TO_SLOT = {
   Briefs: "legs",
   Boxers: "legs",
   Tights: "legs",
-  Belt: "legs",
   Suspenders: "legs",
   Kilt: "legs",
   Sarong: "legs",
+
+  // Waist accessory (stored as head/accessory slot)
+  Belt: "head",
 
   // Footwear (feet)
   Shoes: "feet",
@@ -207,7 +217,6 @@ export const mapTypeToSlot = (type) => {
     t.includes("clutch") ||
     t.includes("headband") ||
     t.includes("bow tie") ||
-    (t.includes("tie") && !t.includes("hoodie")) ||
     t.includes("hat") ||
     (t.includes("cap") && !t.includes("cape") && !t.includes("capri")) ||
     t === "bag" ||
@@ -239,7 +248,8 @@ export const mapTypeToSlot = (type) => {
     t.includes("swimsuit") ||
     t.includes("bodysuit") ||
     t.includes("jersey") ||
-    t.includes("kimono")
+    t.includes("kimono") ||
+    t.includes("tie")
   ) {
     return "body";
   }

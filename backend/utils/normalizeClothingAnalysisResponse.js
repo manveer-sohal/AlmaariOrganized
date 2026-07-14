@@ -4,10 +4,7 @@ import {
   OUTFIT_ROLES,
   STYLE_CATEGORIES,
 } from "../constants/clothingMetadata.js";
-import {
-  countValidTags,
-  sanitizeTagsPayload,
-} from "./tagValidation.utils.js";
+import { countValidTags, sanitizeTagsPayload } from "./tagValidation.utils.js";
 
 const clampConfidence = (value) => {
   if (typeof value !== "number" || Number.isNaN(value)) return null;
@@ -88,7 +85,10 @@ export const FORMALITY_BAND_BY_CATEGORY = {
   Athletic: { min: 1, max: 4, default: 2 },
 };
 
-export const clampFormalityToStyleCategory = (styleCategory, formalityScore) => {
+export const clampFormalityToStyleCategory = (
+  styleCategory,
+  formalityScore,
+) => {
   const band = FORMALITY_BAND_BY_CATEGORY[styleCategory];
   if (!band) return formalityScore ?? null;
   if (formalityScore == null || Number.isNaN(Number(formalityScore))) {
@@ -134,12 +134,25 @@ export const normalizeClothingAnalysisResponse = (rawResponse) => {
     core.fit = { value: null, confidence: core.fit.confidence ?? 0 };
   }
 
+  const subtypeField = readField(raw, "subtype");
+  const subtypeRaw =
+    typeof subtypeField.value === "string"
+      ? subtypeField.value.trim().toLowerCase().replace(/[\s-]+/g, "_")
+      : null;
+  const subtypeConfidence = subtypeField.confidence;
+
   const styling = {
     styleCategory: pickEnum(styleCategoryField.value, STYLE_CATEGORIES),
     occasionTags: pickEnumList(occasionTagsField.value, OCCASION_TAGS),
     formalityScore: clampInt(formalityField.value, 1, 10),
     statementLevel: clampInt(statementField.value, 1, 5),
     outfitRole: pickEnum(outfitRoleField.value, OUTFIT_ROLES),
+    subtype:
+      subtypeRaw && subtypeConfidence != null && subtypeConfidence >= 0.45
+        ? subtypeRaw
+        : subtypeRaw && subtypeConfidence == null
+          ? subtypeRaw
+          : null,
     confidence: {
       type: clampConfidence(core.type?.confidence) ?? null,
       colour: clampConfidence(core.colour?.confidence) ?? null,
@@ -151,6 +164,7 @@ export const normalizeClothingAnalysisResponse = (rawResponse) => {
       formalityScore: formalityField.confidence,
       statementLevel: statementField.confidence,
       outfitRole: outfitRoleField.confidence,
+      subtype: subtypeConfidence,
     },
   };
 
@@ -173,6 +187,7 @@ export const emptyConfidence = () => ({
   formalityScore: null,
   statementLevel: null,
   outfitRole: null,
+  subtype: null,
 });
 
 export const defaultStylingMetadata = () => ({
@@ -181,6 +196,7 @@ export const defaultStylingMetadata = () => ({
   formalityScore: null,
   statementLevel: null,
   outfitRole: null,
+  subtype: null,
   confidence: emptyConfidence(),
   styleCategorySource: null,
   occasionTagsSource: null,

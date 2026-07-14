@@ -23,6 +23,9 @@ export const getRecommendations = async (req, res) => {
       recommendations: result.recommendations,
       creditsDeducted: result.creditsDeducted,
       creditBalance: result.creditBalance,
+      generationId: result.generationId,
+      mode: result.mode,
+      requiredItemIds: result.requiredItemIds,
     });
   } catch (error) {
     const status = error.status || 500;
@@ -66,6 +69,8 @@ export const submitStylistFeedback = async (req, res) => {
       reasons: parsed.reasons,
       occasion: parsed.occasion,
       style: parsed.style,
+      generationId: parsed.generationId,
+      mode: parsed.mode,
     });
 
     return res.status(201).json({ success: true });

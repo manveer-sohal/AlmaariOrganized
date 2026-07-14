@@ -1,11 +1,46 @@
 const LABELS = ["Safe Choice", "Styled Choice", "Alternative"];
+const STYLIST_MODES = ["random", "complete", "improve", "selected"];
+
+const asStringArray = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.map(String).filter(Boolean);
+};
 
 export const validateRecommendationRequest = (body) => {
   const errors = [];
   if (body.anchorItemId != null && typeof body.anchorItemId !== "string") {
     errors.push("anchorItemId must be a string");
   }
+  if (body.mode != null && !STYLIST_MODES.includes(body.mode)) {
+    errors.push(`mode must be one of: ${STYLIST_MODES.join(", ")}`);
+  }
+  if (
+    body.requiredItemIds != null &&
+    !Array.isArray(body.requiredItemIds)
+  ) {
+    errors.push("requiredItemIds must be an array");
+  }
+  if (body.previewItemIds != null && !Array.isArray(body.previewItemIds)) {
+    errors.push("previewItemIds must be an array");
+  }
+  if (
+    body.refinementPrompt != null &&
+    typeof body.refinementPrompt !== "string"
+  ) {
+    errors.push("refinementPrompt must be a string");
+  }
+
   return {
+    mode: body.mode && STYLIST_MODES.includes(body.mode) ? body.mode : null,
+    requiredItemIds: asStringArray(body.requiredItemIds),
+    previewItemIds: asStringArray(body.previewItemIds),
+    refinementPrompt:
+      typeof body.refinementPrompt === "string" ? body.refinementPrompt : "",
+    parentGenerationId:
+      typeof body.parentGenerationId === "string"
+        ? body.parentGenerationId
+        : null,
+    priorOutfitSignatures: asStringArray(body.priorOutfitSignatures),
     anchorItemId: body.anchorItemId || null,
     occasion: body.occasion || "Everyday",
     weather: body.weather || "Mild",
@@ -19,7 +54,14 @@ export const validateRecommendations = ({
   recommendations,
   allowedIds,
   anchorItemId,
+  requiredItemIds,
 }) => {
+  const required = requiredItemIds?.length
+    ? requiredItemIds
+    : anchorItemId
+      ? [anchorItemId]
+      : [];
+
   const seenSignatures = new Set();
   const cleaned = [];
 
@@ -30,7 +72,7 @@ export const validateRecommendations = ({
     const uniqueIds = [...new Set(rec.itemIds.map(String))];
     if (uniqueIds.length !== rec.itemIds.length) continue;
     if (!uniqueIds.every((id) => allowedIds.has(id))) continue;
-    if (anchorItemId && !uniqueIds.includes(String(anchorItemId))) continue;
+    if (required.some((id) => !uniqueIds.includes(String(id)))) continue;
 
     const signature = uniqueIds.sort().join("|");
     if (seenSignatures.has(signature)) continue;
@@ -95,5 +137,8 @@ export const validateFeedbackRequest = (body) => {
     reasons,
     occasion: body.occasion,
     style: body.style,
+    generationId:
+      typeof body.generationId === "string" ? body.generationId : undefined,
+    mode: typeof body.mode === "string" ? body.mode : undefined,
   };
 };

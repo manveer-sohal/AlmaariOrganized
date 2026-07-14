@@ -166,6 +166,9 @@ export const applyAiStylingEnrichment = async ({
   if (styling.outfitRole != null) {
     meta.outfitRole = styling.outfitRole;
   }
+  if (styling.subtype != null) {
+    meta.subtype = styling.subtype;
+  }
 
   // Keep user-chosen styleCategory coherent with formality.
   if (meta.styleCategorySource === "user" && meta.styleCategory) {

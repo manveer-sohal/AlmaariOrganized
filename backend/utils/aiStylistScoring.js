@@ -1,4 +1,10 @@
 import { effectiveFormalityScore } from "./normalizeClothingAnalysisResponse.js";
+import {
+  STYLIST_WEIGHTS,
+  noveltyScore,
+  refinementBoost,
+} from "../services/aiStylist/scoring.js";
+import { generateCandidateOutfits as generateConstrainedFromModule } from "../services/aiStylist/candidateGenerator.js";
 
 const NEUTRALS = ["black", "white", "beige", "grey", "gray", "navy", "brown"];
 
@@ -10,7 +16,13 @@ export const flattenColours = (item) => {
 const isNeutral = (colour) =>
   NEUTRALS.some((n) => String(colour).toLowerCase().includes(n));
 
-export const isDress = (item) => /dress/i.test(item?.type || "");
+export const isDress = (item) => {
+  const t = String(item?.type || "")
+    .toLowerCase()
+    .trim();
+  if (/dress\s*shirt/.test(t)) return false;
+  return /\bdress\b/.test(t);
+};
 
 const matchesAvoid = (item, avoidText) => {
   if (!avoidText) return false;
@@ -245,30 +257,64 @@ export const preferenceMatch = (items, profile) => {
   return Math.max(0, Math.min(1, 0.5 + avg * 0.5));
 };
 
-export const scoreOutfit = (items, preferences, profile) => {
+export const scoreOutfitComponents = (
+  items,
+  preferences = {},
+  profile,
+  options = {},
+) => {
   const { occasion = "Everyday", weather = "Mild", style = "Casual" } =
     preferences;
+  const priorSignatures = options.priorSignatures || [];
+  const w = STYLIST_WEIGHTS;
 
-  return (
-    colourCompatibility(items) * 0.2 +
-    occasionScore(items, occasion) * 0.2 +
-    weatherScore(items, weather) * 0.16 +
-    formalityConsistency(items) * 0.12 +
-    styleScore(items, style) * 0.08 +
-    statementBalance(items, preferences) * 0.07 +
-    preferenceMatch(items, profile) * 0.12 +
-    0.05
-  );
+  const components = {
+    colourHarmony: colourCompatibility(items),
+    occasion: occasionScore(items, occasion),
+    weather: weatherScore(items, weather),
+    formality: formalityConsistency(items),
+    styleMatch: styleScore(items, style),
+    statementBalance: statementBalance(items, preferences),
+    preferenceMatch: preferenceMatch(items, profile),
+    completeness: items.length >= 3 ? 1 : items.length >= 2 ? 0.7 : 0.4,
+    novelty: noveltyScore(items, priorSignatures),
+    layering:
+      typeof options.layeringScore?.total === "number"
+        ? options.layeringScore.total
+        : 0.7,
+  };
+
+  const total =
+    components.colourHarmony * w.colourHarmony +
+    components.occasion * w.occasion +
+    components.weather * w.weather +
+    components.formality * w.formality +
+    components.styleMatch * w.styleMatch +
+    components.statementBalance * w.statementBalance +
+    components.preferenceMatch * w.preferenceMatch +
+    components.completeness * w.completeness +
+    components.novelty * w.novelty +
+    components.layering * (w.layering || 0) +
+    w.constant +
+    refinementBoost(items, preferences.refinementPrompt);
+
+  return { total, components };
 };
 
+export const scoreOutfit = (items, preferences, profile, options) =>
+  scoreOutfitComponents(items, preferences, profile, options).total;
+
 export const filterWardrobe = (items, preferences) => {
-  const { avoid, anchorItem } = preferences;
+  const { avoid, anchorItem, requiredItems = [] } = preferences;
   const avoidText = String(avoid || "").trim();
+  const keepIds = new Set(
+    [anchorItem, ...requiredItems]
+      .filter(Boolean)
+      .map((item) => item._id.toString()),
+  );
 
   return items.filter((item) => {
-    if (anchorItem && item._id.toString() === anchorItem._id.toString()) {
-      return true;
-    }
+    if (keepIds.has(item._id.toString())) return true;
     if (matchesAvoid(item, avoidText)) return false;
     return true;
   });
@@ -297,76 +343,10 @@ export const canFormOutfits = (bySlot) => {
 
 /**
  * Build outfit combinations. Styling metadata is never required.
- * Ensures canFormOutfits and generation stay consistent when the wardrobe
- * is dress+shoes (no legs) or when an anchor sits outside the default slice.
+ * Delegates to the multi-required candidate generator (legacy single-anchor API).
  */
-export const generateCandidateOutfits = (bySlot, anchorItem) => {
-  const combos = [];
-
-  let bodyItems = [...(bySlot.body || [])];
-  let legItems = [...(bySlot.legs || [])];
-  let feetItems = [...(bySlot.feet || [])];
-  let headItems = [...(bySlot.head || [])];
-
-  const prioritizeAnchor = (list, slot) => {
-    if (!anchorItem) return list;
-    const anchorSlot = String(anchorItem.slot || "")
-      .trim()
-      .toLowerCase();
-    if (anchorSlot !== slot) return list;
-    const id = anchorItem._id.toString();
-    const without = list.filter((item) => item._id.toString() !== id);
-    const found = list.find((item) => item._id.toString() === id);
-    if (found) return [found, ...without];
-    return [anchorItem, ...list];
-  };
-
-  bodyItems = prioritizeAnchor(bodyItems, "body");
-  legItems = prioritizeAnchor(legItems, "legs");
-  feetItems = prioritizeAnchor(feetItems, "feet");
-  headItems = prioritizeAnchor(headItems, "head");
-
-  // When there are no bottoms, dresses must be considered first or generation
-  // yields zero combos even though canFormOutfits is true.
-  if (legItems.length === 0) {
-    const dresses = bodyItems.filter(isDress);
-    const nonDresses = bodyItems.filter((item) => !isDress(item));
-    bodyItems = [...dresses, ...nonDresses];
-  }
-
-  bodyItems = bodyItems.slice(0, 10);
-  legItems = legItems.slice(0, 10);
-  feetItems = feetItems.slice(0, 8);
-  headItems = [null, ...headItems.slice(0, 4)];
-
-  for (const body of bodyItems) {
-    const legChoices = isDress(body)
-      ? [null]
-      : legItems.length > 0
-        ? legItems
-        : [];
-    if (legChoices.length === 0) continue;
-
-    for (const legs of legChoices) {
-      for (const feet of feetItems) {
-        for (const head of headItems) {
-          const items = [body, legs, feet, head].filter(Boolean);
-          if (items.length < 2) continue;
-          if (
-            anchorItem &&
-            !items.some((i) => i._id.toString() === anchorItem._id.toString())
-          ) {
-            continue;
-          }
-          combos.push(items);
-          if (combos.length >= 60) return combos;
-        }
-      }
-    }
-  }
-
-  return combos;
-};
+export const generateCandidateOutfits = (bySlot, anchorItem) =>
+  generateConstrainedFromModule(bySlot, anchorItem);
 
 export const outfitSignature = (items) =>
   items
@@ -430,7 +410,7 @@ export const pickDiverseOutfits = (
   return selected;
 };
 
-export const buildExplanation = (items, label, preferences) => {
+export const buildExplanation = (items, label, preferences, layering) => {
   const types = items.map((i) => i.type).join(", ");
   const colours = [
     ...new Set(items.flatMap(flattenColours).filter(Boolean)),
@@ -438,11 +418,31 @@ export const buildExplanation = (items, label, preferences) => {
   const colourText = colours.length ? colours.join(" and ") : "neutral tones";
   const occasion = preferences.occasion || "Everyday";
 
+  const wear = layering?.wearState || {};
+  const midOpen =
+    layering?.midLayerId && wear[layering.midLayerId] === "open";
+  const hasTie = Boolean(layering?.neckwearId);
+  const layered =
+    Boolean(layering?.baseTopId && layering?.midLayerId) ||
+    Boolean(layering?.midLayerId && layering?.outerLayerId);
+
   if (label === "Safe Choice") {
+    if (layered && midOpen) {
+      return `A clean ${occasion.toLowerCase()} look — the open mid layer adds structure while keeping ${colourText.toLowerCase()} easy to wear.`;
+    }
     return `A reliable ${occasion.toLowerCase()} look built from your ${types.toLowerCase()} with balanced ${colourText.toLowerCase()}.`;
   }
   if (label === "Styled Choice") {
+    if (hasTie) {
+      return `The collared shirt and tie create a polished base that still fits your ${preferences.style?.toLowerCase() || "casual"} direction.`;
+    }
+    if (layered) {
+      return `Intentional layering gives this ${preferences.style?.toLowerCase() || "casual"} outfit depth without losing ${colourText.toLowerCase()} cohesion.`;
+    }
     return `This combination leans into your ${preferences.style?.toLowerCase() || "casual"} preference while keeping ${colourText.toLowerCase()} cohesive.`;
+  }
+  if (layered) {
+    return `An alternative layer structure from your wardrobe that still fits ${occasion.toLowerCase()} without repeating your safer picks.`;
   }
   return `An alternative mix from your wardrobe that still fits ${occasion.toLowerCase()} without repeating your safer picks.`;
 };

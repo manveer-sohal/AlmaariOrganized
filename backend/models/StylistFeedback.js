@@ -15,6 +15,8 @@ const stylistFeedbackSchema = new mongoose.Schema({
   },
   occasion: { type: String },
   style: { type: String },
+  generationId: { type: String },
+  mode: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
