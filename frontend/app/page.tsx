@@ -14,7 +14,7 @@ export default function Homepage() {
       <header className="w-full">
         <nav className="mx-auto max-w-6xl flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold">
+            <div className="h-8 w-8 rounded-md  flex items-center justify-center text-white font-bold">
               <Image src={Logo} alt="Almaari Logo" width={32} height={32} />
             </div>
             <span className="animate-wiggle font-semibold">

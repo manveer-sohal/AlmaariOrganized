@@ -110,13 +110,13 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
         </button>
         <li
           id="icon"
-          className="shrink-0 list-none cursor-pointer"
+          className="shrink-0 list-none cursor-pointer hover:bg-indigo-500  rounded-full p-1"
           onClick={() => setView("home")}
         >
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
         </li>
-        <ul className="flex flex-1 items-center justify-end gap-2 h-full">
-          <li className="flex-1 max-w-2xl mx-2">
+        <ul className="flex flex-1 items-center justify-end lg:justify-between gap-2 h-full">
+          <li className="flex-1 max-w-2xl mx-2 lg:ml-40">
             <form onSubmit={handleSubmit} className="w-full">
               <div className="relative">
                 <input
@@ -155,6 +155,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
               </div>
             </form>
           </li>
+
           <li className="shrink-0">
             <button
               id="add-clothes-btn-desktop"
@@ -178,8 +179,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
               </svg>
               <span>Add Clothes</span>
             </button>
-          </li>
-          <li className="max-w-2xl">
+
             <div
               className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
                 showFeedback

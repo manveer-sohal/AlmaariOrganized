@@ -148,7 +148,9 @@ export default function Dashboard() {
         {/* content area*/}
         <div
           className={`${
-            view === "createOutfit" || view === "clothingDetails"
+            view === "createOutfit" ||
+            view === "clothingDetails" ||
+            view == "outfits"
               ? "bg-indigo-200"
               : "bg-background"
           } h-full min-h-0 w-full md:rounded-tl-3xl`}
