@@ -8,7 +8,8 @@ import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 import { useCredits } from "../hooks/useCredits";
 import { View } from "../types/clothes";
-import { Coins, Check, Shirt, Briefcase } from "lucide-react";
+import { Check, Shirt, Briefcase } from "lucide-react";
+import CreditsBalanceButton from "./CreditsBalanceButton";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 type SideBarProp = {
   view: View;
@@ -264,24 +265,12 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
         </div>
         {/* credits display */}
         <div className="flex flex-col items-center justify-center ">
-          {credits != null && (
-            <button
-              type="button"
-              onClick={onBuyCredits}
-              title="Buy more credits"
-              className={`text-sm w-full text-indigo-900 flex flex-col justify-center items-center bg-indigo-100/70 border rounded-xl m-1 p-2 py-1 shadow-md transition-colors duration-200 cursor-pointer hover:bg-indigo-500 hover:text-white hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
-                view === "buyCredits"
-                  ? "border-indigo-600 ring-2 ring-indigo-400/50 bg-indigo-500 text-white"
-                  : "border-indigo-900"
-              }`}
-            >
-              <span className="text-base font-medium flex items-center gap-2">
-                <Coins className="w-4 h-4" />
-                Credits {isLoadingCredits ? "…" : credits}
-              </span>
-              <span className="text-xs mt-1 opacity-80">+ Buy more</span>
-            </button>
-          )}
+          <CreditsBalanceButton
+            credits={credits}
+            isLoading={isLoadingCredits}
+            onBuyCredits={onBuyCredits}
+            active={view === "buyCredits"}
+          />
         </div>
       </ul>
     </div>

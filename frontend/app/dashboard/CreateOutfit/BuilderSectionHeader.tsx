@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type BuilderSectionHeaderProps = {
-  step: string;
+  step?: string;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -17,10 +17,12 @@ export default function BuilderSectionHeader({
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 text-[11px] font-semibold tabular-nums text-indigo-700">
-            {step}
-          </span>
-          <h3 className="text-base font-semibold text-indigo-900 sm:text-lg">
+          {step ? (
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 text-[11px] font-semibold tabular-nums text-indigo-700">
+              {step}
+            </span>
+          ) : null}
+          <h3 className="truncate text-base font-semibold text-indigo-900 sm:text-lg">
             {title}
           </h3>
         </div>

@@ -9,7 +9,7 @@ import Login from "./components/login";
 import Signup from "./components/signup";
 export default function Homepage() {
   return (
-    <div className=" min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
       {/* Nav */}
       <header className="w-full">
         <nav className="mx-auto max-w-6xl flex items-center justify-between px-4 py-4">

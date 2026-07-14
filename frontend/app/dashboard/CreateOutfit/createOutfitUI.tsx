@@ -1,12 +1,19 @@
 "use client";
 
-import React, { RefObject, useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../../types/clothes";
 import {
   DEFAULT_STYLIST_PREFERENCES,
   OutfitRecommendation,
+  StylistMode,
   StylistPreferences,
 } from "../../types/aiStylist";
 import UsersClothes from "./UsersClothes";
@@ -14,12 +21,15 @@ import BuilderOutfitPreview from "./BuilderOutfitPreview";
 import AiStylistPanel from "./AiStylist";
 import StylistConfigModal from "./StylistConfigModal";
 import OutfitBuilderHeader from "./OutfitBuilderHeader";
-import BuilderMobileTabs, { BuilderTab } from "./BuilderMobileTabs";
-import MobileSaveBar from "./MobileSaveBar";
+import MobileOutfitBuilderShell from "./MobileOutfitBuilderShell";
+import AIStylistBottomSheet from "./AIStylistBottomSheet";
+import WardrobeDrawer from "./WardrobeDrawer";
+import MobileGenerationHistorySheet from "./MobileGenerationHistorySheet";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useCredits } from "../../hooks/useCredits";
 import { useStylistRecommendations } from "../../hooks/useStylistRecommendations";
 import { useStylistFeedback } from "../../hooks/useStylistFeedback";
+import { useStylistSession } from "../../hooks/useStylistSession";
 import { useInView } from "react-intersection-observer";
 import {
   clearAuthTokenCache,
@@ -45,11 +55,37 @@ const applyRecommendationToSlots = (
   clothesById: Map<string, ClothingItem>,
 ) => {
   const next = emptySlots();
+  const layering = recommendation.layering;
+  const placed = new Set<string>();
+
+  const append = (item: ClothingItem) => {
+    const slot = item.slot as Slot;
+    const existing = next[slot] || [];
+    if (existing.some((c) => c._id === item._id)) return;
+    next[slot] = [...existing, item];
+    placed.add(item._id);
+  };
+
+  if (layering) {
+    for (const id of [
+      layering.baseTopId,
+      layering.midLayerId,
+      layering.outerLayerId,
+      layering.neckwearId,
+    ]) {
+      if (!id) continue;
+      const item = clothesById.get(id);
+      if (item) append(item);
+    }
+  }
+
   recommendation.itemIds.forEach((id) => {
+    if (placed.has(id)) return;
     const item = clothesById.get(id);
     if (!item) return;
-    next[item.slot as Slot] = [item];
+    append(item);
   });
+
   return next;
 };
 
@@ -59,8 +95,9 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
   const { credits } = useCredits();
   const numberOfClothes = 20;
 
-  const [selectedBySlot, setSelectedBySlot] =
-    useState<Partial<Record<Slot, ClothingItem[] | null>>>(emptySlots());
+  const [selectedBySlot, setSelectedBySlot] = useState<
+    Partial<Record<Slot, ClothingItem[] | null>>
+  >(emptySlots());
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [categoryFilter, setCategoryFilter] = useState<Slot | "all">("all");
@@ -71,26 +108,30 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     DEFAULT_STYLIST_PREFERENCES,
   );
   const [configOpen, setConfigOpen] = useState(false);
-  const [configMode, setConfigMode] = useState<"generate" | "style-item">(
-    "generate",
+  const [stylistMode, setStylistMode] = useState<StylistMode>("random");
+  const [refinementPrompt, setRefinementPrompt] = useState("");
+  const [pendingRefinement, setPendingRefinement] = useState<string | null>(
+    null,
   );
-  const [anchorItemId, setAnchorItemId] = useState<string | undefined>();
+  const [anchoredItemIds, setAnchoredItemIds] = useState<string[]>([]);
   const [stylistStatus, setStylistStatus] = useState<StylistUiStatus>("idle");
-  const [recommendations, setRecommendations] = useState<OutfitRecommendation[]>(
-    [],
-  );
   const [stylistError, setStylistError] = useState<string>("");
-  const [stylistErrorCode, setStylistErrorCode] = useState<string | undefined>();
+  const [stylistErrorCode, setStylistErrorCode] = useState<
+    string | undefined
+  >();
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<
     Record<string, "positive" | "negative">
   >({});
   const [swapMode, setSwapMode] = useState(false);
   const [swapTargetSlot, setSwapTargetSlot] = useState<Slot | null>(null);
-  const [mobileTab, setMobileTab] = useState<BuilderTab>("clothes");
   const [previewHighlight, setPreviewHighlight] = useState(false);
   const [appliedConfirmation, setAppliedConfirmation] = useState<string | null>(
     null,
   );
+  const [isAIStylistOpen, setIsAIStylistOpen] = useState(false);
+  const [isWardrobeDrawerOpen, setIsWardrobeDrawerOpen] = useState(false);
+  const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
+  const [activeGeneratedIndex, setActiveGeneratedIndex] = useState(0);
 
   const {
     clothes,
@@ -106,6 +147,7 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     isPending: isGenerating,
   } = useStylistRecommendations();
   const { mutate: submitFeedback } = useStylistFeedback();
+  const session = useStylistSession();
 
   const { ref, inView } = useInView();
   React.useEffect(() => {
@@ -126,11 +168,39 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     return () => window.clearTimeout(timer);
   }, [previewHighlight]);
 
+  useEffect(() => {
+    setActiveGeneratedIndex(0);
+  }, [session.activeGeneration?.id]);
+
   const selectedItems = useMemo(() => {
     return Object.values(selectedBySlot).filter(
       (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0,
     );
   }, [selectedBySlot]);
+
+  const previewItems = useMemo(() => selectedItems.flat(), [selectedItems]);
+
+  const previewItemIds = useMemo(() => previewItems.map((item) => item._id), [
+    previewItems,
+  ]);
+
+  const requiredItemsForMode = useMemo(() => {
+    if (stylistMode === "random") return [];
+    return previewItems;
+  }, [stylistMode, previewItems]);
+
+  const clothesById = useMemo(
+    () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
+    [clothes],
+  );
+
+  const anchoredItems = useMemo(
+    () =>
+      anchoredItemIds
+        .map((id) => clothesById.get(id))
+        .filter(Boolean) as ClothingItem[],
+    [anchoredItemIds, clothesById],
+  );
 
   const filledSlotCount = useMemo(() => {
     return (["body", "legs", "feet", "head"] as Slot[]).filter((slot) => {
@@ -139,12 +209,10 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     }).length;
   }, [selectedBySlot]);
 
-  const clothesById = useMemo(
-    () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
-    [clothes],
-  );
-
-  const anchorItem = anchorItemId ? clothesById.get(anchorItemId) : undefined;
+  const exitSwapMode = useCallback(() => {
+    setSwapMode(false);
+    setSwapTargetSlot(null);
+  }, []);
 
   const enterSwapMode = useCallback((slot?: Slot) => {
     setSwapMode(true);
@@ -152,13 +220,43 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     if (slot) {
       setCategoryFilter(slot);
     }
-    setMobileTab("clothes");
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+    ) {
+      setIsWardrobeDrawerOpen(true);
+    }
   }, []);
 
-  const exitSwapMode = useCallback(() => {
-    setSwapMode(false);
-    setSwapTargetSlot(null);
+  const unanchorItem = useCallback((id: string) => {
+    setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
   }, []);
+
+  const ensureItemInPreview = useCallback((item: ClothingItem) => {
+    setSelectedBySlot((prev) => {
+      const slot = item.slot as Slot;
+      const current = prev[slot] || [];
+      if (current.some((c) => c._id === item._id)) return prev;
+      return { ...prev, [slot]: [...current, item] };
+    });
+  }, []);
+
+  const removeItemFromPreview = useCallback(
+    (id: string) => {
+      const item = clothesById.get(id);
+      if (!item) {
+        setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+        return;
+      }
+      setSelectedBySlot((prev) => {
+        const slot = item.slot as Slot;
+        const next = (prev[slot] || []).filter((c) => c._id !== id);
+        return { ...prev, [slot]: next.length > 0 ? next : null };
+      });
+      setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+    },
+    [clothesById],
+  );
 
   const toggleSelect = useCallback(
     (id: string) => {
@@ -178,60 +276,189 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
           return next;
         });
         exitSwapMode();
-        setMobileTab("preview");
+        setIsWardrobeDrawerOpen(false);
         return;
       }
 
-      setSelectedBySlot((prev) => {
-        const current = prev[item.slot as Slot];
-        if (current && current.length > 0 && current.some((c) => c._id === id)) {
-          return {
-            ...prev,
-            [item.slot]: current.filter((c) => c._id !== id),
-          };
-        }
-        return { ...prev, [item.slot]: [...(current || []), item] };
-      });
+      const slot = item.slot as Slot;
+      const current = selectedBySlot[slot] || [];
+      const isRemoving = current.some((c) => c._id === id);
+
+      if (isRemoving) {
+        const next = current.filter((c) => c._id !== id);
+        setSelectedBySlot((prev) => ({
+          ...prev,
+          [slot]: next.length > 0 ? next : null,
+        }));
+        setAnchoredItemIds((anchors) =>
+          anchors.filter((itemId) => itemId !== id),
+        );
+      } else {
+        setSelectedBySlot((prev) => ({
+          ...prev,
+          [slot]: [...(prev[slot] || []), item],
+        }));
+      }
     },
-    [clothesById, swapMode, swapTargetSlot, exitSwapMode],
+    [clothesById, swapMode, swapTargetSlot, exitSwapMode, selectedBySlot],
   );
 
-  const openGenerateModal = (mode: "generate" | "style-item") => {
+  const toggleAnchorItem = useCallback(
+    (id: string) => {
+      const item = clothesById.get(id);
+      if (!item) return;
+
+      const willAnchor = !anchoredItemIds.includes(id);
+      if (willAnchor) {
+        ensureItemInPreview(item);
+        setAnchoredItemIds((prev) =>
+          prev.includes(id) ? prev : [...prev, id],
+        );
+      } else {
+        setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+      }
+    },
+    [clothesById, ensureItemInPreview, anchoredItemIds],
+  );
+
+  const anchorAllPreviewItems = useCallback(() => {
+    const ids = previewItems.map((item) => item._id);
+    if (ids.length === 0) return;
+    const allAnchored = ids.every((id) => anchoredItemIds.includes(id));
+    if (allAnchored) {
+      setAnchoredItemIds((prev) => prev.filter((id) => !ids.includes(id)));
+      return;
+    }
+    setAnchoredItemIds((prev) => [...new Set([...prev, ...ids])]);
+  }, [previewItems, anchoredItemIds]);
+
+  const openDesktopGenerateModal = () => {
     if (credits != null && credits < 1) {
       onBuyCredits?.();
       return;
     }
-    setConfigMode(mode);
-    if (mode === "style-item") {
-      setAnchorItemId((prev) => lastSelectedItemId || prev);
-    } else {
-      setAnchorItemId(undefined);
+    if (
+      stylistMode !== "random" &&
+      requiredItemsForMode.length === 0 &&
+      anchoredItemIds.length === 0
+    ) {
+      setStylistStatus("error");
+      setStylistErrorCode(
+        stylistMode === "selected" ? "EMPTY_SELECTION" : "EMPTY_PREVIEW",
+      );
+      setStylistError(
+        stylistMode === "selected"
+          ? "Select one or more wardrobe items to style."
+          : stylistMode === "improve"
+            ? "Build an outfit first, then ask Almaari to improve it."
+            : "Add at least one item to your outfit preview first.",
+      );
+      return;
     }
+    setPendingRefinement(null);
     setConfigOpen(true);
-    setMobileTab("ai");
   };
 
-  const runGeneration = async () => {
+  const openMobileAISheet = () => {
     if (credits != null && credits < 1) {
       onBuyCredits?.();
       return;
     }
+    setPendingRefinement(null);
+    setIsAIStylistOpen(true);
+  };
+
+  const runGeneration = async (options?: {
+    refinement?: string | null;
+    parentGenerationId?: string | null;
+  }) => {
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+
+    if (
+      stylistMode !== "random" &&
+      requiredItemsForMode.length === 0 &&
+      anchoredItemIds.length === 0
+    ) {
+      setStylistStatus("error");
+      setStylistErrorCode(
+        stylistMode === "selected" ? "EMPTY_SELECTION" : "EMPTY_PREVIEW",
+      );
+      setStylistError(
+        stylistMode === "selected"
+          ? "Select one or more wardrobe items to style."
+          : stylistMode === "improve"
+            ? "Build an outfit first, then ask Almaari to improve it."
+            : "Add at least one item to your outfit preview first.",
+      );
+      setIsAIStylistOpen(true);
+      return;
+    }
+
+    const refinement =
+      options?.refinement?.trim() || pendingRefinement?.trim() || "";
 
     setConfigOpen(false);
     setStylistStatus("loading");
     setStylistError("");
     setStylistErrorCode(undefined);
-    setMobileTab("ai");
+
+    const seedIds = requiredItemsForMode.map((item) => item._id);
+    const requiredItemIds =
+      stylistMode === "random"
+        ? []
+        : [...new Set([...anchoredItemIds, ...seedIds])];
 
     try {
       const result = await generateRecommendations({
         ...preferences,
-        anchorItemId: configMode === "style-item" ? anchorItemId : undefined,
+        mode: stylistMode,
+        requiredItemIds:
+          stylistMode === "selected" ? requiredItemIds : undefined,
+        previewItemIds:
+          stylistMode === "complete" || stylistMode === "improve"
+            ? requiredItemIds
+            : previewItemIds,
+        refinementPrompt: refinement || undefined,
+        parentGenerationId: options?.parentGenerationId ?? null,
+        priorOutfitSignatures: session.priorOutfitSignatures,
       });
 
-      setRecommendations(result.data.recommendations);
+      const generationId = result.data.generationId || crypto.randomUUID();
+      const mode = result.data.mode || stylistMode;
+      const resolvedRequired = result.data.requiredItemIds || requiredItemIds;
+
+      const snapshotAnchors = mode === "random" ? [] : [...resolvedRequired];
+      if (snapshotAnchors.length > 0) {
+        setAnchoredItemIds(snapshotAnchors);
+      }
+
+      session.appendGeneration({
+        id: generationId,
+        parentGenerationId: options?.parentGenerationId ?? null,
+        mode,
+        prompt: refinement || null,
+        requiredItemIds: resolvedRequired,
+        anchoredItemIds: snapshotAnchors,
+        inputs: {
+          occasion: preferences.occasion,
+          weather: preferences.weather,
+          stylePreference: preferences.style,
+          avoid: preferences.avoid,
+          refinementPrompt: refinement || null,
+        },
+        outfits: result.data.recommendations,
+      });
+
       setStylistStatus("success");
-      setFeedbackSubmitted({});
+      setRefinementPrompt("");
+      setPendingRefinement(null);
+      setActiveGeneratedIndex(0);
+      setIsAIStylistOpen(false);
+      const count = result.data.recommendations?.length || 3;
+      setAppliedConfirmation(`${count} outfits generated`);
     } catch (generationError) {
       if (
         generationError instanceof Error &&
@@ -247,6 +474,36 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
       setStylistStatus("error");
       setStylistError(err.message || "Failed to generate outfits");
       setStylistErrorCode(err.code);
+      setIsAIStylistOpen(true);
+    }
+  };
+
+  const handleStyleThisItem = () => {
+    const id = lastSelectedItemId;
+    if (!id) return;
+    const item = clothesById.get(id);
+    if (!item) return;
+
+    setStylistMode("selected");
+    setSelectedBySlot((prev) => {
+      const slot = item.slot as Slot;
+      const current = prev[slot] || [];
+      if (current.some((c) => c._id === id)) return prev;
+      return { ...prev, [slot]: [...current, item] };
+    });
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    setPendingRefinement(null);
+    setIsWardrobeDrawerOpen(false);
+    const isMobile =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
+    if (isMobile) {
+      setIsAIStylistOpen(true);
+    } else {
+      setConfigOpen(true);
     }
   };
 
@@ -255,7 +512,6 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     exitSwapMode();
     setPreviewHighlight(true);
     setAppliedConfirmation("Outfit added to preview");
-    setMobileTab("preview");
   };
 
   const handleFeedback = (
@@ -267,13 +523,39 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     submitFeedback({
       recommendationId: recommendation.id,
       outfitItemIds: recommendation.itemIds,
-      outfitSignature: [...recommendation.itemIds].map(String).sort().join("|"),
+      outfitSignature: [...recommendation.itemIds]
+        .map(String)
+        .sort()
+        .join("|"),
       label: recommendation.label,
       rating,
       reasons: rating === "negative" ? reasons : undefined,
       occasion: preferences.occasion,
       style: preferences.style,
+      generationId: session.activeGeneration?.id,
+      mode: session.activeGeneration?.mode || stylistMode,
     });
+  };
+
+  const handleRefine = () => {
+    if (!refinementPrompt.trim()) return;
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    void runGeneration({
+      refinement: refinementPrompt,
+      parentGenerationId: session.activeGeneration?.id ?? null,
+    });
+  };
+
+  const handleModeChange = (mode: StylistMode) => {
+    setStylistMode(mode);
+    if (stylistStatus === "error") {
+      setStylistStatus(session.hasHistory ? "success" : "idle");
+      setStylistError("");
+      setStylistErrorCode(undefined);
+    }
   };
 
   const saveOutfit = async () => {
@@ -318,41 +600,156 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
   const panelHeightClass =
     "md:h-[calc(100vh-220px)] md:max-h-[calc(100vh-220px)] xl:h-[min(760px,calc(100vh-220px))]";
 
+  const displayStatus = isGenerating
+    ? "loading"
+    : stylistStatus === "idle" && session.hasHistory
+      ? "success"
+      : stylistStatus;
+
+  const canGenerate =
+    (credits == null || credits >= 1) &&
+    (stylistMode === "random" ||
+      requiredItemsForMode.length > 0 ||
+      anchoredItemIds.length > 0);
+
+  const infiniteScrollRef = (ref as unknown) as RefObject<HTMLDivElement>;
+
   return (
-    <div className="z-10 w-full p-4 pb-28 md:rounded-tl-3xl md:pb-8">
+    <div
+      className={`z-10 flex h-full min-h-0 w-full flex-col p-3 pb-0 md:rounded-tl-3xl md:p-4 md:pb-8 ${
+        session.recommendations.length > 0
+          ? "overflow-hidden"
+          : "overflow-y-auto"
+      }`}
+    >
       <StylistConfigModal
         open={configOpen}
-        mode={configMode}
-        anchorItemName={anchorItem?.type}
+        mode={stylistMode === "selected" ? "style-item" : "generate"}
+        anchorItemName={
+          stylistMode === "selected" && requiredItemsForMode.length === 1
+            ? requiredItemsForMode[0]?.type
+            : stylistMode === "selected" && requiredItemsForMode.length > 1
+              ? `${requiredItemsForMode.length} selected items`
+              : undefined
+        }
         preferences={preferences}
         onChange={setPreferences}
         onClose={() => setConfigOpen(false)}
-        onSubmit={runGeneration}
+        onSubmit={() => runGeneration()}
         isSubmitting={isGenerating}
         credits={credits}
       />
 
-      <div className="mx-auto w-full max-w-[1400px]">
-        <OutfitBuilderHeader
+      <AIStylistBottomSheet
+        open={isAIStylistOpen}
+        onClose={() => setIsAIStylistOpen(false)}
+        mode={stylistMode}
+        onModeChange={handleModeChange}
+        preferences={preferences}
+        onPreferencesChange={setPreferences}
+        anchoredItems={anchoredItems}
+        onUnanchorItem={unanchorItem}
+        onAnchorAllPreview={anchorAllPreviewItems}
+        canAnchorAll={previewItems.length > 0}
+        status={displayStatus}
+        errorMessage={stylistError}
+        errorCode={stylistErrorCode}
+        credits={credits}
+        clothesCount={clothes.length}
+        canGenerate={canGenerate}
+        onGenerate={() => void runGeneration()}
+        onBuyCredits={onBuyCredits}
+        hasHistory={session.hasHistory}
+        refinementPrompt={refinementPrompt}
+        onRefinementPromptChange={setRefinementPrompt}
+        onRefine={handleRefine}
+      />
+
+      <WardrobeDrawer
+        open={isWardrobeDrawerOpen}
+        onClose={() => {
+          setIsWardrobeDrawerOpen(false);
+          exitSwapMode();
+        }}
+        isLoadingClothes={isLoadingClothes}
+        error={error}
+        clothes={clothes}
+        selectedItems={selectedItems}
+        toggleSelect={toggleSelect}
+        infiniteScrollRef={infiniteScrollRef}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        lastSelectedItemId={lastSelectedItemId}
+        onStyleThisItem={handleStyleThisItem}
+        swapMode={swapMode}
+        swapTargetSlot={swapTargetSlot}
+        onCancelSwap={exitSwapMode}
+        onAddClothes={onAddClothes}
+        anchoredItemIds={anchoredItemIds}
+        onToggleAnchor={toggleAnchorItem}
+      />
+
+      <MobileGenerationHistorySheet
+        open={isHistorySheetOpen}
+        onClose={() => setIsHistorySheetOpen(false)}
+        generationLabel={session.generationLabel}
+        canGoPrev={session.activeIndex > 0}
+        canGoNext={session.activeIndex < session.generations.length - 1}
+        onHistoryPrev={session.goPrev}
+        onHistoryNext={session.goNext}
+        prompt={session.activeGeneration?.prompt}
+      />
+
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col">
+        <div className="hidden md:block">
+          <OutfitBuilderHeader
+            name={name}
+            onNameChange={setName}
+            selectedCount={filledSlotCount}
+            saving={saving}
+            canSave={canSave}
+            onSave={saveOutfit}
+          />
+        </div>
+
+        <MobileOutfitBuilderShell
           name={name}
           onNameChange={setName}
-          selectedCount={filledSlotCount}
+          filledSlotCount={filledSlotCount}
+          selectedBySlot={selectedBySlot}
+          setSelectedBySlot={setSelectedBySlot}
+          anchoredItemIds={anchoredItemIds}
+          onToggleAnchor={toggleAnchorItem}
+          onRemoveItem={removeItemFromPreview}
+          onAnchorAllPreview={anchorAllPreviewItems}
+          swapMode={swapMode}
+          swapTargetSlot={swapTargetSlot}
+          onReplaceSlot={enterSwapMode}
+          previewHighlight={previewHighlight}
+          recommendations={session.recommendations}
+          clothesById={clothesById}
+          activeGeneratedIndex={activeGeneratedIndex}
+          onActiveGeneratedIndexChange={setActiveGeneratedIndex}
+          feedbackSubmitted={feedbackSubmitted}
+          onFeedback={handleFeedback}
+          onUseOutfit={handleUseOutfit}
+          onOpenAI={openMobileAISheet}
+          onOpenWardrobe={() => setIsWardrobeDrawerOpen(true)}
+          onOpenHistory={() => setIsHistorySheetOpen(true)}
+          generationLabel={session.generationLabel}
+          hasHistory={session.hasHistory}
+          appliedConfirmation={appliedConfirmation}
           saving={saving}
           canSave={canSave}
           onSave={saveOutfit}
-          hideSaveOnMobile
         />
 
-        <BuilderMobileTabs activeTab={mobileTab} onChange={setMobileTab} />
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(340px,1.1fr)_minmax(280px,0.72fr)_minmax(360px,1fr)] xl:items-start">
+        <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:grid-cols-[minmax(340px,1.1fr)_minmax(280px,0.72fr)_minmax(360px,1fr)] xl:items-start">
           <section
             id="builder-panel-clothes"
-            role="tabpanel"
-            aria-labelledby="builder-tab-clothes"
-            className={`min-h-0 ${
-              mobileTab === "clothes" ? "block" : "hidden"
-            } md:block ${panelHeightClass}`}
+            className={`min-h-0 ${panelHeightClass}`}
           >
             <UsersClothes
               isLoadingClothes={isLoadingClothes}
@@ -360,43 +757,27 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
               clothes={clothes}
               selectedItems={selectedItems}
               toggleSelect={toggleSelect}
-              ref={(ref as unknown) as RefObject<HTMLDivElement>}
+              ref={infiniteScrollRef}
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={setCategoryFilter}
               lastSelectedItemId={lastSelectedItemId}
-              onStyleThisItem={() => openGenerateModal("style-item")}
+              onStyleThisItem={handleStyleThisItem}
               swapMode={swapMode}
               swapTargetSlot={swapTargetSlot}
               onCancelSwap={exitSwapMode}
               onAddClothes={onAddClothes}
+              anchoredItemIds={anchoredItemIds}
+              onToggleAnchor={toggleAnchorItem}
               className="h-full"
             />
           </section>
 
           <section
             id="builder-panel-preview"
-            role="tabpanel"
-            aria-labelledby="builder-tab-preview"
-            className={`min-h-0 ${
-              mobileTab === "preview" ? "block" : "hidden"
-            } md:block xl:sticky xl:top-4 ${panelHeightClass}`}
+            className={`min-h-0 xl:sticky xl:top-4 ${panelHeightClass}`}
           >
-            <div className="mb-3 md:hidden">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-indigo-800">
-                  Outfit name (optional)
-                </span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Outfit name (optional)"
-                  className="h-10 w-full rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </label>
-            </div>
             <BuilderOutfitPreview
               selectedBySlot={selectedBySlot}
               setSelectedBySlot={setSelectedBySlot}
@@ -404,51 +785,56 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
               swapTargetSlot={swapTargetSlot}
               onReplaceSlot={enterSwapMode}
               highlightApplied={previewHighlight}
+              anchoredItemIds={anchoredItemIds}
+              onToggleAnchor={toggleAnchorItem}
+              onRemoveItem={removeItemFromPreview}
+              onAnchorAllPreview={anchorAllPreviewItems}
               className="h-full min-h-[420px] md:min-h-0"
             />
           </section>
 
           <section
             id="builder-panel-ai"
-            role="tabpanel"
-            aria-labelledby="builder-tab-ai"
-            className={`min-h-0 md:col-span-2 xl:col-span-1 ${
-              mobileTab === "ai" ? "block" : "hidden"
-            } md:block ${panelHeightClass}`}
+            className={`min-h-0 md:col-span-2 xl:col-span-1 ${panelHeightClass}`}
           >
             <AiStylistPanel
-              status={isGenerating ? "loading" : stylistStatus}
-              recommendations={recommendations}
+              status={displayStatus}
+              mode={stylistMode}
+              onModeChange={handleModeChange}
+              recommendations={session.recommendations}
               clothesById={clothesById}
+              requiredItems={requiredItemsForMode}
+              anchoredItems={anchoredItems}
+              onRemoveRequiredItem={unanchorItem}
+              onUnanchorItem={unanchorItem}
+              onAnchorAllPreview={anchorAllPreviewItems}
               errorMessage={stylistError}
               errorCode={stylistErrorCode}
               credits={credits}
               clothesCount={clothes.length}
               feedbackSubmitted={feedbackSubmitted}
-              onGenerateClick={() =>
-                openGenerateModal(anchorItemId ? "style-item" : "generate")
-              }
-              onTryAnother={() => openGenerateModal("generate")}
+              onGenerateClick={openDesktopGenerateModal}
+              onTryAnother={openDesktopGenerateModal}
               onUseOutfit={handleUseOutfit}
               onSwapItem={enterSwapMode}
               onFeedback={handleFeedback}
               onBuyCredits={onBuyCredits}
-              anchorItem={anchorItem ?? null}
               appliedConfirmation={appliedConfirmation}
+              refinementPrompt={refinementPrompt}
+              onRefinementPromptChange={setRefinementPrompt}
+              onRefine={handleRefine}
+              generationLabel={session.generationLabel}
+              canGoPrev={session.activeIndex > 0}
+              canGoNext={
+                session.activeIndex < session.generations.length - 1
+              }
+              onHistoryPrev={session.goPrev}
+              onHistoryNext={session.goNext}
               className="h-full"
             />
           </section>
         </div>
       </div>
-
-      {mobileTab === "preview" ? (
-        <MobileSaveBar
-          selectedCount={filledSlotCount}
-          saving={saving}
-          canSave={canSave}
-          onSave={saveOutfit}
-        />
-      ) : null}
     </div>
   );
 }

@@ -30,7 +30,10 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   // Tops / full pieces worn on torso (body)
   Shirt: "body",
   "T-shirt": "body",
+  "T-Shirt": "body",
   "Dress Shirt": "body",
+  "Button-Up": "body",
+  "Button-Up Shirt": "body",
   Polo: "body",
   Blouse: "body",
   "Tank Top": "body",
@@ -44,6 +47,9 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   Vest: "body",
   "Sweater Vest": "body",
   Jacket: "body",
+  "Denim Jacket": "body",
+  "Bomber Jacket": "body",
+  "Leather Jacket": "body",
   Blazer: "body",
   Coat: "body",
   Raincoat: "body",
@@ -70,9 +76,11 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   Waistcoat: "body",
   Overshirt: "body",
   Shacket: "body",
+  Flannel: "body",
 
   // Bottoms (legs)
   Jeans: "legs",
+  Jorts: "legs",
   Trousers: "legs",
   Pants: "legs",
   Chinos: "legs",
@@ -96,10 +104,12 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   Briefs: "legs",
   Boxers: "legs",
   Tights: "legs",
-  Belt: "legs",
   Suspenders: "legs",
   Kilt: "legs",
   Sarong: "legs",
+
+  // Waist accessory (stored as head/accessory slot)
+  Belt: "head",
 
   // Footwear (feet)
   Shoes: "feet",

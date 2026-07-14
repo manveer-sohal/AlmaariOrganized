@@ -1,12 +1,23 @@
+/**
+ * Title-case clothing labels, including multi-word and hyphenated names
+ * (e.g. "button-up shirt" → "Button-Up Shirt").
+ */
 export function formatClothingInput(value: string) {
-  const spaceValue = value.indexOf(" ");
-  if (spaceValue > 0) {
-    return (
-      value.substring(0, 1).toUpperCase() +
-      value.substring(1, spaceValue).toLowerCase() +
-      value.substring(spaceValue, spaceValue + 2).toUpperCase() +
-      value.substring(spaceValue + 2).toLowerCase()
-    );
-  }
-  return value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase();
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+
+  return trimmed
+    .split(/(\s+)/)
+    .map((chunk) => {
+      if (/^\s+$/.test(chunk)) return chunk;
+      return chunk
+        .split("-")
+        .map((part) =>
+          part
+            ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+            : part,
+        )
+        .join("-");
+    })
+    .join("");
 }

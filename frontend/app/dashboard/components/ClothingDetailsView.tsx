@@ -16,6 +16,7 @@ import {
   validateClothingMetadata,
   ClothingMetadataDraft,
 } from "../../utils/validateClothingMetadata";
+import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
 
 type ClothingDetailsViewProps = {
   item: ClothingItem;
@@ -118,11 +119,22 @@ export default function ClothingDetailsView({
     [outfits, displayItem._id],
   );
 
+  const subtypeLabel = humanizeClothingSubtype(displayItem);
+
   const metadataRows = [
     {
       label: "Type",
       value: displayItem.type,
       render: () => <MetadataChip label={displayItem.type} />,
+    },
+    {
+      label: "Subtype",
+      value:
+        subtypeLabel &&
+        subtypeLabel.toLowerCase() !== displayItem.type.toLowerCase()
+          ? subtypeLabel
+          : null,
+      render: () => <MetadataChip label={subtypeLabel} />,
     },
     {
       label: "Colours",

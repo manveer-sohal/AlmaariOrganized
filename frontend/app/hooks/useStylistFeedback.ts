@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
+import { StylistMode } from "../types/aiStylist";
 
 type SubmitFeedbackInput = {
   recommendationId: string;
@@ -10,6 +11,8 @@ type SubmitFeedbackInput = {
   label?: string;
   outfitSignature?: string;
   reasons?: string[];
+  generationId?: string;
+  mode?: StylistMode;
 };
 
 export const useStylistFeedback = () => {

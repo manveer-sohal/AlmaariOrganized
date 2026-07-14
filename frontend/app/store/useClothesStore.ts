@@ -25,7 +25,7 @@ export const useClothesStore = create<ClothesStore>((set) => ({
     pattern: [],
     search: "",
   },
-  menuOpen: false,
+  menuOpen: true,
   setMenuOpen: (menuOpen: boolean) => set({ menuOpen }),
 
 }));

@@ -34,6 +34,7 @@ export type StylingMetadataConfidence = {
   formalityScore: number | null;
   statementLevel: number | null;
   outfitRole: number | null;
+  subtype?: number | null;
 };
 
 export type StylingMetadata = {
@@ -42,6 +43,8 @@ export type StylingMetadata = {
   formalityScore: number | null;
   statementLevel: number | null;
   outfitRole: OutfitRole | null;
+  /** Optional normalized subtype (e.g. button_up, polo, jorts). */
+  subtype?: string | null;
   confidence: StylingMetadataConfidence;
   styleCategorySource?: "ai" | "user" | null;
   occasionTagsSource?: "ai" | "user" | null;

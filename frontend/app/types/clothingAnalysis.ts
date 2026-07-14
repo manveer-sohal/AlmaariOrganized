@@ -24,6 +24,8 @@ export type ClothingAnalysisTags = {
   material: ClothingTagField;
   fit: ClothingTagField;
   pattern: ClothingTagField;
+  /** Optional precise subtype (e.g. button_up, polo, jorts). */
+  subtype?: ClothingTagField;
   styleCategory?: ClothingTagField;
   occasionTags?: StringListTagField;
   formalityScore?: NumberTagField;

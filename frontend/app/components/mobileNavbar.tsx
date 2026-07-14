@@ -4,9 +4,10 @@ import React, { Dispatch, SetStateAction, useState } from "react";
 import { useClothesStore } from "../store/useClothesStore";
 import { colours_List, type_List } from "../data/constants";
 import { useCredits } from "../hooks/useCredits";
-import { Coins, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import Dropdown from "../dashboard/components/Dropdown";
 import { motion } from "framer-motion";
+import CreditsBalanceButton from "./CreditsBalanceButton";
 
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
@@ -73,21 +74,14 @@ function MobileNavBar({ onSearchTermChange, onBuyCredits }: NavBarProps) {
             </li>
 
             {/* credits display */}
-            {credits != null && (
-              <li className="shrink-0 ">
-                <span className="text-indigo-900 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onBuyCredits}
-                    title="Buy more credits"
-                    className="text-sm w-full text-indigo-900 flex flex-col justify-center items-center bg-indigo-100/70 border rounded-xl m-1 p-2 py-1 shadow-md transition-colors duration-200 cursor-pointer hover:bg-indigo-500 hover:text-white hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  >
-                    <Coins className="w-4 h-4" /> Credits{" "}
-                    {isLoadingCredits ? "…" : credits}
-                  </button>
-                </span>
-              </li>
-            )}
+            <li className="shrink-0 min-w-[7.5rem]">
+              <CreditsBalanceButton
+                credits={credits}
+                isLoading={isLoadingCredits}
+                onBuyCredits={onBuyCredits}
+                compact
+              />
+            </li>
           </div>
           <div className=" flex max-w-2xl">
             <li className="max-w-2xl">

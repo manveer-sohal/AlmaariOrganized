@@ -6,7 +6,9 @@ import { ClothingItem, Slot } from "../../types/clothes";
 import { SLOT_LABELS } from "../../types/aiStylist";
 import { AnimatePresence } from "framer-motion";
 import { RefObject } from "react";
+import { Anchor } from "lucide-react";
 import BuilderSectionHeader from "./BuilderSectionHeader";
+import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
 
 const UsersClothes = ({
   isLoadingClothes,
@@ -25,6 +27,9 @@ const UsersClothes = ({
   swapTargetSlot,
   onCancelSwap,
   onAddClothes,
+  anchoredItemIds = [],
+  onToggleAnchor,
+  embedded = false,
   className = "",
 }: {
   isLoadingClothes: boolean;
@@ -43,15 +48,25 @@ const UsersClothes = ({
   swapTargetSlot?: Slot | null;
   onCancelSwap?: () => void;
   onAddClothes?: () => void;
+  anchoredItemIds?: string[];
+  onToggleAnchor?: (id: string) => void;
+  /** Hide outer card chrome when nested in a drawer. */
+  embedded?: boolean;
   className?: string;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const selectedIds = useMemo(() => {
     const ids = new Set<string>();
-    selectedItems.forEach((group) => group.forEach((item) => ids.add(item._id)));
+    selectedItems.forEach((group) =>
+      group.forEach((item) => ids.add(item._id)),
+    );
     return ids;
   }, [selectedItems]);
+
+  const anchoredIds = useMemo(() => new Set(anchoredItemIds), [
+    anchoredItemIds,
+  ]);
 
   const filteredClothes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -66,8 +81,10 @@ const UsersClothes = ({
       const colourText = Array.isArray(item.colour)
         ? item.colour.join(" ")
         : "";
+      const subtypeLabel = humanizeClothingSubtype(item).toLowerCase();
       return (
         item.type.toLowerCase().includes(query) ||
+        subtypeLabel.includes(query) ||
         colourText.toLowerCase().includes(query) ||
         (SLOT_LABELS[item.slot] || item.slot).toLowerCase().includes(query)
       );
@@ -82,25 +99,59 @@ const UsersClothes = ({
   return (
     <div
       id="create-outfit-form"
-      className={`relative flex min-h-0 flex-col rounded-2xl border border-indigo-200 bg-white/80 p-4 shadow-md backdrop-blur ${className}`}
+      className={
+        embedded
+          ? `relative flex min-h-0 flex-col ${className}`
+          : `relative flex min-h-0 flex-col rounded-2xl border border-indigo-200 bg-white/80 p-4 shadow-md backdrop-blur ${className}`
+      }
     >
-      <div className="shrink-0 space-y-3 border-b border-indigo-100 pb-3">
-        <BuilderSectionHeader
-          step="01"
-          title="Your Clothes"
-          description={
-            swapMode
-              ? undefined
-              : "Choose an item to add or replace it in your outfit."
-          }
-          action={
+      <div
+        className={`shrink-0 space-y-3 ${
+          embedded ? "" : "border-b border-indigo-100 pb-3"
+        }`}
+      >
+        {embedded ? null : (
+          <BuilderSectionHeader
+            step="01"
+            title="Your Clothes"
+            action={
+              <select
+                value={categoryFilter}
+                onChange={(e) =>
+                  onCategoryFilterChange(e.target.value as Slot | "all")
+                }
+                aria-label="Filter by category"
+                className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-medium text-indigo-900"
+              >
+                <option value="all">All categories</option>
+                <option value="body">Top</option>
+                <option value="legs">Bottom</option>
+                <option value="feet">Shoes</option>
+                <option value="head">Accessories</option>
+              </select>
+            }
+          />
+        )}
+
+        {embedded ? (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="sr-only">Search your wardrobe</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search your wardrobe..."
+                className="h-11 w-full rounded-xl border border-indigo-200 bg-white px-3 text-sm text-indigo-900 placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </label>
             <select
               value={categoryFilter}
               onChange={(e) =>
                 onCategoryFilterChange(e.target.value as Slot | "all")
               }
               aria-label="Filter by category"
-              className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-medium text-indigo-900"
+              className="h-11 w-full rounded-xl border border-indigo-200 bg-white px-3 text-sm font-medium text-indigo-900"
             >
               <option value="all">All categories</option>
               <option value="body">Top</option>
@@ -108,8 +159,8 @@ const UsersClothes = ({
               <option value="feet">Shoes</option>
               <option value="head">Accessories</option>
             </select>
-          }
-        />
+          </div>
+        ) : null}
 
         {swapMode ? (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2">
@@ -130,41 +181,37 @@ const UsersClothes = ({
           </div>
         ) : null}
 
-        <label className="block">
-          <span className="sr-only">Search your wardrobe</span>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search your wardrobe..."
-            className="h-10 w-full rounded-xl border border-indigo-200 bg-white px-3 text-sm text-indigo-900 placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
-        </label>
+        {embedded ? null : (
+          <>
+            <label className="block">
+              <span className="sr-only">Search your wardrobe</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search your wardrobe..."
+                className="h-10 w-full rounded-xl border border-indigo-200 bg-white px-3 text-sm text-indigo-900 placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </label>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[11px] font-medium text-indigo-700/80">
-            {categoryFilter === "all"
-              ? "All categories"
-              : SLOT_LABELS[categoryFilter]}
-            {" · "}
-            {filteredClothes.length}{" "}
-            {filteredClothes.length === 1 ? "item" : "items"}
-          </p>
-          {hasSelection && !swapMode ? (
-            <button
-              type="button"
-              onClick={onStyleThisItem}
-              className="inline-flex min-h-9 items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-500 hover:text-white sm:text-sm"
-            >
-              Style this item
-            </button>
-          ) : null}
-        </div>
+            {hasSelection && !swapMode ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onStyleThisItem}
+                  className="inline-flex min-h-9 items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-500 hover:text-white sm:text-sm"
+                >
+                  Style this item
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {isLoadingClothes ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {Array.from({ length: 9 }, (_, index) => (
               <div
                 key={index}
@@ -202,70 +249,131 @@ const UsersClothes = ({
           </p>
         ) : (
           <AnimatePresence mode="popLayout">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
               {filteredClothes.map((item: ClothingItem) => {
                 const isSelected = selectedIds.has(item._id);
+                const isAnchored = anchoredIds.has(item._id);
                 const isAnchorHighlight = lastSelectedItemId === item._id;
-                const inOutfit = isSelected;
+                const subtypeLabel = humanizeClothingSubtype(item);
 
                 return (
-                  <button
+                  <div
                     key={item._id}
-                    type="button"
-                    onClick={() => toggleSelect(item._id)}
-                    aria-pressed={isSelected}
-                    className={`group relative flex flex-col overflow-hidden rounded-xl border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 ${
-                      isSelected
+                    className={`group relative flex flex-col overflow-hidden rounded-xl border text-left transition ${
+                      isAnchored
+                        ? "border-indigo-600 bg-indigo-50 shadow-sm ring-1 ring-indigo-300"
+                        : isSelected
                         ? "border-indigo-500 bg-indigo-50 shadow-sm"
                         : "border-indigo-200 bg-white hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
-                    } ${isAnchorHighlight && !isSelected ? "border-amber-400 ring-1 ring-amber-300" : ""}`}
+                    } ${
+                      isAnchorHighlight && !isSelected && !isAnchored
+                        ? "border-amber-400 ring-1 ring-amber-300"
+                        : ""
+                    }`}
                   >
                     <div className="relative aspect-square w-full overflow-hidden bg-indigo-50/40">
-                      <Image
-                        src={item.imageSrc}
-                        alt={`${item.type}${Array.isArray(item.colour) && item.colour[0] ? `, ${item.colour[0]}` : ""}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 45vw, 160px"
-                      />
-                      {isSelected ? (
-                        <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                          Selected
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(item._id)}
+                        aria-pressed={isSelected}
+                        aria-label={
+                          isAnchored
+                            ? `${subtypeLabel}, anchored — stays in future generations`
+                            : subtypeLabel
+                        }
+                        className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+                      >
+                        <Image
+                          src={item.imageSrc}
+                          alt={subtypeLabel}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 45vw, 160px"
+                        />
+                        <span className="absolute bottom-1.5 left-1.5 z-[1] max-w-[calc(100%-12px)] truncate rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 shadow-sm">
+                          {subtypeLabel}
                         </span>
-                      ) : inOutfit ? null : null}
-                      {isSelected ? (
-                        <span
-                          className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white"
-                          aria-hidden="true"
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 12 12"
-                            fill="none"
+                        {isAnchored ? (
+                          <span
+                            className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-indigo-700 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                            title="This item will remain in future generations"
                           >
-                            <path
-                              d="M2.5 6.2 L4.8 8.5 L9.5 3.5"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
+                            <Anchor className="h-3 w-3" aria-hidden />
+                            Anchored
+                          </span>
+                        ) : isSelected ? (
+                          <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                            In outfit
+                          </span>
+                        ) : null}
+                        {!onToggleAnchor && isSelected && !isAnchored ? (
+                          <span
+                            className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white"
+                            aria-hidden="true"
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                            >
+                              <path
+                                d="M2.5 6.2 L4.8 8.5 L9.5 3.5"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+                        ) : null}
+                      </button>
+                      {onToggleAnchor ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleAnchor(item._id);
+                          }}
+                          aria-pressed={isAnchored}
+                          aria-label={
+                            isAnchored
+                              ? `Unanchor ${subtypeLabel}`
+                              : `Anchor ${subtypeLabel} for future generations`
+                          }
+                          title={
+                            isAnchored
+                              ? "Unanchor — unlock for future generations"
+                              : "Anchor — keep in every future generation"
+                          }
+                          className={`absolute left-1.5 top-1.5 z-[2] inline-flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition ${
+                            isAnchored
+                              ? "border-indigo-700 bg-indigo-700 text-white"
+                              : "border-indigo-200 bg-white/95 text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50"
+                          }`}
+                        >
+                          <Anchor className="h-3.5 w-3.5" aria-hidden />
+                        </button>
                       ) : null}
                     </div>
                     <div className="flex items-center justify-between gap-1 px-2 py-1.5">
                       <span className="truncate text-[11px] font-medium text-indigo-900">
                         {SLOT_LABELS[item.slot] || item.slot}
                       </span>
-                      {inOutfit ? (
-                        <span className="shrink-0 text-[10px] font-medium text-indigo-600">
-                          In outfit
-                        </span>
+                      {onToggleAnchor ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleAnchor(item._id);
+                          }}
+                          className="shrink-0 text-[10px] font-semibold text-indigo-700 underline-offset-2 hover:underline"
+                        >
+                          {isAnchored ? "Unanchor" : "Anchor"}
+                        </button>
                       ) : null}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
               {isFetchingNextPage &&

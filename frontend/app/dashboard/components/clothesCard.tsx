@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 import { Trash } from "lucide-react";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
+import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
 
 type ClothesCardProps = ClothingItem & {
   onSelect?: (item: ClothingItem) => void;
@@ -18,6 +19,7 @@ export default function ClothesCard({
   material,
   fit,
   pattern,
+  stylingMetadata,
   onSelect,
 }: ClothesCardProps) {
   const [loaded, setLoaded] = useState(false);
@@ -32,7 +34,10 @@ export default function ClothesCard({
     fit,
     pattern,
     imageSrc,
+    stylingMetadata,
   };
+
+  const subtypeLabel = humanizeClothingSubtype(item);
 
   return (
     <motion.div
@@ -70,7 +75,7 @@ export default function ClothesCard({
       >
         <Image
           src={imageSrc || ""}
-          alt={type || "Clothing item"}
+          alt={subtypeLabel}
           width={200}
           height={200}
           className={`object-cover w-full h-full transition-all duration-100 ease-in-out ${
@@ -80,6 +85,9 @@ export default function ClothesCard({
           loading="lazy"
           fetchPriority="high"
         />
+        <span className="absolute bottom-1.5 left-1.5 z-[1] max-w-[calc(100%-40px)] truncate rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-800 shadow-sm">
+          {subtypeLabel}
+        </span>
       </div>
     </motion.div>
   );
