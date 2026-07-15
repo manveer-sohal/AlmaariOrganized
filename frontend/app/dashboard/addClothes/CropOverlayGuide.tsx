@@ -57,25 +57,20 @@ function silhouetteShape(overlay: CropOverlayId) {
   switch (overlay) {
     case "top":
       return (
-        <path d="M32 22 L26 18 L14 34 V78 H38 V58 H62 V78 H86 V34 L74 18 L68 22 V28 H32 Z" />
+        <path d="M38 20 L28 16 L10 30 L14 46 L22 42 L20 88 H80 L78 42 L86 46 L90 30 L72 16 L62 20 C58 30 42 30 38 20 Z" />
       );
     case "pants":
       return <path d="M24 4 H76 V2 L92 98 H64 L50 42 L36 98 H8 L16 42 Z" />;
     case "shorts":
       return <path d="M24 20 H73 V20 L89 80 H64 L50 42 L36 80 H12 L19 42 Z" />;
     case "skirt":
-      return <path d="M36 20 H64 V36 L78 78 H22 L36 36 Z" />;
+      return <path d="M38 8 H62 L88 94 H12 Z" />;
     case "dress":
       return (
         <path d="M36 12 L30 10 L20 24 V40 L14 82 H86 L80 40 V24 L70 10 L64 12 V18 H36 Z" />
       );
     case "shoes":
-      return (
-        <g>
-          <path d="M18 48 H42 V58 L48 68 C56 72 58 78 52 82 H24 L18 82 Z" />
-          <path d="M58 48 H82 V58 L88 68 C96 72 98 78 92 82 H64 L58 82 Z" />
-        </g>
-      );
+      return <path d="M12 48 H88 V82 H12 Z" />;
     case "accessory":
       return (
         <g>

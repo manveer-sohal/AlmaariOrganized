@@ -38,8 +38,10 @@ import {
   CROP_OUTPUT_SIZE,
   canvasToPngBlob,
   clampCropOffset,
+  createWorkingImageBlob,
+  CropServiceMode,
   drawSquareCrop,
-  exportVisibleSourceRegionBlob,
+  frameImageBlob,
   getDrawScale,
   getMinUserZoom,
 } from "../../utils/clientImageCrop";
@@ -49,6 +51,7 @@ import {
   cropOverlayFromClothingType,
 } from "../../utils/cropOverlays";
 import CropOverlayGuide from "./CropOverlayGuide";
+import { warmupAiClothingService } from "../../utils/warmupAiService";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -129,6 +132,13 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
+  /** Working (downscaled) PNG used for framing + rembg input. */
+  const workingBlobRef = useRef<Blob | null>(null);
+  /** In-flight or completed rembg-only result for the current generation. */
+  const rembgPromiseRef = useRef<Promise<Blob | null> | null>(null);
+  const rembgBlobRef = useRef<Blob | null>(null);
+  const rembgGenerationRef = useRef(0);
+  const previewUrlsRef = useRef<string[]>([]);
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -385,23 +395,106 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   );
 
   useEffect(() => {
+    warmupAiClothingService();
+  }, []);
+
+  /** Background removal via /api/clothes/crop (mode=rembg_only preserves geometry). */
+  const removeBackground = useCallback(
+    async (
+      blob: Blob,
+      mode: CropServiceMode = "rembg_only",
+    ): Promise<Blob | null> => {
+      const cropForm = new FormData();
+      cropForm.append("image", blob, "working.png");
+      cropForm.append("mode", mode);
+
+      const postCrop = async () =>
+        fetch("/api/clothes/crop", {
+          method: "POST",
+          headers: await getAuthHeaders(),
+          body: cropForm,
+        });
+
+      try {
+        let response = await postCrop();
+        if (response.status === 401) {
+          clearAuthTokenCache();
+          response = await postCrop();
+        }
+        if (!response.ok) return null;
+        return await response.blob();
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
     if (!file) return;
 
+    let cancelled = false;
     setValidFile(true);
 
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
+    const generation = ++rembgGenerationRef.current;
+    rembgBlobRef.current = null;
+    rembgPromiseRef.current = null;
+    workingBlobRef.current = null;
 
-    imageRef.current = null;
-    const initialOffset = { x: 0, y: 0 };
-    setZoom(1);
-    setMinZoom(0.2);
-    setCropOverlay("none");
-    setOffset(initialOffset);
-    drawCropPreview(objectUrl, 1, initialOffset);
+    const revokeTrackedUrls = () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrlsRef.current = [];
+    };
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file, drawCropPreview]);
+    const trackUrl = (url: string) => {
+      previewUrlsRef.current.push(url);
+      return url;
+    };
+
+    (async () => {
+      try {
+        const working = await createWorkingImageBlob(file);
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+
+        workingBlobRef.current = working.blob;
+        revokeTrackedUrls();
+        const workingUrl = trackUrl(URL.createObjectURL(working.blob));
+        setPreview(workingUrl);
+
+        imageRef.current = null;
+        const initialOffset = { x: 0, y: 0 };
+        setZoom(1);
+        setMinZoom(0.2);
+        setCropOverlay("none");
+        setOffset(initialOffset);
+        drawCropPreview(workingUrl, 1, initialOffset);
+
+        const rembgPromise = removeBackground(working.blob, "rembg_only");
+        rembgPromiseRef.current = rembgPromise;
+        const rembgBlob = await rembgPromise;
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+
+        rembgBlobRef.current = rembgBlob;
+        if (!rembgBlob) return;
+
+        const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
+        // Soft-swap to transparent PNG; same WxH keeps zoom/offset valid.
+        setPreview(rembgUrl);
+      } catch (err) {
+        console.error("Failed to prepare image for rembg:", err);
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+        const fallbackUrl = trackUrl(URL.createObjectURL(file));
+        workingBlobRef.current = file;
+        setPreview(fallbackUrl);
+        drawCropPreview(fallbackUrl, 1, { x: 0, y: 0 });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      revokeTrackedUrls();
+    };
+  }, [file, drawCropPreview, removeBackground]);
 
   useEffect(() => {
     if (preview) {
@@ -416,60 +509,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     // Ensure the canvas reflects the latest zoom/offset before export.
     drawCropPreview(preview, zoom, offset);
     return canvasToPngBlob(canvas);
-  };
-
-  /**
-   * Real photo pixels in the crop frame (no white letterbox).
-   * The Railway cropper rembg + re-centers with transparent padding.
-   */
-  const generateRembgSourceBlob = async (): Promise<Blob | null> => {
-    const img = imageRef.current;
-    if (!img?.complete || !img.naturalWidth) {
-      return file;
-    }
-    const nextMin = getMinUserZoom(img.naturalWidth, img.naturalHeight);
-    const clampedZoom = Math.max(nextMin, zoom);
-    const scale = getDrawScale(
-      img.naturalWidth,
-      img.naturalHeight,
-      clampedZoom,
-    );
-    const clampedOffset = clampCropOffset(
-      offset.x,
-      offset.y,
-      img.naturalWidth,
-      img.naturalHeight,
-      scale,
-    );
-    return (
-      (await exportVisibleSourceRegionBlob(img, clampedZoom, clampedOffset)) ??
-      file
-    );
-  };
-
-  /** Background removal + subject square via /api/clothes/crop → rembg service. */
-  const removeBackground = async (blob: Blob): Promise<Blob | null> => {
-    const cropForm = new FormData();
-    cropForm.append("image", blob, "region.png");
-
-    const postCrop = async () =>
-      fetch("/api/clothes/crop", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: cropForm,
-      });
-
-    try {
-      let response = await postCrop();
-      if (response.status === 401) {
-        clearAuthTokenCache();
-        response = await postCrop();
-      }
-      if (!response.ok) return null;
-      return await response.blob();
-    } catch {
-      return null;
-    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -726,23 +765,24 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       formData.append("analysisSnapshot", JSON.stringify(analysisSnapshot));
     }
 
-    // Cropper microservice: rembg → bbox → transparent square pad (owns final frame).
-    // Send the visible photo region (no white pad). If cropper is down, fall back to
-    // the white preview canvas so upload still succeeds.
-    const rembgSource = await generateRembgSourceBlob();
-    if (!rembgSource && !file) return;
-
-    const backgroundRemoved = rembgSource
-      ? await removeBackground(rembgSource)
-      : null;
-    if (backgroundRemoved) {
-      formData.append("image", backgroundRemoved, "cropped.png");
-    } else {
-      const framed = await generateCroppedImage();
-      const fallback = framed ?? file;
-      if (!fallback) return;
-      formData.append("image", fallback, framed ? "framed.png" : file!.name);
+    // Await early rembg_only (started on file pick). Then apply local pan/zoom framing.
+    // Do not call the crop service again on submit.
+    let rembgBlob = rembgBlobRef.current;
+    if (!rembgBlob && rembgPromiseRef.current) {
+      rembgBlob = await rembgPromiseRef.current;
+      rembgBlobRef.current = rembgBlob;
     }
+
+    const sourceForFrame =
+      rembgBlob ?? workingBlobRef.current ?? file;
+    if (!sourceForFrame) return;
+
+    const framed =
+      (await frameImageBlob(sourceForFrame, zoom, offset)) ??
+      (await generateCroppedImage());
+    if (!framed) return;
+
+    formData.append("image", framed, "cropped.png");
     formData.append("imageAlreadyCropped", "true");
 
     const uploadClothes = async () =>
