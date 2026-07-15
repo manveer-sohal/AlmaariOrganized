@@ -86,10 +86,6 @@ export default function WeatherCheck() {
             </svg>
             <span className="font-medium">Weather</span>
           </div>
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-indigo-200 text-indigo-900 bg-indigo-50">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-400" />
-            Status
-          </span>
         </div>
 
         <div
