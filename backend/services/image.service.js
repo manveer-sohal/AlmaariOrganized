@@ -1,60 +1,111 @@
 import dotenv from "dotenv";
-import axios from "axios";
-import { performance } from "node:perf_hooks";
-import { logAnalyzeStep } from "../utils/aiAnalyzeTiming.js";
+import { callDownstream } from "../observability/downstream.js";
+import { logInfo, logError } from "../observability/logger.js";
+import { updateRequestContext, getRequestId } from "../observability/requestContext.js";
+import { observeMs, incMetric } from "../observability/metrics.js";
+import { createTimer } from "../observability/timer.js";
+import { classifyAiError } from "../observability/errors.js";
 
 dotenv.config();
 
 const CROP_SERVICE_URL = process.env.CROP_SERVICE_URL;
+const CROP_TIMEOUT_MS = Number(process.env.CROP_TIMEOUT_MS || 15000);
 const CROP_WARMUP_TIMEOUT_MS = Number(
   process.env.CROP_WARMUP_TIMEOUT_MS || 8000,
 );
+const WORKFLOW = "image_crop_processing";
 
 export const toBase64 = (file) => {
   return `data:image/png;base64,${file.toString("base64")}`;
 };
 
-export const cropImage = async (base64Image) => {
-  const res = await axios.post(
-    `${CROP_SERVICE_URL}/crop`,
-    {
-      image: base64Image,
-    },
-    {
-      timeout: 15000,
-    },
-  );
+export const cropImage = async (
+  base64Image,
+  { mode = "subject_square" } = {},
+) => {
+  updateRequestContext({ workflow: WORKFLOW });
+  const timer = createTimer();
+  const requestId = getRequestId();
+  const cropMode =
+    mode === "rembg_only" ? "rembg_only" : "subject_square";
 
-  return res.data.image;
+  logInfo("ai.image.processing.started", {
+    workflow: WORKFLOW,
+    requestId,
+    mode: cropMode,
+    hasImage: Boolean(base64Image),
+    imageCharLength: typeof base64Image === "string" ? base64Image.length : 0,
+  });
+  incMetric("ai.workflow.image_crop_processing.total");
+
+  try {
+    const { data, durationMs } = await callDownstream({
+      service: "crop",
+      method: "POST",
+      url: `${CROP_SERVICE_URL}/crop`,
+      data: { image: base64Image, mode: cropMode },
+      timeout: CROP_TIMEOUT_MS,
+      workflow: WORKFLOW,
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const totalMs = timer.elapsedMs();
+    observeMs("ai.image_crop_processing.ms", totalMs);
+    logInfo("ai.image.processing.completed", {
+      workflow: WORKFLOW,
+      mode: cropMode,
+      durationMs: totalMs,
+      downstreamMs: durationMs,
+      success: true,
+    });
+    incMetric("ai.workflow.image_crop_processing.success");
+
+    return data.image;
+  } catch (error) {
+    const classified = classifyAiError(error, { service: "crop" });
+    const totalMs = timer.elapsedMs();
+    observeMs("ai.image_crop_processing.ms", totalMs);
+    logError("ai.image.processing.failed", {
+      workflow: WORKFLOW,
+      mode: cropMode,
+      durationMs: totalMs,
+      classification: classified.classification,
+      retryable: classified.retryable,
+      status: classified.status,
+      errorMessage: error.message,
+    });
+    incMetric("ai.workflow.image_crop_processing.failed");
+    throw {
+      status: error.status || classified.status || 500,
+      message: error.message || "Error cropping image",
+      classification: classified.classification,
+    };
+  }
 };
 
 /** Wake crop worker; no image processing. */
 export const warmupCropService = async (requestId) => {
   if (!CROP_SERVICE_URL) {
-    logAnalyzeStep(requestId || "warmup", "crop warmup skipped (no URL)", 0);
+    logInfo("ai.image.processing.started", {
+      workflow: "crop_warmup",
+      skipped: true,
+      reason: "CROP_SERVICE_URL unset",
+    });
     return { success: false, skipped: true };
   }
 
-  const warmupStart = performance.now();
   try {
-    await axios.get(`${CROP_SERVICE_URL}/warmup`, {
+    await callDownstream({
+      service: "crop",
+      method: "GET",
+      url: `${CROP_SERVICE_URL}/warmup`,
       timeout: CROP_WARMUP_TIMEOUT_MS,
-      headers: requestId ? { "X-Request-Id": requestId } : {},
+      workflow: "crop_warmup",
     });
-    logAnalyzeStep(
-      requestId || "warmup",
-      "crop service warmup",
-      performance.now() - warmupStart,
-    );
     return { success: true };
   } catch (error) {
-    logAnalyzeStep(
-      requestId || "warmup",
-      "crop service warmup failed (non-fatal)",
-      performance.now() - warmupStart,
-    );
     throw {
-      status: error.response?.status || 503,
+      status: error.status || 503,
       message: "Crop service warmup failed",
     };
   }

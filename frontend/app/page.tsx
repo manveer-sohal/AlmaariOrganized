@@ -9,12 +9,12 @@ import Login from "./components/login";
 import Signup from "./components/signup";
 export default function Homepage() {
   return (
-    <div className=" min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-indigo-50 text-indigo-900">
       {/* Nav */}
       <header className="w-full">
         <nav className="mx-auto max-w-6xl flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold">
+            <div className="h-8 w-8 rounded-md  flex items-center justify-center text-white font-bold">
               <Image src={Logo} alt="Almaari Logo" width={32} height={32} />
             </div>
             <span className="animate-wiggle font-semibold">

@@ -6,6 +6,40 @@ import mongoose from "mongoose";
 import { Clothes } from "../models/Users.js";
 import { Outfits } from "../models/Users.js";
 import { redis } from "../libs/redis.client.js";
+import {
+  scheduleStylingEnrichment,
+  updateUserStyleDetails,
+  applyAiStylingEnrichment,
+} from "./stylingEnrichment.service.js";
+import {
+  OCCASION_TAGS,
+  STYLE_CATEGORIES,
+} from "../constants/clothingMetadata.js";
+import {
+  defaultStylingMetadata,
+  normalizeClothingAnalysisResponse,
+  clampFormalityToStyleCategory,
+} from "../utils/normalizeClothingAnalysisResponse.js";
+
+// Helper to invalidate all userClothes cache keys for a user (any page/limit)
+const invalidateUserClothesCache = async (auth0Id) => {
+  try {
+    const matchingKeys = [];
+    for await (const key of redis.scanIterator({
+      MATCH: `userClothes:${auth0Id}:*`,
+      COUNT: 100,
+    })) {
+      matchingKeys.push(key);
+    }
+    if (matchingKeys.length > 0) {
+      await redis.del(matchingKeys);
+    }
+    // Remove the pre-pagination legacy key as well.
+    await redis.del(`userClothes:${auth0Id}`);
+  } catch (err) {
+    console.warn("Redis clothes cache invalidation failed:", err);
+  }
+};
 
 const resolveClothingDoc = async ({ clothingId, uniqueId }) => {
   if (clothingId) {
@@ -54,7 +88,7 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       { _id: 0, clothes: 1 },
     ).populate("clothes");
 
-    await redis.del("userClothes:" + auth0Id);
+    await invalidateUserClothesCache(auth0Id);
     await redis.del("userOutfits:" + auth0Id);
     return {
       message: "Clothing item removed successfully",
@@ -82,6 +116,9 @@ export const uploadData = async ({
   fit,
   pattern,
   imageAlreadyCropped = false,
+  styleCategory = undefined,
+  occasionTags = undefined,
+  analysisSnapshot = undefined,
 }) => {
   try {
     const slot = mapTypeToSlot(type);
@@ -106,6 +143,48 @@ export const uploadData = async ({
       }
     }
 
+    const stylingMetadata = defaultStylingMetadata();
+
+    // User edits from the form (override AI snapshot for those fields).
+    const userSetCategory = styleCategory != null && styleCategory !== "";
+    const userSetOccasions = Array.isArray(occasionTags);
+
+    if (userSetCategory) {
+      if (!STYLE_CATEGORIES.includes(styleCategory)) {
+        throw { status: 400, message: "Invalid styleCategory" };
+      }
+      stylingMetadata.styleCategory = styleCategory;
+      stylingMetadata.styleCategorySource = "user";
+      stylingMetadata.formalityScore = clampFormalityToStyleCategory(
+        styleCategory,
+        stylingMetadata.formalityScore,
+      );
+    }
+
+    if (userSetOccasions) {
+      const cleaned = [];
+      const seen = new Set();
+      for (const tag of occasionTags) {
+        if (!OCCASION_TAGS.includes(tag)) {
+          throw { status: 400, message: `Invalid occasionTag: ${tag}` };
+        }
+        if (seen.has(tag)) continue;
+        seen.add(tag);
+        cleaned.push(tag);
+      }
+      stylingMetadata.occasionTags = cleaned;
+      stylingMetadata.occasionTagsSource = "user";
+    }
+
+    if (userSetCategory || userSetOccasions) {
+      stylingMetadata.userReviewedAt = new Date();
+    }
+
+    let normalizedSnapshot = null;
+    if (analysisSnapshot && typeof analysisSnapshot === "object") {
+      normalizedSnapshot = normalizeClothingAnalysisResponse(analysisSnapshot);
+    }
+
     const clothingDoc = await Clothes.create({
       userId: userId._id,
       uniqueId: new mongoose.Types.ObjectId().toString(),
@@ -119,6 +198,7 @@ export const uploadData = async ({
       material,
       fit,
       pattern,
+      stylingMetadata,
     });
 
     const user = await User.findOneAndUpdate(
@@ -134,10 +214,34 @@ export const uploadData = async ({
       throw { status: 404, error: "User Not Found" };
     }
 
+    try {
+      await invalidateUserClothesCache(auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after clothing upload:", err);
+    }
+
+    // Reuse the pre-upload FastAPI analysis when present — never charge credits twice.
+    // If the snapshot has no rich styling fields, still schedule background enrichment
+    // so pending items do not stay stuck forever.
+    if (normalizedSnapshot) {
+      const applied = await applyAiStylingEnrichment({
+        clothingId: clothingDoc._id,
+        analysis: normalizedSnapshot,
+      });
+      if (!applied.rich) {
+        scheduleStylingEnrichment(clothingDoc._id);
+      }
+    } else {
+      // No prior analysis — one background FastAPI call for rich styling.
+      scheduleStylingEnrichment(clothingDoc._id);
+    }
+
+    const refreshed = await Clothes.findById(clothingDoc._id);
+
     return {
       status: 200,
       message: "Clothes added successfully",
-      clothing: clothingDoc,
+      clothing: refreshed || clothingDoc,
     };
   } catch (e) {
     if (e.status) throw e;
@@ -253,7 +357,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   console.log("List clothes");
 
   // Redis cache key
-  const redisKey = `userClothes:${auth0Id}`;
+  const redisKey = `userClothes:${auth0Id}:page:${page}:limit:${numberOfClothes}`;
 
   // Check cache for the data (safe fallback if Redis unavailable)
   let cachedData = null;
@@ -264,7 +368,19 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   }
   if (cachedData) {
     console.log("Cache hit: Returning cached data");
-    return { status: 200, clothes: JSON.parse(cachedData) }; // Send cached data
+
+    const parsedCache = JSON.parse(cachedData);
+    const cachedClothes = Array.isArray(parsedCache)
+      ? parsedCache
+      : Array.isArray(parsedCache?.Clothes)
+      ? parsedCache.Clothes
+      : [];
+
+    return {
+      status: 200,
+      clothes: cachedClothes,
+      message: "Clothes fetched successfully",
+    };
   }
 
   const skip = (page - 1) * numberOfClothes;
@@ -289,7 +405,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
 
   // Store the data in Redis cache with a TTL (best-effort)
   try {
-    await redis.set(redisKey, JSON.stringify({ Clothes: userData || [] }), {
+    await redis.set(redisKey, JSON.stringify(userData || []), {
       EX: 600,
     });
     console.log("Cache miss: Queried MongoDB and cached the result");
@@ -348,8 +464,20 @@ export const updateClothing = async ({
 
     await clothingDoc.save();
 
+    if (
+      updates.styleCategory !== undefined ||
+      updates.occasionTags !== undefined
+    ) {
+      clothingDoc = await updateUserStyleDetails({
+        clothingId: clothingDoc._id,
+        userId: user._id,
+        styleCategory: updates.styleCategory,
+        occasionTags: updates.occasionTags,
+      });
+    }
+
     try {
-      await redis.del("userClothes:" + auth0Id);
+      await invalidateUserClothesCache(auth0Id);
       await redis.del("userOutfits:" + auth0Id);
     } catch (err) {
       console.warn("Redis delete failed after clothing update:", err);

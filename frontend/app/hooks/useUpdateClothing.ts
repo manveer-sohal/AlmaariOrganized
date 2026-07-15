@@ -33,6 +33,8 @@ export function useUpdateClothing() {
             fit: payload.fit,
             pattern: payload.pattern,
             slot: payload.slot,
+            styleCategory: payload.styleCategory,
+            occasionTags: payload.occasionTags,
           }),
         });
 

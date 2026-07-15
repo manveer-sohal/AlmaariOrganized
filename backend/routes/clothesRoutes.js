@@ -8,11 +8,15 @@ import {
   getOutfits,
   deleteOutfit,
   cropImageForClient,
+  retryStyleEnrichment,
 } from "../controllers/clothesController.js";
 import uploadMiddleware from "../middleware/upload.middleware.js";
 import { validateImageFile } from "../middleware/validateImageFile.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { uploadRateLimiter } from "../middleware/rateLimiters.js";
+import {
+  uploadRateLimiter,
+  styleEnrichmentRetryLimiter,
+} from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
@@ -36,6 +40,11 @@ router.post(
 );
 router.post("/remove", removeData);
 router.post("/update", updateData);
+router.post(
+  "/:id/style-enrichment/retry",
+  styleEnrichmentRetryLimiter,
+  retryStyleEnrichment,
+);
 router.post("/createOutfit", createOutfit);
 router.post("/deleteOutfit", deleteOutfit);
 

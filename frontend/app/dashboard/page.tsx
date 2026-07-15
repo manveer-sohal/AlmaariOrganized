@@ -10,6 +10,7 @@ import ClothingDetailsView from "./components/ClothingDetailsView";
 import AddClothesUI from "./addClothes/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
 import MobileSideBar from "../components/mobileSidebar";
+import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStep } from "../components/OnBoardingTour";
 // import { startOnboardingTour } from "../components/OnBoardingTour";
 import CheckList from "./components/CheckList";
@@ -17,6 +18,7 @@ import BuyCredits from "./components/BuyCredits";
 import { useRole } from "../hooks/useRole";
 import { View, ClothingItem } from "../types/clothes";
 import { warmupAiClothingService } from "../utils/warmupAiService";
+import { PanelLeftOpen } from "lucide-react";
 // import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
@@ -44,7 +46,7 @@ export default function Dashboard() {
     selectedClothingItem,
     setSelectedClothingItem,
   ] = useState<ClothingItem | null>(null);
-  // const { menuOpen } = useClothesStore();
+  const { menuOpen, setMenuOpen } = useClothesStore();
 
   useRole();
 
@@ -110,12 +112,20 @@ export default function Dashboard() {
         </div>
       </div>
       {/* bottom row container, this contains the side bar and the content area*/}
-      <div className="h-full min-h-0 grid md:grid-cols-[auto_1fr]">
+      <div className="relative h-full min-h-0 grid md:grid-cols-[auto_1fr]">
         {/* side bar*/}
-        <div className=" z-10 hidden md:block">
+        <div
+          id="desktop-sidebar"
+          className={`z-10 hidden md:block overflow-hidden transition-[width] duration-300 ease-out ${
+            menuOpen ? "w-[clamp(100px,20vw,280px)]" : "w-0"
+          }`}
+        >
           <div
-            className="sidebar-container"
+            className={`sidebar-container h-full transition-transform duration-300 ease-out ${
+              menuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
             style={{ width: "clamp(100px,20vw,280px)" }}
+            aria-hidden={!menuOpen}
           >
             <SideBar
               view={view}
@@ -124,10 +134,23 @@ export default function Dashboard() {
             ></SideBar>
           </div>
         </div>
+        {!menuOpen ? (
+          <button
+            type="button"
+            aria-label="Expand sidebar"
+            title="Show sidebar"
+            onClick={() => setMenuOpen(true)}
+            className="absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 rounded-r-xl border border-l-0 border-indigo-300 bg-indigo-100/90 p-2 text-indigo-900 shadow-md backdrop-blur hover:bg-indigo-500 hover:text-white md:inline-flex"
+          >
+            <PanelLeftOpen className="h-5 w-5" aria-hidden />
+          </button>
+        ) : null}
         {/* content area*/}
         <div
           className={`${
-            view === "createOutfit" || view === "clothingDetails"
+            view === "createOutfit" ||
+            view === "clothingDetails" ||
+            view == "outfits"
               ? "bg-indigo-200"
               : "bg-background"
           } h-full min-h-0 w-full md:rounded-tl-3xl`}
@@ -148,7 +171,12 @@ export default function Dashboard() {
           {user && (
             <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0">
               {/* previously had a loading screen here before the whole page loaded*/}
-              {view === "createOutfit" && <CreateOutfitUI></CreateOutfitUI>}
+              {view === "createOutfit" && (
+                <CreateOutfitUI
+                  onBuyCredits={openBuyCredits}
+                  onAddClothes={() => setView("addClothes")}
+                />
+              )}
               {view === "outfits" && <ViewOutfits></ViewOutfits>}
               {view === "clothingDetails" && selectedClothingItem && (
                 <ClothingDetailsView

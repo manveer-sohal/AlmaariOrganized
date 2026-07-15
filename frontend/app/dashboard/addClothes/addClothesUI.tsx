@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { View } from "../../types/clothes";
+import { View, OccasionTag, StyleCategory } from "../../types/clothes";
 import {
   colours_List,
   fits_List,
   materials_List,
   patterns_List,
+  styleCategories_List,
+  occasionTags_List,
   type_List,
 } from "../../data/constants";
 import { goToNextTourStep } from "../../components/OnBoardingTour";
@@ -31,6 +33,25 @@ import {
   clearAuthTokenCache,
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
+import StyleDetailsSection from "../components/StyleDetailsSection";
+import {
+  CROP_OUTPUT_SIZE,
+  canvasToPngBlob,
+  clampCropOffset,
+  createWorkingImageBlob,
+  CropServiceMode,
+  drawSquareCrop,
+  frameImageBlob,
+  getDrawScale,
+  getMinUserZoom,
+} from "../../utils/clientImageCrop";
+import {
+  CROP_OVERLAY_OPTIONS,
+  CropOverlayId,
+  cropOverlayFromClothingType,
+} from "../../utils/cropOverlays";
+import CropOverlayGuide from "./CropOverlayGuide";
+import { warmupAiClothingService } from "../../utils/warmupAiService";
 type addClothesUIProm = {
   setView: (view: View) => void;
 };
@@ -81,16 +102,19 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [validPattern, setValidPattern] = useState<boolean | null>(null);
   const [usersClothFit, setUsersClothFit] = useState<string>("");
   const [usersClothPattern, setUsersClothPattern] = useState<string>("");
+  const [styleCategory, setStyleCategory] = useState<StyleCategory | null>(
+    null,
+  );
+  const [occasionTags, setOccasionTags] = useState<OccasionTag[]>([]);
+  const [styleFromAi, setStyleFromAi] = useState(false);
+  const [
+    analysisSnapshot,
+    setAnalysisSnapshot,
+  ] = useState<ClothingAnalysisTags | null>(null);
   //file can either be of type file or type null
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
   const [preview, setPreview] = useState<string | null>(null);
-  const [pythonCropStatus, setPythonCropStatus] = useState<
-    "idle" | "pending" | "ready" | "failed"
-  >("idle");
-  const [pythonCroppedBlob, setPythonCroppedBlob] = useState<Blob | null>(null);
-  const pythonCropJobIdRef = useRef(0);
-  const pythonCropPromiseRef = useRef<Promise<Blob | null> | null>(null);
   //a filtered list of colours which will change depedending on the user input for filtered results
   const [filtered_colours_List, set_Filtered_colours_List] = useState(
     colours_List,
@@ -102,74 +126,19 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(0.2);
+  const [cropOverlay, setCropOverlay] = useState<CropOverlayId>("none");
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
-  // const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
-
-  const startPythonCrop = useCallback(
-    (nextFile: File | null): Promise<Blob | null> => {
-      pythonCropJobIdRef.current += 1;
-      const jobId = pythonCropJobIdRef.current;
-
-      setPythonCroppedBlob(null);
-      if (!nextFile) {
-        setPythonCropStatus("idle");
-        pythonCropPromiseRef.current = null;
-        return Promise.resolve(null);
-      }
-
-      setPythonCropStatus("pending");
-
-      const work = (async (): Promise<Blob | null> => {
-        const formData = new FormData();
-        formData.append("image", nextFile);
-
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 20000);
-
-        try {
-          const postCrop = async () =>
-            fetch("/api/clothes/crop", {
-              method: "POST",
-              headers: await getAuthHeaders(),
-              body: formData,
-              signal: controller.signal,
-            });
-
-          let response = await postCrop();
-          if (response.status === 401) {
-            clearAuthTokenCache();
-            response = await postCrop();
-          }
-
-          if (!response.ok) return null;
-
-          const blob = await response.blob();
-
-          if (pythonCropJobIdRef.current !== jobId) return null;
-          setPythonCroppedBlob(blob);
-          setPythonCropStatus("ready");
-          return blob;
-        } catch {
-          if (pythonCropJobIdRef.current === jobId) {
-            setPythonCropStatus("failed");
-          }
-          return null;
-        } finally {
-          window.clearTimeout(timeout);
-          if (pythonCropJobIdRef.current === jobId) {
-            pythonCropPromiseRef.current = null;
-          }
-        }
-      })();
-
-      pythonCropPromiseRef.current = work;
-      return work;
-    },
-    [],
-  );
+  /** Working (downscaled) PNG used for framing + rembg input. */
+  const workingBlobRef = useRef<Blob | null>(null);
+  /** In-flight or completed rembg-only result for the current generation. */
+  const rembgPromiseRef = useRef<Promise<Blob | null> | null>(null);
+  const rembgBlobRef = useRef<Blob | null>(null);
+  const rembgGenerationRef = useRef(0);
+  const previewUrlsRef = useRef<string[]>([]);
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -316,6 +285,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       console.log("valid type");
       setUsersClothType(formatted);
       setInputTypeValue(formatted);
+      setCropOverlay(cropOverlayFromClothingType(formatted));
     }
   }
 
@@ -385,42 +355,77 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       let img = imageRef.current;
 
-      if (!img) {
+      if (!img || img.src !== imageSrc) {
         img = new window.Image();
         img.src = imageSrc;
         imageRef.current = img;
       }
 
-      if (!img.complete) {
-        img.onload = () => drawCropPreview(imageSrc, zoomLevel, drawOffset);
+      if (!img.complete || img.naturalWidth === 0) {
+        img.onload = () => {
+          const nextMin = getMinUserZoom(img!.naturalWidth, img!.naturalHeight);
+          setMinZoom(nextMin);
+          setZoom((prev) => Math.max(nextMin, prev));
+          drawCropPreview(imageSrc, Math.max(nextMin, zoomLevel), drawOffset);
+        };
         return;
       }
 
-      let size = 355; // square crop size
-      console.log("img.width", img.width);
-      console.log("img.height", img.height);
+      canvas.width = CROP_OUTPUT_SIZE;
+      canvas.height = CROP_OUTPUT_SIZE;
 
-      canvas.width = size;
-      canvas.height = size;
-      if (img.width < 280) {
-        canvas.width = img.width;
+      const nextMin = getMinUserZoom(img.naturalWidth, img.naturalHeight);
+      const clampedZoom = Math.max(nextMin, zoomLevel);
+      const scale = getDrawScale(
+        img.naturalWidth,
+        img.naturalHeight,
+        clampedZoom,
+      );
+      const clampedOffset = clampCropOffset(
+        drawOffset.x,
+        drawOffset.y,
+        img.naturalWidth,
+        img.naturalHeight,
+        scale,
+      );
+
+      drawSquareCrop(ctx, img, clampedZoom, clampedOffset);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    warmupAiClothingService();
+  }, []);
+
+  /** Background removal via /api/clothes/crop (mode=rembg_only preserves geometry). */
+  const removeBackground = useCallback(
+    async (
+      blob: Blob,
+      mode: CropServiceMode = "rembg_only",
+    ): Promise<Blob | null> => {
+      const cropForm = new FormData();
+      cropForm.append("image", blob, "working.png");
+      cropForm.append("mode", mode);
+
+      const postCrop = async () =>
+        fetch("/api/clothes/crop", {
+          method: "POST",
+          headers: await getAuthHeaders(),
+          body: cropForm,
+        });
+
+      try {
+        let response = await postCrop();
+        if (response.status === 401) {
+          clearAuthTokenCache();
+          response = await postCrop();
+        }
+        if (!response.ok) return null;
+        return await response.blob();
+      } catch {
+        return null;
       }
-      if (img.height < 400) {
-        canvas.height = img.height + 10;
-      }
-      size = Math.min(canvas.width, canvas.height);
-      ctx.clearRect(0, 0, size, size);
-
-      const minZoom = Math.max(size / img.width, size / img.height);
-      const scale = minZoom * zoomLevel;
-
-      const baseX = (size - img.width * scale) / 2;
-      const baseY = (size - img.height * scale) / 2;
-
-      const x = baseX + drawOffset.x;
-      const y = baseY + drawOffset.y;
-
-      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
     },
     [],
   );
@@ -428,19 +433,68 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   useEffect(() => {
     if (!file) return;
 
+    let cancelled = false;
     setValidFile(true);
 
-    const objectUrl = URL.createObjectURL(file);
-    setPreview(objectUrl);
+    const generation = ++rembgGenerationRef.current;
+    rembgBlobRef.current = null;
+    rembgPromiseRef.current = null;
+    workingBlobRef.current = null;
 
-    imageRef.current = null;
-    const initialOffset = { x: 0, y: 0 };
-    setOffset(initialOffset);
-    drawCropPreview(objectUrl, 1, initialOffset);
-    startPythonCrop(file);
+    const revokeTrackedUrls = () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrlsRef.current = [];
+    };
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file, drawCropPreview, startPythonCrop]);
+    const trackUrl = (url: string) => {
+      previewUrlsRef.current.push(url);
+      return url;
+    };
+
+    (async () => {
+      try {
+        const working = await createWorkingImageBlob(file);
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+
+        workingBlobRef.current = working.blob;
+        revokeTrackedUrls();
+        const workingUrl = trackUrl(URL.createObjectURL(working.blob));
+        setPreview(workingUrl);
+
+        imageRef.current = null;
+        const initialOffset = { x: 0, y: 0 };
+        setZoom(1);
+        setMinZoom(0.2);
+        setCropOverlay("none");
+        setOffset(initialOffset);
+        drawCropPreview(workingUrl, 1, initialOffset);
+
+        const rembgPromise = removeBackground(working.blob, "rembg_only");
+        rembgPromiseRef.current = rembgPromise;
+        const rembgBlob = await rembgPromise;
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+
+        rembgBlobRef.current = rembgBlob;
+        if (!rembgBlob) return;
+
+        const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
+        // Soft-swap to transparent PNG; same WxH keeps zoom/offset valid.
+        setPreview(rembgUrl);
+      } catch (err) {
+        console.error("Failed to prepare image for rembg:", err);
+        if (cancelled || generation !== rembgGenerationRef.current) return;
+        const fallbackUrl = trackUrl(URL.createObjectURL(file));
+        workingBlobRef.current = file;
+        setPreview(fallbackUrl);
+        drawCropPreview(fallbackUrl, 1, { x: 0, y: 0 });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      revokeTrackedUrls();
+    };
+  }, [file, drawCropPreview, removeBackground]);
 
   useEffect(() => {
     if (preview) {
@@ -450,33 +504,15 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   const generateCroppedImage = async () => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
+    if (!canvas || !preview) return null;
 
-    return new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((blob) => {
-        resolve(blob);
-      }, "image/png");
-    });
-  };
-
-  const clampOffset = (
-    x: number,
-    y: number,
-    imgW: number,
-    imgH: number,
-    scale: number,
-  ) => {
-    const size = 400;
-    const maxX = Math.max(0, (imgW * scale - size) / 2);
-    const maxY = Math.max(0, (imgH * scale - size) / 2);
-
-    return {
-      x: Math.min(maxX, Math.max(-maxX, x)),
-      y: Math.min(maxY, Math.max(-maxY, y)),
-    };
+    // Ensure the canvas reflects the latest zoom/offset before export.
+    drawCropPreview(preview, zoom, offset);
+    return canvasToPngBlob(canvas);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     isDraggingRef.current = true;
     lastPosRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -493,13 +529,17 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     lastPosRef.current = { x: e.clientX, y: e.clientY };
 
     const img = imageRef.current;
-    const minZoom = Math.max(400 / img.width, 400 / img.height);
-    const scale = minZoom * zoom;
+    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
 
-    setOffset((prev) => {
-      const next = { x: prev.x + dx, y: prev.y + dy };
-      return clampOffset(next.x, next.y, img.width, img.height, scale);
-    });
+    setOffset((prev) =>
+      clampCropOffset(
+        prev.x + dx,
+        prev.y + dy,
+        img.naturalWidth,
+        img.naturalHeight,
+        scale,
+      ),
+    );
   };
 
   const getTouchPoint = (e: React.TouchEvent) => {
@@ -525,20 +565,21 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     lastPosRef.current = { x, y };
 
     const img = imageRef.current;
-    const minZoom = Math.max(400 / img.width, 400 / img.height);
-    const scale = minZoom * zoom;
+    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
 
-    setOffset((prev) => {
-      const next = { x: prev.x + dx, y: prev.y + dy };
-      return clampOffset(next.x, next.y, img.width, img.height, scale);
-    });
+    setOffset((prev) =>
+      clampCropOffset(
+        prev.x + dx,
+        prev.y + dy,
+        img.naturalWidth,
+        img.naturalHeight,
+        scale,
+      ),
+    );
   };
 
-  /** Source blob for AI only — uses crop canvas when available, else raw file. */
+  /** Source blob for AI — always the user-framed canvas crop when available. */
   const getAnalysisSourceBlob = async (): Promise<Blob | null> => {
-    if (pythonCropStatus === "ready" && pythonCroppedBlob) {
-      return pythonCroppedBlob;
-    }
     const cropped = await generateCroppedImage();
     if (cropped) return cropped;
     if (file) return file;
@@ -594,6 +635,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       setUsersClothType(formatted);
       setInputTypeValue(formatted);
       setValidType(type_List.includes(formatted));
+      setCropOverlay(cropOverlayFromClothingType(formatted));
     });
 
     applyColourList(tags.colour);
@@ -615,6 +657,28 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       setInputPatternValue(formatted);
       setValidPattern(patterns_List.includes(formatted));
     });
+
+    if (tags.styleCategory?.value) {
+      const match = styleCategories_List.find(
+        (item) =>
+          item.toLowerCase() ===
+          String(tags.styleCategory?.value).toLowerCase(),
+      );
+      if (match) {
+        setStyleCategory(match);
+        setStyleFromAi(true);
+      }
+    }
+
+    if (Array.isArray(tags.occasionTags?.value)) {
+      const next = tags.occasionTags.value.filter((tag): tag is OccasionTag =>
+        occasionTags_List.includes(tag as OccasionTag),
+      );
+      if (next.length > 0) {
+        setOccasionTags(next);
+        setStyleFromAi(true);
+      }
+    }
   };
 
   const analyzeImage = async () => {
@@ -660,6 +724,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
       if (result.tags) {
         applyAnalysisTags(result.tags);
+        setAnalysisSnapshot(result.tags);
       }
       setAnalyzeMessage(result.message ?? "Analysis completed");
 
@@ -690,30 +755,35 @@ function AddClothesUI({ setView }: addClothesUIProm) {
     formData.append("material", usersClothMaterial);
     formData.append("fit", usersClothFit);
     formData.append("pattern", usersClothPattern);
-
-    // Submit must wait for python crop completion if pending.
-    let pythonBlob: Blob | null = null;
-    if (file) {
-      if (pythonCropStatus === "pending" && pythonCropPromiseRef.current) {
-        pythonBlob = await pythonCropPromiseRef.current;
-      } else if (pythonCropStatus === "ready" && pythonCroppedBlob) {
-        pythonBlob = pythonCroppedBlob;
-      } else if (pythonCropStatus === "idle") {
-        pythonBlob = await startPythonCrop(file);
-      }
+    if (styleCategory) {
+      formData.append("styleCategory", styleCategory);
+    }
+    if (occasionTags.length > 0) {
+      formData.append("occasionTags", JSON.stringify(occasionTags));
+    }
+    if (analysisSnapshot) {
+      formData.append("analysisSnapshot", JSON.stringify(analysisSnapshot));
     }
 
-    if (pythonBlob) {
-      formData.append("image", pythonBlob, "python-cropped.png");
-      formData.append("imageAlreadyCropped", "true");
-    } else {
-      const cropped = await generateCroppedImage();
-      if (cropped) {
-        formData.append("image", cropped, "cropped.png");
-      } else if (file) {
-        formData.append("image", file);
-      }
+    // Await early rembg_only (started on file pick). Then apply local pan/zoom framing.
+    // Do not call the crop service again on submit.
+    let rembgBlob = rembgBlobRef.current;
+    if (!rembgBlob && rembgPromiseRef.current) {
+      rembgBlob = await rembgPromiseRef.current;
+      rembgBlobRef.current = rembgBlob;
     }
+
+    const sourceForFrame =
+      rembgBlob ?? workingBlobRef.current ?? file;
+    if (!sourceForFrame) return;
+
+    const framed =
+      (await frameImageBlob(sourceForFrame, zoom, offset)) ??
+      (await generateCroppedImage());
+    if (!framed) return;
+
+    formData.append("image", framed, "cropped.png");
+    formData.append("imageAlreadyCropped", "true");
 
     const uploadClothes = async () =>
       fetch(`/api/clothes/upload`, {
@@ -842,18 +912,23 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 }}
               >
                 {preview ? (
-                  <div className="flex items-center justify-center w-full h-full cursor-pointer hover:opacity-90 transition">
-                    <canvas
-                      ref={canvasRef}
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      onTouchStart={handleTouchStart}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                      className="max-w-full max-h-full cursor-grab active:cursor-grabbing touch-none"
-                    />
+                  <div className="relative flex items-center justify-center w-full h-full">
+                    <div className="relative inline-flex max-h-full max-w-full">
+                      <canvas
+                        ref={canvasRef}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        className="max-w-full max-h-full cursor-grab active:cursor-grabbing touch-none"
+                      />
+                      <div className="pointer-events-none absolute inset-0">
+                        <CropOverlayGuide overlay={cropOverlay} />
+                      </div>
+                    </div>
 
                     <button
                       type="button"
@@ -861,11 +936,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                         e.stopPropagation();
                         fileInputRef.current?.click();
                       }}
-                      className="absolute top-2 right-2 bg-white/90 text-xs px-2.5 py-1.5 rounded-lg shadow min-h-8"
+                      className="absolute top-2 right-2 bg-white/90 text-xs px-2.5 py-1.5 rounded-lg shadow min-h-8 z-10"
                     >
                       Replace
                     </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-[90%] text-center text-[11px] sm:text-xs text-indigo-700 bg-white/80 px-2 py-1 rounded">
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-[90%] text-center text-[11px] sm:text-xs text-indigo-700 bg-white/80 px-2 py-1 rounded z-10">
                       <span className="sm:hidden">
                         Drag to reposition • slider to zoom
                       </span>
@@ -884,16 +959,61 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
             {preview && (
               <>
+                <label
+                  htmlFor="crop-overlay-select"
+                  className="text-sm font-medium text-indigo-900"
+                >
+                  Crop guide
+                </label>
+                <select
+                  id="crop-overlay-select"
+                  value={cropOverlay}
+                  onChange={(e) =>
+                    setCropOverlay(e.target.value as CropOverlayId)
+                  }
+                  className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                  {CROP_OVERLAY_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <input
                   type="range"
-                  min="1"
-                  max="2.5"
+                  min={minZoom}
+                  max={3}
                   step="0.01"
                   value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
+                  onChange={(e) => {
+                    const nextZoom = Number(e.target.value);
+                    setZoom(nextZoom);
+                    if (imageRef.current) {
+                      const img = imageRef.current;
+                      const scale = getDrawScale(
+                        img.naturalWidth,
+                        img.naturalHeight,
+                        nextZoom,
+                      );
+                      setOffset((prev) =>
+                        clampCropOffset(
+                          prev.x,
+                          prev.y,
+                          img.naturalWidth,
+                          img.naturalHeight,
+                          scale,
+                        ),
+                      );
+                    }
+                  }}
                   className="w-full min-h-8 accent-indigo-600 touch-manipulation"
+                  aria-label="Zoom image for crop"
                 />
-                <span className="text-xs text-indigo-700">Adjust crop</span>
+                <div className="flex items-center justify-between text-xs text-indigo-700">
+                  <span>Zoom out</span>
+                  <span>Adjust crop</span>
+                  <span>Zoom in</span>
+                </div>
               </>
             )}
             {validFile == false && (
@@ -1149,6 +1269,16 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                   ))}{" "}
                 </datalist>
               </div>
+
+              <StyleDetailsSection
+                value={{ styleCategory, occasionTags }}
+                userReviewedAt={styleFromAi ? null : "local"}
+                onChange={(next) => {
+                  setStyleCategory(next.styleCategory);
+                  setOccasionTags(next.occasionTags);
+                  setStyleFromAi(false);
+                }}
+              />
             </div>
 
             {/* <input

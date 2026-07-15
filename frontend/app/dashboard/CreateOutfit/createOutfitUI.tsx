@@ -1,30 +1,138 @@
-import React, { RefObject, useEffect, useMemo, useState } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
+"use client";
 
+import React, {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ClothingItem, Slot } from "../../types/clothes";
-import { useGenerateAiThoughts } from "../../hooks/useGenerateAiThoughts";
+import {
+  DEFAULT_STYLIST_PREFERENCES,
+  OutfitRecommendation,
+  StylistMode,
+  StylistPreferences,
+} from "../../types/aiStylist";
 import UsersClothes from "./UsersClothes";
-import OutfitPreview from "../components/OutfitPreview";
-import AiStylist from "./AiStylist";
+import BuilderOutfitPreview from "./BuilderOutfitPreview";
+import AiStylistPanel from "./AiStylist";
+import StylistConfigModal from "./StylistConfigModal";
+import OutfitBuilderHeader from "./OutfitBuilderHeader";
+import MobileOutfitBuilderShell from "./MobileOutfitBuilderShell";
+import AIStylistBottomSheet from "./AIStylistBottomSheet";
+import WardrobeDrawer from "./WardrobeDrawer";
+import MobileGenerationHistorySheet from "./MobileGenerationHistorySheet";
 import { useClothesData } from "../../hooks/useClothesData";
+import { useCredits } from "../../hooks/useCredits";
+import { useStylistRecommendations } from "../../hooks/useStylistRecommendations";
+import { useStylistFeedback } from "../../hooks/useStylistFeedback";
+import { useStylistSession } from "../../hooks/useStylistSession";
 import { useInView } from "react-intersection-observer";
 import {
   clearAuthTokenCache,
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
-const DEFAULT_AI_MESSAGE =
-  "Select items to start building your outfit. I’ll review color balance and pieces as you go.";
-function CreateOutfitUI() {
+
+type StylistUiStatus = "idle" | "loading" | "success" | "error";
+
+type CreateOutfitUIProps = {
+  onBuyCredits?: () => void;
+  onAddClothes?: () => void;
+};
+
+const emptySlots = (): Partial<Record<Slot, ClothingItem[] | null>> => ({
+  head: null,
+  body: null,
+  legs: null,
+  feet: null,
+});
+
+const applyRecommendationToSlots = (
+  recommendation: OutfitRecommendation,
+  clothesById: Map<string, ClothingItem>,
+) => {
+  const next = emptySlots();
+  const layering = recommendation.layering;
+  const placed = new Set<string>();
+
+  const append = (item: ClothingItem) => {
+    const slot = item.slot as Slot;
+    const existing = next[slot] || [];
+    if (existing.some((c) => c._id === item._id)) return;
+    next[slot] = [...existing, item];
+    placed.add(item._id);
+  };
+
+  if (layering) {
+    for (const id of [
+      layering.baseTopId,
+      layering.midLayerId,
+      layering.outerLayerId,
+      layering.neckwearId,
+    ]) {
+      if (!id) continue;
+      const item = clothesById.get(id);
+      if (item) append(item);
+    }
+  }
+
+  recommendation.itemIds.forEach((id) => {
+    if (placed.has(id)) return;
+    const item = clothesById.get(id);
+    if (!item) return;
+    append(item);
+  });
+
+  return next;
+};
+
+function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
   const { user } = useUser();
   const queryClient = useQueryClient();
+  const { credits } = useCredits();
+  const numberOfClothes = 20;
+
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>
-  >({ head: null, body: null, legs: null, feet: null });
+  >(emptySlots());
   const [name, setName] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
-  const [aiMessages, setAiMessages] = useState<string[]>([DEFAULT_AI_MESSAGE]);
-  const numberOfClothes = 20;
+  const [categoryFilter, setCategoryFilter] = useState<Slot | "all">("all");
+  const [lastSelectedItemId, setLastSelectedItemId] = useState<string | null>(
+    null,
+  );
+  const [preferences, setPreferences] = useState<StylistPreferences>(
+    DEFAULT_STYLIST_PREFERENCES,
+  );
+  const [configOpen, setConfigOpen] = useState(false);
+  const [stylistMode, setStylistMode] = useState<StylistMode>("random");
+  const [refinementPrompt, setRefinementPrompt] = useState("");
+  const [pendingRefinement, setPendingRefinement] = useState<string | null>(
+    null,
+  );
+  const [anchoredItemIds, setAnchoredItemIds] = useState<string[]>([]);
+  const [stylistStatus, setStylistStatus] = useState<StylistUiStatus>("idle");
+  const [stylistError, setStylistError] = useState<string>("");
+  const [stylistErrorCode, setStylistErrorCode] = useState<
+    string | undefined
+  >();
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<
+    Record<string, "positive" | "negative">
+  >({});
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapTargetSlot, setSwapTargetSlot] = useState<Slot | null>(null);
+  const [previewHighlight, setPreviewHighlight] = useState(false);
+  const [appliedConfirmation, setAppliedConfirmation] = useState<string | null>(
+    null,
+  );
+  const [isAIStylistOpen, setIsAIStylistOpen] = useState(false);
+  const [isWardrobeDrawerOpen, setIsWardrobeDrawerOpen] = useState(false);
+  const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
+  const [activeGeneratedIndex, setActiveGeneratedIndex] = useState(0);
+
   const {
     clothes,
     fetchNextPage,
@@ -33,53 +141,421 @@ function CreateOutfitUI() {
     isLoadingClothes,
     error,
   } = useClothesData(numberOfClothes);
+
+  const {
+    mutateAsync: generateRecommendations,
+    isPending: isGenerating,
+  } = useStylistRecommendations();
+  const { mutate: submitFeedback } = useStylistFeedback();
+  const session = useStylistSession();
+
   const { ref, inView } = useInView();
-  useEffect(() => {
+  React.useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    if (!appliedConfirmation) return;
+    const timer = window.setTimeout(() => setAppliedConfirmation(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [appliedConfirmation]);
+
+  useEffect(() => {
+    if (!previewHighlight) return;
+    const timer = window.setTimeout(() => setPreviewHighlight(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [previewHighlight]);
+
+  useEffect(() => {
+    setActiveGeneratedIndex(0);
+  }, [session.activeGeneration?.id]);
+
   const selectedItems = useMemo(() => {
     return Object.values(selectedBySlot).filter(
       (v): v is ClothingItem[] => Array.isArray(v) && v.length > 0,
     );
   }, [selectedBySlot]);
 
-  const { thoughts, isLoadingThoughts, errorThoughts } = useGenerateAiThoughts(
-    selectedItems,
-  );
+  const previewItems = useMemo(() => selectedItems.flat(), [selectedItems]);
 
-  const mascotState = useMemo(() => {
-    return isLoadingThoughts || errorThoughts ? "thinking" : "idle";
-  }, [isLoadingThoughts, errorThoughts]);
+  const previewItemIds = useMemo(() => previewItems.map((item) => item._id), [
+    previewItems,
+  ]);
 
-  useEffect(() => {
-    if (selectedItems.length === 0) {
-      setAiMessages([DEFAULT_AI_MESSAGE]);
-    } else if (thoughts) {
-      const message = `${thoughts.insights}${
-        thoughts.nextStep ? `Next Step: ${thoughts.nextStep}` : ""
-      }`;
-      setAiMessages([message]);
-    }
-  }, [thoughts, selectedItems]);
+  const requiredItemsForMode = useMemo(() => {
+    if (stylistMode === "random") return [];
+    return previewItems;
+  }, [stylistMode, previewItems]);
 
   const clothesById = useMemo(
     () => new Map(clothes?.map((c: ClothingItem) => [c._id, c])),
     [clothes],
   );
 
-  const toggleSelect = (id: string) => {
-    const item = clothesById.get(id) as ClothingItem;
+  const anchoredItems = useMemo(
+    () =>
+      anchoredItemIds
+        .map((id) => clothesById.get(id))
+        .filter(Boolean) as ClothingItem[],
+    [anchoredItemIds, clothesById],
+  );
 
-    if (!item) return;
+  const filledSlotCount = useMemo(() => {
+    return (["body", "legs", "feet", "head"] as Slot[]).filter((slot) => {
+      const items = selectedBySlot[slot];
+      return Array.isArray(items) && items.length > 0;
+    }).length;
+  }, [selectedBySlot]);
+
+  const exitSwapMode = useCallback(() => {
+    setSwapMode(false);
+    setSwapTargetSlot(null);
+  }, []);
+
+  const enterSwapMode = useCallback((slot?: Slot) => {
+    setSwapMode(true);
+    setSwapTargetSlot(slot ?? null);
+    if (slot) {
+      setCategoryFilter(slot);
+    }
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches
+    ) {
+      setIsWardrobeDrawerOpen(true);
+    }
+  }, []);
+
+  const unanchorItem = useCallback((id: string) => {
+    setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+  }, []);
+
+  const ensureItemInPreview = useCallback((item: ClothingItem) => {
     setSelectedBySlot((prev) => {
-      const current = prev[item.slot as Slot];
-      if (current && current.length > 0 && current.some((c) => c._id === id)) {
-        return { ...prev, [item.slot]: current.filter((c) => c._id !== id) };
-      }
-      return { ...prev, [item.slot]: [...(current || []), item] };
+      const slot = item.slot as Slot;
+      const current = prev[slot] || [];
+      if (current.some((c) => c._id === item._id)) return prev;
+      return { ...prev, [slot]: [...current, item] };
     });
+  }, []);
+
+  const removeItemFromPreview = useCallback(
+    (id: string) => {
+      const item = clothesById.get(id);
+      if (!item) {
+        setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+        return;
+      }
+      setSelectedBySlot((prev) => {
+        const slot = item.slot as Slot;
+        const next = (prev[slot] || []).filter((c) => c._id !== id);
+        return { ...prev, [slot]: next.length > 0 ? next : null };
+      });
+      setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+    },
+    [clothesById],
+  );
+
+  const toggleSelect = useCallback(
+    (id: string) => {
+      const item = clothesById.get(id) as ClothingItem | undefined;
+      if (!item) return;
+
+      setLastSelectedItemId(id);
+
+      if (swapMode) {
+        if (swapTargetSlot && item.slot !== swapTargetSlot) {
+          return;
+        }
+        setSelectedBySlot((prev) => {
+          const next = { ...prev };
+          const slot = item.slot as Slot;
+          next[slot] = [item];
+          return next;
+        });
+        exitSwapMode();
+        setIsWardrobeDrawerOpen(false);
+        return;
+      }
+
+      const slot = item.slot as Slot;
+      const current = selectedBySlot[slot] || [];
+      const isRemoving = current.some((c) => c._id === id);
+
+      if (isRemoving) {
+        const next = current.filter((c) => c._id !== id);
+        setSelectedBySlot((prev) => ({
+          ...prev,
+          [slot]: next.length > 0 ? next : null,
+        }));
+        setAnchoredItemIds((anchors) =>
+          anchors.filter((itemId) => itemId !== id),
+        );
+      } else {
+        setSelectedBySlot((prev) => ({
+          ...prev,
+          [slot]: [...(prev[slot] || []), item],
+        }));
+      }
+    },
+    [clothesById, swapMode, swapTargetSlot, exitSwapMode, selectedBySlot],
+  );
+
+  const toggleAnchorItem = useCallback(
+    (id: string) => {
+      const item = clothesById.get(id);
+      if (!item) return;
+
+      const willAnchor = !anchoredItemIds.includes(id);
+      if (willAnchor) {
+        ensureItemInPreview(item);
+        setAnchoredItemIds((prev) =>
+          prev.includes(id) ? prev : [...prev, id],
+        );
+      } else {
+        setAnchoredItemIds((prev) => prev.filter((itemId) => itemId !== id));
+      }
+    },
+    [clothesById, ensureItemInPreview, anchoredItemIds],
+  );
+
+  const anchorAllPreviewItems = useCallback(() => {
+    const ids = previewItems.map((item) => item._id);
+    if (ids.length === 0) return;
+    const allAnchored = ids.every((id) => anchoredItemIds.includes(id));
+    if (allAnchored) {
+      setAnchoredItemIds((prev) => prev.filter((id) => !ids.includes(id)));
+      return;
+    }
+    setAnchoredItemIds((prev) => [...new Set([...prev, ...ids])]);
+  }, [previewItems, anchoredItemIds]);
+
+  const openDesktopGenerateModal = () => {
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    if (
+      stylistMode !== "random" &&
+      requiredItemsForMode.length === 0 &&
+      anchoredItemIds.length === 0
+    ) {
+      setStylistStatus("error");
+      setStylistErrorCode(
+        stylistMode === "selected" ? "EMPTY_SELECTION" : "EMPTY_PREVIEW",
+      );
+      setStylistError(
+        stylistMode === "selected"
+          ? "Select one or more wardrobe items to style."
+          : stylistMode === "improve"
+            ? "Build an outfit first, then ask Almaari to improve it."
+            : "Add at least one item to your outfit preview first.",
+      );
+      return;
+    }
+    setPendingRefinement(null);
+    setConfigOpen(true);
+  };
+
+  const openMobileAISheet = () => {
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    setPendingRefinement(null);
+    setIsAIStylistOpen(true);
+  };
+
+  const runGeneration = async (options?: {
+    refinement?: string | null;
+    parentGenerationId?: string | null;
+  }) => {
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+
+    if (
+      stylistMode !== "random" &&
+      requiredItemsForMode.length === 0 &&
+      anchoredItemIds.length === 0
+    ) {
+      setStylistStatus("error");
+      setStylistErrorCode(
+        stylistMode === "selected" ? "EMPTY_SELECTION" : "EMPTY_PREVIEW",
+      );
+      setStylistError(
+        stylistMode === "selected"
+          ? "Select one or more wardrobe items to style."
+          : stylistMode === "improve"
+            ? "Build an outfit first, then ask Almaari to improve it."
+            : "Add at least one item to your outfit preview first.",
+      );
+      setIsAIStylistOpen(true);
+      return;
+    }
+
+    const refinement =
+      options?.refinement?.trim() || pendingRefinement?.trim() || "";
+
+    setConfigOpen(false);
+    setStylistStatus("loading");
+    setStylistError("");
+    setStylistErrorCode(undefined);
+
+    const seedIds = requiredItemsForMode.map((item) => item._id);
+    const requiredItemIds =
+      stylistMode === "random"
+        ? []
+        : [...new Set([...anchoredItemIds, ...seedIds])];
+
+    try {
+      const result = await generateRecommendations({
+        ...preferences,
+        mode: stylistMode,
+        requiredItemIds:
+          stylistMode === "selected" ? requiredItemIds : undefined,
+        previewItemIds:
+          stylistMode === "complete" || stylistMode === "improve"
+            ? requiredItemIds
+            : previewItemIds,
+        refinementPrompt: refinement || undefined,
+        parentGenerationId: options?.parentGenerationId ?? null,
+        priorOutfitSignatures: session.priorOutfitSignatures,
+      });
+
+      const generationId = result.data.generationId || crypto.randomUUID();
+      const mode = result.data.mode || stylistMode;
+      const resolvedRequired = result.data.requiredItemIds || requiredItemIds;
+
+      const snapshotAnchors = mode === "random" ? [] : [...resolvedRequired];
+      if (snapshotAnchors.length > 0) {
+        setAnchoredItemIds(snapshotAnchors);
+      }
+
+      session.appendGeneration({
+        id: generationId,
+        parentGenerationId: options?.parentGenerationId ?? null,
+        mode,
+        prompt: refinement || null,
+        requiredItemIds: resolvedRequired,
+        anchoredItemIds: snapshotAnchors,
+        inputs: {
+          occasion: preferences.occasion,
+          weather: preferences.weather,
+          stylePreference: preferences.style,
+          avoid: preferences.avoid,
+          refinementPrompt: refinement || null,
+        },
+        outfits: result.data.recommendations,
+      });
+
+      setStylistStatus("success");
+      setRefinementPrompt("");
+      setPendingRefinement(null);
+      setActiveGeneratedIndex(0);
+      setIsAIStylistOpen(false);
+      const count = result.data.recommendations?.length || 3;
+      setAppliedConfirmation(`${count} outfits generated`);
+    } catch (generationError) {
+      if (
+        generationError instanceof Error &&
+        generationError.message === "STALE_REQUEST"
+      ) {
+        return;
+      }
+
+      const err = generationError as Error & {
+        code?: string;
+        status?: number;
+      };
+      setStylistStatus("error");
+      setStylistError(err.message || "Failed to generate outfits");
+      setStylistErrorCode(err.code);
+      setIsAIStylistOpen(true);
+    }
+  };
+
+  const handleStyleThisItem = () => {
+    const id = lastSelectedItemId;
+    if (!id) return;
+    const item = clothesById.get(id);
+    if (!item) return;
+
+    setStylistMode("selected");
+    setSelectedBySlot((prev) => {
+      const slot = item.slot as Slot;
+      const current = prev[slot] || [];
+      if (current.some((c) => c._id === id)) return prev;
+      return { ...prev, [slot]: [...current, item] };
+    });
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    setPendingRefinement(null);
+    setIsWardrobeDrawerOpen(false);
+    const isMobile =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches;
+    if (isMobile) {
+      setIsAIStylistOpen(true);
+    } else {
+      setConfigOpen(true);
+    }
+  };
+
+  const handleUseOutfit = (recommendation: OutfitRecommendation) => {
+    setSelectedBySlot(applyRecommendationToSlots(recommendation, clothesById));
+    exitSwapMode();
+    setPreviewHighlight(true);
+    setAppliedConfirmation("Outfit added to preview");
+  };
+
+  const handleFeedback = (
+    recommendation: OutfitRecommendation,
+    rating: "positive" | "negative",
+    reasons?: string[],
+  ) => {
+    setFeedbackSubmitted((prev) => ({ ...prev, [recommendation.id]: rating }));
+    submitFeedback({
+      recommendationId: recommendation.id,
+      outfitItemIds: recommendation.itemIds,
+      outfitSignature: [...recommendation.itemIds]
+        .map(String)
+        .sort()
+        .join("|"),
+      label: recommendation.label,
+      rating,
+      reasons: rating === "negative" ? reasons : undefined,
+      occasion: preferences.occasion,
+      style: preferences.style,
+      generationId: session.activeGeneration?.id,
+      mode: session.activeGeneration?.mode || stylistMode,
+    });
+  };
+
+  const handleRefine = () => {
+    if (!refinementPrompt.trim()) return;
+    if (credits != null && credits < 1) {
+      onBuyCredits?.();
+      return;
+    }
+    void runGeneration({
+      refinement: refinementPrompt,
+      parentGenerationId: session.activeGeneration?.id ?? null,
+    });
+  };
+
+  const handleModeChange = (mode: StylistMode) => {
+    setStylistMode(mode);
+    if (stylistStatus === "error") {
+      setStylistStatus(session.hasHistory ? "success" : "idle");
+      setStylistError("");
+      setStylistErrorCode(undefined);
+    }
   };
 
   const saveOutfit = async () => {
@@ -109,8 +585,9 @@ function CreateOutfitUI() {
         response = await createOutfit();
       }
       if (!response.ok) throw new Error("Failed to save outfit");
-      setSelectedBySlot({ head: null, body: null, legs: null, feet: null });
+      setSelectedBySlot(emptySlots());
       setName("");
+      setAppliedConfirmation(null);
       queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
     } catch (e) {
       console.error(e);
@@ -119,49 +596,243 @@ function CreateOutfitUI() {
     }
   };
 
+  const canSave = selectedItems.length > 0;
+  const panelHeightClass =
+    "md:h-[calc(100vh-220px)] md:max-h-[calc(100vh-220px)] xl:h-[min(760px,calc(100vh-220px))]";
+
+  const displayStatus = isGenerating
+    ? "loading"
+    : stylistStatus === "idle" && session.hasHistory
+      ? "success"
+      : stylistStatus;
+
+  const canGenerate =
+    (credits == null || credits >= 1) &&
+    (stylistMode === "random" ||
+      requiredItemsForMode.length > 0 ||
+      anchoredItemIds.length > 0);
+
+  const infiniteScrollRef = (ref as unknown) as RefObject<HTMLDivElement>;
+
   return (
-    <div className="md:rounded-tl-3xl w-full z-10 p-4 pb-24 md:pb-8">
-      {/* Outfit name and save outfit button */}
-      <div className="flex items-center justify-between mb-4 md:mr-40">
-        <div className="flex justify-end w-full gap-2 ">
-          <input
-            id="create-outfit-form-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Outfit name (optional)"
-            className=" w-full md:w-1/2 rounded-xl border border-indigo-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+    <div
+      className={`z-10 flex h-full min-h-0 w-full flex-col p-3 pb-0 md:rounded-tl-3xl md:p-4 md:pb-8 ${
+        session.recommendations.length > 0
+          ? "overflow-hidden"
+          : "overflow-y-auto"
+      }`}
+    >
+      <StylistConfigModal
+        open={configOpen}
+        mode={stylistMode === "selected" ? "style-item" : "generate"}
+        anchorItemName={
+          stylistMode === "selected" && requiredItemsForMode.length === 1
+            ? requiredItemsForMode[0]?.type
+            : stylistMode === "selected" && requiredItemsForMode.length > 1
+              ? `${requiredItemsForMode.length} selected items`
+              : undefined
+        }
+        preferences={preferences}
+        onChange={setPreferences}
+        onClose={() => setConfigOpen(false)}
+        onSubmit={() => runGeneration()}
+        isSubmitting={isGenerating}
+        credits={credits}
+      />
+
+      <AIStylistBottomSheet
+        open={isAIStylistOpen}
+        onClose={() => setIsAIStylistOpen(false)}
+        mode={stylistMode}
+        onModeChange={handleModeChange}
+        preferences={preferences}
+        onPreferencesChange={setPreferences}
+        anchoredItems={anchoredItems}
+        onUnanchorItem={unanchorItem}
+        onAnchorAllPreview={anchorAllPreviewItems}
+        canAnchorAll={previewItems.length > 0}
+        status={displayStatus}
+        errorMessage={stylistError}
+        errorCode={stylistErrorCode}
+        credits={credits}
+        clothesCount={clothes.length}
+        canGenerate={canGenerate}
+        onGenerate={() => void runGeneration()}
+        onBuyCredits={onBuyCredits}
+        hasHistory={session.hasHistory}
+        refinementPrompt={refinementPrompt}
+        onRefinementPromptChange={setRefinementPrompt}
+        onRefine={handleRefine}
+      />
+
+      <WardrobeDrawer
+        open={isWardrobeDrawerOpen}
+        onClose={() => {
+          setIsWardrobeDrawerOpen(false);
+          exitSwapMode();
+        }}
+        isLoadingClothes={isLoadingClothes}
+        error={error}
+        clothes={clothes}
+        selectedItems={selectedItems}
+        toggleSelect={toggleSelect}
+        infiniteScrollRef={infiniteScrollRef}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        lastSelectedItemId={lastSelectedItemId}
+        onStyleThisItem={handleStyleThisItem}
+        swapMode={swapMode}
+        swapTargetSlot={swapTargetSlot}
+        onCancelSwap={exitSwapMode}
+        onAddClothes={onAddClothes}
+        anchoredItemIds={anchoredItemIds}
+        onToggleAnchor={toggleAnchorItem}
+      />
+
+      <MobileGenerationHistorySheet
+        open={isHistorySheetOpen}
+        onClose={() => setIsHistorySheetOpen(false)}
+        generationLabel={session.generationLabel}
+        canGoPrev={session.activeIndex > 0}
+        canGoNext={session.activeIndex < session.generations.length - 1}
+        onHistoryPrev={session.goPrev}
+        onHistoryNext={session.goNext}
+        prompt={session.activeGeneration?.prompt}
+      />
+
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col">
+        <div className="hidden md:block">
+          <OutfitBuilderHeader
+            name={name}
+            onNameChange={setName}
+            selectedCount={filledSlotCount}
+            saving={saving}
+            canSave={canSave}
+            onSave={saveOutfit}
           />
-          <button
-            disabled={saving || selectedItems.length === 0}
-            onClick={saveOutfit}
-            className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Outfit"}
-          </button>
         </div>
-      </div>
-      {/* Your Clothes, Outfit Preview, AI Stylist */}
-      <div className="grid lg:grid-cols-[0.6fr,0.9fr] gap-4">
-        {/* Users Clothes */}
-        <UsersClothes
-          isLoadingClothes={isLoadingClothes}
-          error={error}
-          clothes={clothes}
-          selectedItems={selectedItems}
-          toggleSelect={toggleSelect}
-          ref={(ref as unknown) as RefObject<HTMLDivElement>}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
+
+        <MobileOutfitBuilderShell
+          name={name}
+          onNameChange={setName}
+          filledSlotCount={filledSlotCount}
+          selectedBySlot={selectedBySlot}
+          setSelectedBySlot={setSelectedBySlot}
+          anchoredItemIds={anchoredItemIds}
+          onToggleAnchor={toggleAnchorItem}
+          onRemoveItem={removeItemFromPreview}
+          onAnchorAllPreview={anchorAllPreviewItems}
+          swapMode={swapMode}
+          swapTargetSlot={swapTargetSlot}
+          onReplaceSlot={enterSwapMode}
+          previewHighlight={previewHighlight}
+          recommendations={session.recommendations}
+          clothesById={clothesById}
+          activeGeneratedIndex={activeGeneratedIndex}
+          onActiveGeneratedIndexChange={setActiveGeneratedIndex}
+          feedbackSubmitted={feedbackSubmitted}
+          onFeedback={handleFeedback}
+          onUseOutfit={handleUseOutfit}
+          onOpenAI={openMobileAISheet}
+          onOpenWardrobe={() => setIsWardrobeDrawerOpen(true)}
+          onOpenHistory={() => setIsHistorySheetOpen(true)}
+          generationLabel={session.generationLabel}
+          hasHistory={session.hasHistory}
+          appliedConfirmation={appliedConfirmation}
+          saving={saving}
+          canSave={canSave}
+          onSave={saveOutfit}
         />
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-[clamp(200px,20vw,330px),1fr] gap-4">
-          {/* Outfit Preview */}
-          <OutfitPreview
-            selectedBySlot={selectedBySlot}
-            setSelectedBySlot={setSelectedBySlot}
-          />
-          {/* AI Stylist */}
-          <AiStylist aiMessages={aiMessages} mascotState={mascotState} />
+
+        <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:grid-cols-[minmax(340px,1.1fr)_minmax(280px,0.72fr)_minmax(360px,1fr)] xl:items-start">
+          <section
+            id="builder-panel-clothes"
+            className={`min-h-0 ${panelHeightClass}`}
+          >
+            <UsersClothes
+              isLoadingClothes={isLoadingClothes}
+              error={error}
+              clothes={clothes}
+              selectedItems={selectedItems}
+              toggleSelect={toggleSelect}
+              ref={infiniteScrollRef}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              lastSelectedItemId={lastSelectedItemId}
+              onStyleThisItem={handleStyleThisItem}
+              swapMode={swapMode}
+              swapTargetSlot={swapTargetSlot}
+              onCancelSwap={exitSwapMode}
+              onAddClothes={onAddClothes}
+              anchoredItemIds={anchoredItemIds}
+              onToggleAnchor={toggleAnchorItem}
+              className="h-full"
+            />
+          </section>
+
+          <section
+            id="builder-panel-preview"
+            className={`min-h-0 xl:sticky xl:top-4 ${panelHeightClass}`}
+          >
+            <BuilderOutfitPreview
+              selectedBySlot={selectedBySlot}
+              setSelectedBySlot={setSelectedBySlot}
+              swapMode={swapMode}
+              swapTargetSlot={swapTargetSlot}
+              onReplaceSlot={enterSwapMode}
+              highlightApplied={previewHighlight}
+              anchoredItemIds={anchoredItemIds}
+              onToggleAnchor={toggleAnchorItem}
+              onRemoveItem={removeItemFromPreview}
+              onAnchorAllPreview={anchorAllPreviewItems}
+              className="h-full min-h-[420px] md:min-h-0"
+            />
+          </section>
+
+          <section
+            id="builder-panel-ai"
+            className={`min-h-0 md:col-span-2 xl:col-span-1 ${panelHeightClass}`}
+          >
+            <AiStylistPanel
+              status={displayStatus}
+              mode={stylistMode}
+              onModeChange={handleModeChange}
+              recommendations={session.recommendations}
+              clothesById={clothesById}
+              requiredItems={requiredItemsForMode}
+              anchoredItems={anchoredItems}
+              onRemoveRequiredItem={unanchorItem}
+              onUnanchorItem={unanchorItem}
+              onAnchorAllPreview={anchorAllPreviewItems}
+              errorMessage={stylistError}
+              errorCode={stylistErrorCode}
+              credits={credits}
+              clothesCount={clothes.length}
+              feedbackSubmitted={feedbackSubmitted}
+              onGenerateClick={openDesktopGenerateModal}
+              onTryAnother={openDesktopGenerateModal}
+              onUseOutfit={handleUseOutfit}
+              onSwapItem={enterSwapMode}
+              onFeedback={handleFeedback}
+              onBuyCredits={onBuyCredits}
+              appliedConfirmation={appliedConfirmation}
+              refinementPrompt={refinementPrompt}
+              onRefinementPromptChange={setRefinementPrompt}
+              onRefine={handleRefine}
+              generationLabel={session.generationLabel}
+              canGoPrev={session.activeIndex > 0}
+              canGoNext={
+                session.activeIndex < session.generations.length - 1
+              }
+              onHistoryPrev={session.goPrev}
+              onHistoryNext={session.goNext}
+              className="h-full"
+            />
+          </section>
         </div>
       </div>
     </div>

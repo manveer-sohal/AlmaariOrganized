@@ -1,6 +1,8 @@
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { ClothingItem } from "../types/clothes";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
+import { normalizeClothingItem } from "../utils/validateClothingMetadata";
 
 export const useClothesData = (numberOfClothes: number = 40) => {
   const { user } = useUser();
@@ -34,8 +36,11 @@ export const useClothesData = (numberOfClothes: number = 40) => {
       }
 
       if (!response.ok) throw new Error("Failed to fetch clothes data");
-      const data = await response.json();
-      return data.Clothes;
+      const payload = await response.json();
+      const rows = Array.isArray(payload.Clothes) ? payload.Clothes : [];
+      return rows.map((item: Record<string, unknown>) =>
+        normalizeClothingItem(item),
+      ) as ClothingItem[];
     },
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === numberOfClothes ? allPages.length + 1 : undefined,

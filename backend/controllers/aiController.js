@@ -8,10 +8,19 @@ import {
   logAnalyzeStep,
   logAnalyzeTotal,
   resolveAnalyzeRequestId,
+  setAnalyzeWorkflow,
 } from "../utils/aiAnalyzeTiming.js";
+import { logError, logInfo, hashUserId } from "../observability/logger.js";
+import { classifyAiError } from "../observability/errors.js";
+import { updateRequestContext } from "../observability/requestContext.js";
+import { createTimer } from "../observability/timer.js";
+import { observeMs } from "../observability/metrics.js";
+
+const WORKFLOW = "clothing_metadata_generation";
 
 export const warmupAiClothing = async (req, res) => {
   const requestId = resolveAnalyzeRequestId(req);
+  updateRequestContext({ workflow: "ai_warmup", requestId });
 
   const [aiResult, cropResult] = await Promise.allSettled([
     warmupAiClothingService(requestId),
@@ -34,7 +43,14 @@ export const warmupAiClothing = async (req, res) => {
 
 export const analyzeClothing = async (req, res) => {
   const requestId = resolveAnalyzeRequestId(req);
-  const controllerStart = performance.now();
+  setAnalyzeWorkflow();
+  updateRequestContext({
+    requestId,
+    workflow: WORKFLOW,
+    route: req.originalUrl || req.url,
+    method: req.method,
+  });
+  const timer = createTimer();
 
   try {
     const validationStart = performance.now();
@@ -42,13 +58,29 @@ export const analyzeClothing = async (req, res) => {
     const { image } = req.body;
 
     if (!auth0Id) {
+      logInfo("ai.validation.failed", {
+        workflow: WORKFLOW,
+        reason: "missing_auth",
+        classification: "authentication_error",
+      });
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
       });
     }
 
+    logInfo("ai.request.authenticated", {
+      workflow: WORKFLOW,
+      userIdHash: hashUserId(auth0Id),
+    });
+
     if (!image || typeof image !== "string") {
+      logInfo("ai.validation.failed", {
+        workflow: WORKFLOW,
+        reason: "image_required",
+        classification: "validation_error",
+        userIdHash: hashUserId(auth0Id),
+      });
       return res.status(400).json({
         success: false,
         message: "image is required",
@@ -64,7 +96,16 @@ export const analyzeClothing = async (req, res) => {
 
     const result = await analyzeClothingForUser({ auth0Id, image, requestId });
 
-    logAnalyzeTotal(requestId, "total controller", controllerStart);
+    const totalMs = timer.elapsedMs();
+    observeMs("ai.analyze.controller.ms", totalMs);
+    logAnalyzeTotal(requestId, "total controller", timer.start);
+    logInfo("ai.request.completed", {
+      workflow: WORKFLOW,
+      durationMs: totalMs,
+      validTagCount: result.validTagCount,
+      creditsDeducted: result.creditsDeducted,
+      success: true,
+    });
 
     return res.status(200).json({
       success: true,
@@ -78,8 +119,20 @@ export const analyzeClothing = async (req, res) => {
           : "Analysis completed with no confident tags",
     });
   } catch (error) {
-    logAnalyzeTotal(requestId, "total controller (error)", controllerStart);
-    const status = error.status || 500;
+    const classified = classifyAiError(error);
+    const totalMs = timer.elapsedMs();
+    observeMs("ai.analyze.controller.ms", totalMs);
+    logAnalyzeTotal(requestId, "total controller (error)", timer.start);
+    logError("ai.request.failed", {
+      workflow: WORKFLOW,
+      durationMs: totalMs,
+      classification: error.classification || classified.classification,
+      retryable: classified.retryable,
+      status: error.status || classified.status,
+      errorMessage: error.message,
+    });
+
+    const status = error.status || classified.status || 500;
     return res.status(status).json({
       success: false,
       message: error.message || "Failed to analyze clothing image",

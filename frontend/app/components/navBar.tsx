@@ -12,7 +12,7 @@ import {
 } from "../data/constants";
 import { goToNextTourStep } from "./OnBoardingTour";
 import Dropdown from "../dashboard/components/Dropdown";
-import { Search, Settings } from "lucide-react";
+import { Search, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { motion } from "framer-motion";
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
@@ -21,7 +21,7 @@ type NavBarProps = {
 
 function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   const [search, setSearch] = useState("");
-  const { filters, setFilters } = useClothesStore();
+  const { filters, setFilters, menuOpen, setMenuOpen } = useClothesStore();
   const [showFeedback, setShowFeedback] = useState(false);
   const changeFilter = (value: string) => {
     const terms = value
@@ -92,16 +92,31 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
 
   return (
     <>
-      <nav className=" border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 z-20">
+      <nav className="border-indigo-300 border-solid border-s-4 w-full bg-indigo-400 h-16 p-2 sticky top-0 z-20 flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={menuOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-expanded={menuOpen}
+          aria-controls="desktop-sidebar"
+          title={menuOpen ? "Hide sidebar" : "Show sidebar"}
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors"
+        >
+          {menuOpen ? (
+            <PanelLeftClose className="h-5 w-5" aria-hidden />
+          ) : (
+            <PanelLeftOpen className="h-5 w-5" aria-hidden />
+          )}
+        </button>
         <li
           id="icon"
-          className="shrink-0 cursor-pointer"
+          className="shrink-0 list-none cursor-pointer hover:bg-indigo-500  rounded-full p-1"
           onClick={() => setView("home")}
         >
           <Image src={temp.src} width={50} height={30} alt="logo"></Image>
         </li>
-        <ul className="flex items-center justify-end gap-2 h-full">
-          <li className="flex-1 max-w-2xl mx-2">
+        <ul className="flex flex-1 items-center justify-end lg:justify-between gap-2 h-full">
+          <li className="flex-1 max-w-2xl mx-2 lg:ml-40">
             <form onSubmit={handleSubmit} className="w-full">
               <div className="relative">
                 <input
@@ -140,6 +155,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
               </div>
             </form>
           </li>
+
           <li className="shrink-0">
             <button
               id="add-clothes-btn-desktop"
@@ -163,8 +179,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
               </svg>
               <span>Add Clothes</span>
             </button>
-          </li>
-          <li className="max-w-2xl">
+
             <div
               className={`inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 ${
                 showFeedback

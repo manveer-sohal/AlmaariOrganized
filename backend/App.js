@@ -9,6 +9,10 @@ import feedbackRoutes from "./routes/feedbackRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
 import { stripeWebhook } from "./controllers/billingController.js";
 import connectMongoDB from "./libs/mongodb.js";
+import { redis } from "./libs/redis.client.js";
+import { requestContextMiddleware } from "./middleware/requestContext.js";
+import { getMetricsSnapshot } from "./observability/metrics.js";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 if (process.env.NODE_ENV !== "test") {
@@ -32,11 +36,50 @@ app.head("/health", (_req, res) => res.sendStatus(200));
 
 app.get("/", (_req, res) => res.send("Go to /health for health check"));
 
+/**
+ * Process liveness is /health. Readiness checks essential local deps only
+ * (no OpenAI / FastAPI / crop probes — those are expensive and optional).
+ */
+app.get("/ready", async (_req, res) => {
+  const checks = {
+    mongodb: mongoose.connection.readyState === 1,
+    redis: false,
+    auth0DomainConfigured: Boolean(process.env.AUTH0_DOMAIN),
+  };
+
+  try {
+    if (redis && typeof redis.ping === "function") {
+      await redis.ping();
+      checks.redis = true;
+    } else {
+      checks.redis = true;
+    }
+  } catch {
+    // Cache is optional; API continues without Redis.
+    checks.redis = false;
+  }
+
+  const ready =
+    process.env.NODE_ENV === "test"
+      ? true
+      : checks.mongodb && checks.auth0DomainConfigured;
+  return res.status(ready ? 200 : 503).json({
+    ready,
+    checks,
+  });
+});
+
+/** Lightweight in-process metrics snapshot for operators / future exporters. */
+app.get("/metrics/ai", (_req, res) => {
+  res.status(200).json(getMetricsSnapshot());
+});
+
 //middleware
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
     credentials: true,
+    exposedHeaders: ["x-request-id"],
   }),
 );
 
@@ -49,16 +92,14 @@ app.post(
 );
 
 app.use(express.json({ limit: "5mb" }));
+app.use(requestContextMiddleware);
 
-// app.use(bodyParser.json({ limit: "5mb" }));
-// app.use(bodyParser.urlencoded({ limit: "5mb", extended: true }));
-
-//rip it
 // Mount routes BEFORE starting the server to avoid cold-start race conditions
 app.use("/api/clothes", clothesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/aiStylist", aiStylistRoutes);
+app.use("/api/ai-stylist", aiStylistRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/billing", billingRoutes);

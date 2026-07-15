@@ -1,53 +1,11 @@
 import React, { Dispatch, useState } from "react";
 import { Plus } from "lucide-react";
+import { type_List } from "../../data/constants";
+
 type ValidateTypeProp = {
   type: Dispatch<React.SetStateAction<string[] | null | undefined>>;
 };
 function ValidateType({ type }: ValidateTypeProp) {
-  //type of clothes
-  const type_List = [
-    "Shirt",
-    "Jeans",
-    "Sweater",
-    "Jacket",
-    "T-shirt",
-    "Shorts",
-    "Skirt",
-    "Dress",
-    "Blouse",
-    "Trousers",
-    "Hoodie",
-    "Coat",
-    "Cardigan",
-    "Tank Top",
-    "Pajamas",
-    "Socks",
-    "Scarf",
-    "Hat",
-    "Gloves",
-    "Cargos",
-    "Jeans",
-    "Dress Shirt",
-    "Leggings",
-    "Vest",
-    "Swimsuit",
-    "Raincoat",
-    "Overalls",
-    "Jumper",
-    "Blazer",
-    "Crop Top",
-    "Pants",
-    "Capri Pants",
-    "Suit",
-    "Tie",
-    "Belt",
-    "Tunic",
-    "Poncho",
-    "Robe",
-    "Underwear",
-    "Shoes",
-  ];
-
   const [validType, setValidType] = useState<boolean | null>(null);
 
   const [usersClothType, setUsersClothType] = useState<string[]>([]);

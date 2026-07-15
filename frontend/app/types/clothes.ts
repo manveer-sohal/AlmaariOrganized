@@ -1,20 +1,79 @@
+export type Slot = "head" | "body" | "legs" | "feet";
+
+export type StyleCategory =
+  | "Casual"
+  | "Smart Casual"
+  | "Formal"
+  | "Athletic";
+
+export type OccasionTag =
+  | "Everyday"
+  | "Work"
+  | "Going Out"
+  | "Event"
+  | "Formal Event"
+  | "Travel"
+  | "Active";
+
+export type OutfitRole = "Base" | "Layer" | "Accent" | "Statement";
+
+export type EnrichmentStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export type StylingMetadataConfidence = {
+  type: number | null;
+  colour: number | null;
+  material: number | null;
+  fit: number | null;
+  pattern: number | null;
+  styleCategory: number | null;
+  occasionTags: number | null;
+  formalityScore: number | null;
+  statementLevel: number | null;
+  outfitRole: number | null;
+  subtype?: number | null;
+};
+
+export type StylingMetadata = {
+  styleCategory: StyleCategory | null;
+  occasionTags: OccasionTag[];
+  formalityScore: number | null;
+  statementLevel: number | null;
+  outfitRole: OutfitRole | null;
+  /** Optional normalized subtype (e.g. button_up, polo, jorts). */
+  subtype?: string | null;
+  confidence: StylingMetadataConfidence;
+  styleCategorySource?: "ai" | "user" | null;
+  occasionTagsSource?: "ai" | "user" | null;
+  enrichmentStatus: EnrichmentStatus;
+  enrichmentError: string | null;
+  enrichedAt: string | null;
+  processingStartedAt?: string | null;
+  lastRetryAt?: string | null;
+  enrichmentAttemptCount?: number;
+  userReviewedAt: string | null;
+};
+
 export type ClothingItem = {
-  _id: string; // Unique ID for the clothing item
-  colour: string[]; // Array of colours
-  type: string; // Type of clothing
+  _id: string;
+  colour: string[];
+  type: string;
   material?: string;
   fit?: string;
   pattern?: string;
-  slot: Slot; // Slot of the clothing item
-  imageSrc: string; // Base64 encoded image
+  slot: Slot;
+  imageSrc: string;
+  stylingMetadata?: StylingMetadata | null;
 };
+
 export type Outfit = {
   uniqueId: string;
   name: string;
   outfit_items: ClothingItem[];
 };
-
-export type Slot = "head" | "body" | "legs" | "feet";
 
 export type View =
   | "home"
@@ -22,7 +81,8 @@ export type View =
   | "createOutfit"
   | "addClothes"
   | "buyCredits"
-  | "clothingDetails";
+  | "clothingDetails"
+  | "travelMode";
 
 export type coloursList =
   | "Black"
@@ -40,44 +100,5 @@ export type coloursList =
   | "Orange"
   | "Camo";
 
-export type typeList =
-  | "Shirt"
-  | "Jeans"
-  | "Sweater"
-  | "Jacket"
-  | "T-shirt"
-  | "Shorts"
-  | "Skirt"
-  | "Dress"
-  | "Blouse"
-  | "Trousers"
-  | "Hoodie"
-  | "Coat"
-  | "Cardigan"
-  | "Tank Top"
-  | "Pajamas"
-  | "Socks"
-  | "Scarf"
-  | "Hat"
-  | "Gloves"
-  | "Cargos"
-  | "Jeans"
-  | "Dress Shirt"
-  | "Leggings"
-  | "Vest"
-  | "Swimsuit"
-  | "Raincoat"
-  | "Overalls"
-  | "Jumper"
-  | "Blazer"
-  | "Crop Top"
-  | "Pants"
-  | "Capri Pants"
-  | "Suit"
-  | "Tie"
-  | "Belt"
-  | "Tunic"
-  | "Poncho"
-  | "Robe"
-  | "Underwear"
-  | "Shoes";
+/** Clothing type labels; validated at runtime against `type_List`. */
+export type typeList = string;

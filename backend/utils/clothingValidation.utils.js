@@ -2,8 +2,10 @@ import {
   COLOURS_LIST,
   FITS_LIST,
   MATERIALS_LIST,
+  OCCASION_TAGS,
   PATTERNS_LIST,
   SLOTS_LIST,
+  STYLE_CATEGORIES,
   TYPE_LIST,
 } from "../constants/clothingMetadata.js";
 import { mapTypeToSlot } from "./slot.utils.js";
@@ -36,7 +38,9 @@ export const validateClothingUpdatePayload = ({
   material,
   fit,
   pattern,
-  slot,
+  slot: _slot,
+  styleCategory,
+  occasionTags,
 }) => {
   const errors = [];
   const normalizedType = formatScalar(type);
@@ -65,27 +69,53 @@ export const validateClothingUpdatePayload = ({
     errors.push("Invalid pattern");
   }
 
-  let normalizedSlot = formatScalar(slot).toLowerCase();
-  if (!normalizedSlot) {
-    normalizedSlot = mapTypeToSlot(normalizedType);
-  }
+  // Always derive slot from type so mismatches (e.g. Belt → body) cannot persist.
+  let normalizedSlot = mapTypeToSlot(normalizedType);
   if (!SLOTS_LIST.includes(normalizedSlot)) {
     errors.push("Invalid slot");
+  }
+
+  const data = {
+    type: normalizedType,
+    colour: normalizedColour,
+    material: normalizedMaterial,
+    fit: normalizedFit,
+    pattern: normalizedPattern,
+    slot: normalizedSlot,
+  };
+
+  if (styleCategory !== undefined) {
+    if (styleCategory === null || styleCategory === "") {
+      data.styleCategory = null;
+    } else if (STYLE_CATEGORIES.includes(styleCategory)) {
+      data.styleCategory = styleCategory;
+    } else {
+      errors.push("Invalid styleCategory");
+    }
+  }
+
+  if (occasionTags !== undefined) {
+    if (!Array.isArray(occasionTags)) {
+      errors.push("occasionTags must be an array");
+    } else {
+      const cleaned = [];
+      const seen = new Set();
+      for (const tag of occasionTags) {
+        if (!OCCASION_TAGS.includes(tag)) {
+          errors.push(`Invalid occasionTag: ${tag}`);
+          break;
+        }
+        if (seen.has(tag)) continue;
+        seen.add(tag);
+        cleaned.push(tag);
+      }
+      data.occasionTags = cleaned;
+    }
   }
 
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
-  return {
-    ok: true,
-    data: {
-      type: normalizedType,
-      colour: normalizedColour,
-      material: normalizedMaterial,
-      fit: normalizedFit,
-      pattern: normalizedPattern,
-      slot: normalizedSlot,
-    },
-  };
+  return { ok: true, data };
 };
