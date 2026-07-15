@@ -26,6 +26,7 @@ export const TYPE_TO_SLOT = {
   Tote: "head",
 
   // Tops / full pieces worn on torso (body)
+  "Polo Shirt": "body",
   Shirt: "body",
   "T-shirt": "body",
   "T-Shirt": "body",
@@ -249,7 +250,8 @@ export const mapTypeToSlot = (type) => {
     t.includes("bodysuit") ||
     t.includes("jersey") ||
     t.includes("kimono") ||
-    t.includes("tie")
+    t.includes("tie") ||
+    t.includes("polo shirt")
   ) {
     return "body";
   }

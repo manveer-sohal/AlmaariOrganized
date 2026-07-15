@@ -19,14 +19,20 @@ export const toBase64 = (file) => {
   return `data:image/png;base64,${file.toString("base64")}`;
 };
 
-export const cropImage = async (base64Image) => {
+export const cropImage = async (
+  base64Image,
+  { mode = "subject_square" } = {},
+) => {
   updateRequestContext({ workflow: WORKFLOW });
   const timer = createTimer();
   const requestId = getRequestId();
+  const cropMode =
+    mode === "rembg_only" ? "rembg_only" : "subject_square";
 
   logInfo("ai.image.processing.started", {
     workflow: WORKFLOW,
     requestId,
+    mode: cropMode,
     hasImage: Boolean(base64Image),
     imageCharLength: typeof base64Image === "string" ? base64Image.length : 0,
   });
@@ -37,7 +43,7 @@ export const cropImage = async (base64Image) => {
       service: "crop",
       method: "POST",
       url: `${CROP_SERVICE_URL}/crop`,
-      data: { image: base64Image },
+      data: { image: base64Image, mode: cropMode },
       timeout: CROP_TIMEOUT_MS,
       workflow: WORKFLOW,
       headers: { "Content-Type": "application/json" },
@@ -47,6 +53,7 @@ export const cropImage = async (base64Image) => {
     observeMs("ai.image_crop_processing.ms", totalMs);
     logInfo("ai.image.processing.completed", {
       workflow: WORKFLOW,
+      mode: cropMode,
       durationMs: totalMs,
       downstreamMs: durationMs,
       success: true,
@@ -60,6 +67,7 @@ export const cropImage = async (base64Image) => {
     observeMs("ai.image_crop_processing.ms", totalMs);
     logError("ai.image.processing.failed", {
       workflow: WORKFLOW,
+      mode: cropMode,
       durationMs: totalMs,
       classification: classified.classification,
       retryable: classified.retryable,

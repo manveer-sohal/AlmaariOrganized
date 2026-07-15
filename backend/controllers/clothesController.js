@@ -238,9 +238,15 @@ export const cropImageForClient = async (request, response) => {
   }
 
   try {
+    const mode =
+      request.body?.mode === "rembg_only" ? "rembg_only" : "subject_square";
     const base64 = await toBase64(file.buffer);
-    const croppedBase64 = await cropImage(base64);
-    const buffer = Buffer.from(String(croppedBase64), "base64");
+    const croppedBase64 = await cropImage(base64, { mode });
+    // Downstream may return raw base64 or a data URL.
+    const raw = String(croppedBase64).includes(",")
+      ? String(croppedBase64).split(",").pop()
+      : String(croppedBase64);
+    const buffer = Buffer.from(raw, "base64");
 
     response.setHeader("Content-Type", "image/png");
     response.setHeader("Cache-Control", "no-store");
