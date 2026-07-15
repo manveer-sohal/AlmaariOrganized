@@ -8,7 +8,7 @@ import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 import { useCredits } from "../hooks/useCredits";
 import { View } from "../types/clothes";
-import { Check, Shirt, Briefcase } from "lucide-react";
+import { Check, Shirt } from "lucide-react";
 import CreditsBalanceButton from "./CreditsBalanceButton";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 type SideBarProp = {
@@ -59,9 +59,9 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
     setView("home");
   };
 
-  const onClickTravelMode = () => {
-    setView("travelMode");
-  };
+  // const onClickTravelMode = () => {
+  //   setView("travelMode");
+  // };
 
   const handleSubmit = () => {
     console.log("apply");
@@ -248,7 +248,7 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
             </span>
           </button>
 
-          <button
+          {/* <button
             id="desktop-sidebar-button"
             onClick={() => onClickTravelMode()}
             className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
@@ -261,7 +261,7 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
               <Briefcase className="w-4 h-4" />
               Travel Mode
             </span>
-          </button>
+          </button>*/}
         </div>
         {/* credits display */}
         <div className="flex flex-col items-center justify-center ">

@@ -616,7 +616,7 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
 
   return (
     <div
-      className={`z-10 flex h-full min-h-0 w-full flex-col p-3 pb-0 md:rounded-tl-3xl md:p-4 md:pb-8 ${
+      className={`z-10 flex h-full min-h-0 w-full flex-col p-3 pb-0 md:h-auto md:min-h-full md:rounded-tl-3xl md:p-4 md:pb-8 md:overflow-visible ${
         session.recommendations.length > 0
           ? "overflow-hidden"
           : "overflow-y-auto"
@@ -702,7 +702,7 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
         prompt={session.activeGeneration?.prompt}
       />
 
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col md:h-auto">
         <div className="hidden md:block">
           <OutfitBuilderHeader
             name={name}
