@@ -17,7 +17,7 @@ import {
   // hasMeaningfulLayering,
 } from "../../utils/layeringDisplay";
 import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
-import { Anchor, ChevronDown, Settings2, PlaneIcon } from "lucide-react";
+import { Anchor, ChevronDown, Settings2 } from "lucide-react";
 
 const MODE_ORDER: StylistMode[] = ["random", "complete", "improve", "selected"];
 
@@ -480,7 +480,6 @@ export default function AiStylistPanel({
                   </span> */}
                   <h4 className="mt-2 break-words text-base font-semibold text-indigo-900">
                     {recommendation.name}
-                    <PlaneIcon className="h-4 w-4" aria-hidden />
                   </h4>
                   {/* <p className="mt-1 line-clamp-2 text-sm text-indigo-800/90">
                     {recommendation.explanation}
