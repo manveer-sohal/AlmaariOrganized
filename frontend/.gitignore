@@ -44,10 +44,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Generated assets
-public/*.svg
-public/*.png
-public/*.jpg
+# Generated / throwaway media (keep branding assets in public/ tracked)
+# public/*.svg
+# public/*.png
+# public/*.jpg
+public/uploads/
 
 # OS files
 .DS_Store
