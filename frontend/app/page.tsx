@@ -284,7 +284,7 @@ export default function Homepage() {
         <div className="border-t border-indigo-100 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>Almaari Organizer © 2025</div>
           <div className="flex items-center gap-4">
-            <Link href="#" className="hover:text-indigo-900">
+            {/* <Link href="#" className="hover:text-indigo-900">
               Privacy
             </Link>
             <Link href="#" className="hover:text-indigo-900">
@@ -292,7 +292,7 @@ export default function Homepage() {
             </Link>
             <Link href="#" className="hover:text-indigo-900">
               Contact
-            </Link>
+            </Link> */}
           </div>
         </div>
       </footer>
