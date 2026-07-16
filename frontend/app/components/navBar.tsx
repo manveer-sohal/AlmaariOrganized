@@ -197,7 +197,7 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
                   transition={{ duration: 0.1, ease: "easeOut" }}
                   className="z-50 fixed right-0 top-16"
                 >
-                  <Dropdown />
+                  <Dropdown onClose={() => setShowFeedback(false)} />
                 </motion.div>
               )}
             </div>

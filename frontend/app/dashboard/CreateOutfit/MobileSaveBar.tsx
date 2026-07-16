@@ -47,8 +47,7 @@ export default function MobileSaveBar({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-indigo-200 bg-white/95 px-3 pt-2 shadow-[0_-4px_16px_rgba(79,70,229,0.08)] backdrop-blur md:hidden"
-      style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      className="fixed inset-x-0 bottom-[4.25rem] z-30 border-t border-indigo-200 bg-white/95 px-3 py-2 shadow-[0_-4px_16px_rgba(79,70,229,0.08)] backdrop-blur md:hidden"
     >
       <div className="mx-auto flex max-w-lg flex-col gap-1.5">
         {showAiActions && activeRecommendation ? (
@@ -171,6 +170,7 @@ export default function MobileSaveBar({
               : `${selectedCount} ${selectedCount === 1 ? "item" : "items"} selected`}
           </p>
           <button
+            id="mobile-save-outfit-btn"
             type="button"
             disabled={saving || !canSave}
             onClick={onSave}

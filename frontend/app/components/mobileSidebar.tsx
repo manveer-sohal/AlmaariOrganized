@@ -4,6 +4,7 @@
 // import { useClothesStore } from "../store/useClothesStore";
 //  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
 import { View } from "../types/clothes";
+import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 type SideBarProp = {
   view: View;
   setView: (view: View) => void;
@@ -199,7 +200,10 @@ function MobileSideBar({ view, setView }: SideBarProp) {
           </button>
           <button
             id="create-outfit-btn"
-            onClick={() => onClickCreateOutfits()}
+            onClick={() => {
+              onClickCreateOutfits();
+              goToNextTourStepOutfit();
+            }}
             className={`inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
               view === "createOutfit"
                 ? "bg-indigo-500 text-white"
