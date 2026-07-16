@@ -18,7 +18,7 @@ predifined endpoints which lets it load the auth0 authenticaiton page
 
 this is loaded into the nav bar, keeping it seperate due to "use cliet"
 */
-function LoginButton() {
+function LoginButton({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -27,6 +27,7 @@ function LoginButton() {
       className="inline-flex items-center font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
       href={user ? "/api/auth/logout" : "/api/auth/login"}
       onClick={() => {
+        onNavigate?.();
         if (user) {
           setIsLoggingOut(true);
           console.log("Logging out...");

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from "react";
+import Image from "next/image";
 import ClothesCard from "./clothesCard";
 import { useClothesStore } from "../../store/useClothesStore";
 import LoadingClothesCard from "./loadingclothesCard";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useInView } from "react-intersection-observer";
@@ -10,6 +11,43 @@ import { useInView } from "react-intersection-observer";
 type DisplayClothesProps = {
   onSelectItem?: (item: ClothingItem) => void;
 };
+
+function EmptyWardrobeState() {
+  return (
+    <motion.div
+      className="col-span-full flex min-h-[min(70vh,32rem)] flex-col items-center justify-center px-4 py-10"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
+      <div className="relative flex flex-col items-center">
+        <div
+          role="status"
+          className="relative z-10 mb-3 max-w-[15rem] rounded-2xl border-[3px] border-[#273157]  px-4 py-3 text-center text-base font-semibold leading-snug text-[#273157] shadow-sm sm:text-lg"
+        >
+          Add some clothes!
+          <span
+            aria-hidden
+            className="absolute left-1/2 top-full -mt-px -translate-x-1/2 border-x-[11px] border-t-[14px] border-x-transparent border-t-[#273157]"
+          />
+          <span
+            aria-hidden
+            className="absolute left-1/2 top-full -translate-x-1/2 translate-y-[-2px] border-x-[8px] border-t-[11px] border-x-transparent border-t-[#F9F7F1]"
+          />
+        </div>
+
+        <Image
+          src="/almaari-mascot-chilling.png"
+          alt="Almaari mascot waving"
+          width={280}
+          height={280}
+          priority
+          className="h-auto w-[min(72vw,260px)] select-none"
+        />
+      </div>
+    </motion.div>
+  );
+}
 
 function DisplayClothes({ onSelectItem }: DisplayClothesProps) {
   const { filters } = useClothesStore();
@@ -76,9 +114,9 @@ function DisplayClothes({ onSelectItem }: DisplayClothesProps) {
           <LoadingClothesCard key={index} index={index} />
         ))
       ) : error && clothes.length === 0 ? (
-        <p className="text-xl">Error loading clothes</p>
+        <p className="col-span-full text-xl">Error loading clothes</p>
       ) : clothes.length === 0 ? (
-        <p className="text-xl">Add Some Clothes!</p>
+        <EmptyWardrobeState />
       ) : (
         <AnimatePresence mode="popLayout">
           {filteredClothes.map((item: ClothingItem) => (

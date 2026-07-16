@@ -9,10 +9,8 @@ import ViewOutfits from "./PreviewOutfit/viewOutfits";
 import ClothingDetailsView from "./components/ClothingDetailsView";
 import AddClothesUI from "./addClothes/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
-import MobileSideBar from "../components/mobileSidebar";
+import MobileSearchBar from "../components/MobileSearchBar";
 import { useClothesStore } from "../store/useClothesStore";
-import { goToNextTourStep } from "../components/OnBoardingTour";
-// import { startOnboardingTour } from "../components/OnBoardingTour";
 import CheckList from "./components/CheckList";
 import BuyCredits from "./components/BuyCredits";
 import { useRole } from "../hooks/useRole";
@@ -93,22 +91,18 @@ export default function Dashboard() {
   return (
     <main className="bg-indigo-400 h-screen w-full grid grid-rows-[auto_1fr] overflow-hidden relative">
       {view === "addClothes" && (
-        <div className="absolute w-full h-full z-40 top-0">
+        <div className="absolute w-full h-full z-50 top-0">
           <AddClothesUI setView={setView}></AddClothesUI>
         </div>
       )}
-      {/* top row container, this contains the nav bar and the mobile side bar*/}
-      <div className="w-[100vw] ">
-        <div className="block md:hidden ">
-          <MobileNavBar onBuyCredits={openBuyCredits}></MobileNavBar>
+      {/* top row: desktop navbar / mobile search */}
+      <div className="w-[100vw]">
+        <div className="block md:hidden">
+          <MobileSearchBar enabled={view === "home"} />
         </div>
 
         <div className="hidden md:block">
           <NavBar setView={setView}></NavBar>
-        </div>
-
-        <div className="block md:hidden">
-          <MobileSideBar view={view} setView={setView}></MobileSideBar>
         </div>
       </div>
       {/* bottom row container, this contains the side bar and the content area*/}
@@ -169,7 +163,7 @@ export default function Dashboard() {
             </>
           )}
           {user && (
-            <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0">
+            <div className="md:rounded-tl-3xl w-full overflow-y-auto h-full min-h-0 pb-20 md:pb-0">
               {/* previously had a loading screen here before the whole page loaded*/}
               {view === "createOutfit" && (
                 <CreateOutfitUI
@@ -191,51 +185,21 @@ export default function Dashboard() {
               {(view === "home" || view === "addClothes") && (
                 <DisplayClothes onSelectItem={openClothingDetails} />
               )}
-              <div className="block md:hidden">
-                <div
-                  className="absolute bottom-0 right-0"
-                  onClick={onClickAddClothes}
-                >
-                  <button
-                    id="add-clothes-btn-mobile"
-                    onClick={goToNextTourStep}
-                    title="Add Clothes"
-                    className="fixed bottom-0 right-0 inline-flex items-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300"
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M12 5v14M5 12h14"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span>Add Clothes</span>
-                  </button>
-                </div>
-              </div>
-              <div
-                className="   
-            
-  z-10 fixed
-  left-0 bottom-0
-  md:left-auto
-  md:top-20 md:right-0
-  lg:right-0 lg:top-20
-  xl:top-20 xl:right-0
-"
-              >
+              <div className="z-10 fixed left-0 bottom-20 md:hidden">
                 <CheckList />
               </div>
             </div>
           )}
         </div>
+      </div>
+
+      <div className="block md:hidden">
+        <MobileNavBar
+          view={view}
+          setView={setView}
+          onAddClothes={onClickAddClothes}
+          onBuyCredits={openBuyCredits}
+        />
       </div>
     </main>
   );

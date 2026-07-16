@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import OutfitOption from "./outfitOption";
 import { ClothingItem, Outfit } from "../../types/clothes";
@@ -24,6 +24,21 @@ export default function OutfitBrowser({
   onDeleteOutfit,
 }: OutfitBrowserProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (outfits.length === 0) {
+      setActiveId(null);
+      return;
+    }
+
+    const stillExists = activeId
+      ? outfits.some((o) => o.uniqueId === activeId)
+      : false;
+
+    if (!stillExists) {
+      setActiveId(outfits[0].uniqueId);
+    }
+  }, [outfits, activeId]);
 
   const activeOutfit = useMemo(
     () => outfits.find((o) => o.uniqueId === activeId) || null,

@@ -84,11 +84,12 @@ export default function MobileOutfitBuilderShell({
     ? recommendations[activeGeneratedIndex] ?? recommendations[0]
     : null;
 
-  // Bottom dock is taller when AI actions (name + use + feedback + save) are shown.
-  const bottomPad = hasAiResults ? "pb-[13.5rem]" : "pb-24";
+  // Bottom dock + fixed mobile tab bar (~4.25rem).
+  const bottomPad = hasAiResults ? "pb-[18rem]" : "pb-32";
 
   return (
     <div
+      id="mobile-outfit-builder"
       className={`md:hidden flex max-w-full flex-col overflow-x-hidden ${
         hasAiResults
           ? `h-full min-h-0 ${bottomPad}`
@@ -121,6 +122,7 @@ export default function MobileOutfitBuilderShell({
 
         <div className={`grid grid-cols-2 gap-2 ${hasAiResults ? "" : "mt-2"}`}>
           <button
+            id="mobile-ai-style-btn"
             type="button"
             onClick={onOpenAI}
             className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white hover:bg-indigo-700"
@@ -129,6 +131,7 @@ export default function MobileOutfitBuilderShell({
             {hasAiResults ? "Refine" : "AI Style Me"}
           </button>
           <button
+            id="mobile-add-clothes-btn"
             type="button"
             onClick={onOpenWardrobe}
             className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-900 hover:bg-indigo-50"
