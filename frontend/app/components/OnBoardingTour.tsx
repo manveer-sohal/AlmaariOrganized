@@ -1,6 +1,7 @@
 "use client";
 import { driver, Driver } from "driver.js";
 import { isMobile } from "react-device-detect";
+import { almaariDriverDefaults } from "./onboardingTourShared";
 
 let tour: Driver | null = null;
 let tourRunning = false;
@@ -17,7 +18,7 @@ export async function startOnboardingTour() {
   tourRunning = true;
 
   tour = driver({
-    showProgress: true,
+    ...almaariDriverDefaults,
     onDestroyed: () => {
       tourRunning = false;
       tour = null;
@@ -29,14 +30,14 @@ export async function startOnboardingTour() {
           title: "Welcome to the app! Add your first item",
           description: "Click this button to add your first item.",
           showButtons: [],
-          side: "left",
+          side: "top",
         },
       },
       {
         popover: {
           title: "Fill in the form",
           description: "Fill in the form to add your clothing item.",
-          side: "left",
+          side: "top",
         },
       },
       {
@@ -46,7 +47,9 @@ export async function startOnboardingTour() {
           description:
             "Click this button to analyze your clothing item quickly! Skipping manual steps.",
           side: "left",
-          showButtons: ["close"],
+          showButtons: ["next"],
+          nextBtnText: "Got it",
+          doneBtnText: "Got it",
         },
       },
     ],
@@ -56,9 +59,11 @@ export async function startOnboardingTour() {
 }
 
 export function goToNextTourStep() {
+  if (!tour || !tourRunning) return;
+
   const addClothesForm = document.getElementById("add-clothes-form");
   if (addClothesForm) {
-    tour?.moveNext();
+    tour.moveNext();
   } else {
     setTimeout(() => {
       goToNextTourStep();

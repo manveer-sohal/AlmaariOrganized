@@ -190,6 +190,7 @@ export default function BuilderOutfitPreview({
 
   return (
     <div
+      id="outfit-preview"
       className={`flex min-h-0 flex-col rounded-2xl border border-indigo-200 bg-white/80 shadow-md backdrop-blur transition-shadow ${
         compact ? "p-3" : "p-4"
       } ${
