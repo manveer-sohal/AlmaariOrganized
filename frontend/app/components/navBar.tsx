@@ -1,6 +1,6 @@
 import temp from "../Logo.png";
 import Image from "next/image";
-import React, { Dispatch, SetStateAction, useState } from "react";
+import React, { Dispatch, SetStateAction, useRef, useState } from "react";
 import { useClothesStore } from "../store/useClothesStore";
 import { View } from "../types/clothes";
 import {
@@ -12,7 +12,7 @@ import {
 } from "../data/constants";
 import { goToNextTourStep } from "./OnBoardingTour";
 import Dropdown from "../dashboard/components/Dropdown";
-import { Search, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Search, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 type NavBarProps = {
   onSearchTermChange?: Dispatch<SetStateAction<string>>;
@@ -21,8 +21,12 @@ type NavBarProps = {
 
 function NavBar({ onSearchTermChange, setView }: NavBarProps) {
   const [search, setSearch] = useState("");
-  const { filters, setFilters, menuOpen, setMenuOpen } = useClothesStore();
+  const filters = useClothesStore((s) => s.filters);
+  const setFilters = useClothesStore((s) => s.setFilters);
+  const menuOpen = useClothesStore((s) => s.menuOpen);
+  const setMenuOpen = useClothesStore((s) => s.setMenuOpen);
   const [showFeedback, setShowFeedback] = useState(false);
+  const toggleLockUntil = useRef(0);
   const changeFilter = (value: string) => {
     const terms = value
       .trim()
@@ -98,14 +102,23 @@ function NavBar({ onSearchTermChange, setView }: NavBarProps) {
           aria-label={menuOpen ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={menuOpen}
           aria-controls="desktop-sidebar"
-          title={menuOpen ? "Hide sidebar" : "Show sidebar"}
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors"
+          title={menuOpen ? "Collapse sidebar" : "Expand sidebar"}
+          onClick={() => {
+            const now = Date.now();
+            if (now < toggleLockUntil.current) return;
+            toggleLockUntil.current = now + 320;
+            setMenuOpen(!menuOpen);
+          }}
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+            menuOpen
+              ? "border-indigo-400 bg-indigo-500 text-white hover:bg-indigo-600"
+              : "border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white"
+          }`}
         >
           {menuOpen ? (
-            <PanelLeftClose className="h-5 w-5" aria-hidden />
+            <ChevronLeft className="h-5 w-5" aria-hidden />
           ) : (
-            <PanelLeftOpen className="h-5 w-5" aria-hidden />
+            <ChevronRight className="h-5 w-5" aria-hidden />
           )}
         </button>
         <li

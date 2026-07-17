@@ -2,70 +2,100 @@ import ChooseColour from "../dashboard/components/chooseColour";
 import ValidateType from "../dashboard/components/validateType";
 import TagFilterPicker from "../dashboard/components/TagFilterPicker";
 import { materials_List, fits_List, patterns_List } from "../data/constants";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useClothesStore } from "../store/useClothesStore";
 import { goToNextTourStepOutfit } from "./OnBoardingTourOutfit";
 import { useCredits } from "../hooks/useCredits";
 import { View } from "../types/clothes";
-import { Check, Shirt } from "lucide-react";
+import {
+  Check,
+  Shirt,
+  Home,
+  Filter,
+  Eye,
+  Coins,
+  ListChecks,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import CreditsBalanceButton from "./CreditsBalanceButton";
 import CheckList from "../dashboard/components/CheckList";
-//  onQuery: (Dispatch<SetStateAction<{ colour: string[] | undefined; type: string[] | undefined; } | undefined>>) => void;
+
 type SideBarProp = {
   view: View;
   setView: (view: View) => void;
   onBuyCredits: () => void;
+  collapsed?: boolean;
 };
-function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
-  const [active, setActive] = useState<boolean>(false);
-  const [displayFilterType, setDisplayFilterType] = useState<string>("none");
+
+const TOGGLE_LOCK_MS = 320;
+
+function SideBar({
+  view,
+  setView,
+  onBuyCredits,
+  collapsed = false,
+}: SideBarProp) {
+  const [active, setActive] = useState(false);
+  const [displayFilterType, setDisplayFilterType] = useState("none");
   const [colour, setColour] = useState<string[] | null | undefined>([]);
   const [type, setType] = useState<string[] | null | undefined>([]);
   const [material, setMaterial] = useState<string[] | null | undefined>([]);
   const [fit, setFit] = useState<string[] | null | undefined>([]);
   const [pattern, setPattern] = useState<string[] | null | undefined>([]);
-  const { filters, setFilters } = useClothesStore();
+  const filters = useClothesStore((s) => s.filters);
+  const setFilters = useClothesStore((s) => s.setFilters);
+  const setMenuOpen = useClothesStore((s) => s.setMenuOpen);
   const { credits, isLoadingCredits } = useCredits();
+  const toggleLockUntil = useRef(0);
+
+  useEffect(() => {
+    if (!collapsed) return;
+    setDisplayFilterType("none");
+    setActive(false);
+  }, [collapsed]);
+
+  const toggleSidebar = (nextOpen: boolean) => {
+    const now = Date.now();
+    if (now < toggleLockUntil.current) return;
+    toggleLockUntil.current = now + TOGGLE_LOCK_MS;
+    setMenuOpen(nextOpen);
+  };
+
   const changeFilter = (
-    colour: string[],
-    type: string[],
-    material: string[],
-    fit: string[],
-    pattern: string[],
+    nextColour: string[],
+    nextType: string[],
+    nextMaterial: string[],
+    nextFit: string[],
+    nextPattern: string[],
   ) => {
-    setFilters({ ...filters, colour, type, material, fit, pattern });
-    console.log(filters);
+    setFilters({
+      ...filters,
+      colour: nextColour,
+      type: nextType,
+      material: nextMaterial,
+      fit: nextFit,
+      pattern: nextPattern,
+    });
   };
 
   const onClickFilter = () => {
-    if (displayFilterType == "none") {
+    if (collapsed) {
+      toggleSidebar(true);
+      setDisplayFilterType("block");
+      setActive(true);
+      return;
+    }
+    if (displayFilterType === "none") {
       setDisplayFilterType("block");
       setActive(true);
     } else {
       setDisplayFilterType("none");
       setActive(false);
     }
-    console.log(active);
   };
-
-  const onClickOutfits = () => {
-    setView("outfits");
-  };
-
-  const onClickCreateOutfits = () => {
-    setView("createOutfit");
-  };
-  const onClickHome = () => {
-    setView("home");
-  };
-
-  // const onClickTravelMode = () => {
-  //   setView("travelMode");
-  // };
 
   const handleSubmit = () => {
-    console.log("apply");
-
     changeFilter(
       colour ?? [],
       type ?? [],
@@ -73,80 +103,63 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
       fit ?? [],
       pattern ?? [],
     );
-
     onClickFilter();
   };
+
+  const navBtnClass = (isActive: boolean) =>
+    `inline-flex h-10 shrink-0 items-center overflow-hidden whitespace-nowrap font-medium rounded-xl m-1 cursor-pointer border transition-colors duration-200 ${
+      collapsed
+        ? "w-10 justify-center p-0"
+        : "w-[calc(100%-0.5rem)] justify-center gap-2 text-base px-3"
+    } ${
+      isActive
+        ? "bg-indigo-500 text-white border-indigo-500"
+        : "bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 hover:text-white hover:border-indigo-500"
+    }`;
+
   return (
-    <div className="bg-red-500 w-full">
-      <ul className="border-indigo-300 border-l-4 p-3 w-full h-[93.4vh] text-center bg-indigo-400/100  py-[2.1vh] flex flex-col min-w-[150px] shadow-md justify-between">
-        <div className="flex flex-col items-center justify-center ">
+    <div className="h-full w-full">
+      <ul
+        className={`border-indigo-300 border-l-4 h-[93.4vh] text-center bg-indigo-400/100 flex flex-col shadow-md justify-between ${
+          collapsed ? "items-center px-1.5 py-[2.1vh]" : "p-3 py-[2.1vh]"
+        }`}
+      >
+        <div
+          className={`flex flex-col ${
+            collapsed ? "items-center w-full" : "items-center justify-center"
+          }`}
+        >
           <button
-            onClick={() => onClickHome()}
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
-              view === "home"
-                ? "bg-indigo-500 text-white"
-                : "bg-indigo-100/70 text-indigo-900"
-            }`}
+            type="button"
+            onClick={() => setView("home")}
+            title="Home"
+            aria-label="Home"
+            className={navBtnClass(view === "home")}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M3 10L12 3l9 7"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M5 10v10h5v-6h4v6h5V10"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>Home</span>
+            <Home className="h-5 w-5 shrink-0" aria-hidden />
+            {!collapsed ? <span className="truncate">Home</span> : null}
           </button>
+
           <button
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border ${
-              active === true
-                ? "bg-white text-indigo-900 border-indigo-300"
-                : "bg-indigo-100/70 text-indigo-900 border-indigo-200"
-            } hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-colors duration-200`}
+            type="button"
+            className={navBtnClass(active)}
             onClick={onClickFilter}
             aria-pressed={active}
+            title="Filter"
+            aria-label="Filter"
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M4 5h16l-6 7v5l-4 2v-7L4 5z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>Filter</span>
+            <Filter className="h-5 w-5 shrink-0" aria-hidden />
+            {!collapsed ? <span className="truncate">Filter</span> : null}
           </button>
 
           <div
-            className={`dropdwn ${
-              displayFilterType === "block" ? "flex" : "hidden"
-            } rounded-lg flex-col`}
+            className={`dropdwn rounded-lg flex-col ${
+              collapsed || displayFilterType !== "block" ? "hidden" : "flex"
+            }`}
           >
             <div className="relative bg-white/80 backdrop-blur border border-indigo-200 shadow-md p-3 rounded-lg flex flex-col gap-2">
-              <ChooseColour colour={setColour}></ChooseColour>
-              <ValidateType type={setType}></ValidateType>
+              <ChooseColour colour={setColour} />
+              <ValidateType type={setType} />
               <TagFilterPicker
                 label="Material:"
                 placeholder="Enter material ie. cotton"
@@ -174,6 +187,7 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
             </div>
 
             <button
+              type="button"
               className="w-1/2 inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-xl m-1 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors duration-200"
               onClick={handleSubmit}
             >
@@ -184,79 +198,108 @@ function SideBar({ view, setView, onBuyCredits }: SideBarProp) {
           </div>
 
           <button
-            onClick={() => onClickOutfits()}
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border bg-indigo-100/70 text-indigo-900 border-indigo-200 hover:bg-indigo-500 active:bg-purple-600 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
-              view === "outfits"
-                ? "bg-indigo-500 text-white"
-                : "bg-indigo-100/70 text-indigo-900"
-            }`}
+            type="button"
+            onClick={() => setView("outfits")}
+            title="View Outfits"
+            aria-label="View Outfits"
+            className={navBtnClass(view === "outfits")}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M2 12c2.5-4.5 7-7 10-7s7.5 2.5 10 7c-2.5 4.5-7 7-10 7S4.5 16.5 2 12z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="3"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-            </svg>
-            <span>View Outfits</span>
+            <Eye className="h-5 w-5 shrink-0" aria-hidden />
+            {!collapsed ? (
+              <span className="whitespace-nowrap">View Outfits</span>
+            ) : null}
           </button>
+
           <button
+            type="button"
             id="desktop-sidebar-button"
             onClick={() => {
-              onClickCreateOutfits();
+              setView("createOutfit");
               goToNextTourStepOutfit();
             }}
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
-              view === "createOutfit"
-                ? "bg-indigo-500 text-white"
-                : "bg-indigo-100/70 text-indigo-900"
-            }`}
+            title="Create Outfit"
+            aria-label="Create Outfit"
+            className={navBtnClass(view === "createOutfit")}
           >
-            <span className="flex items-center gap-2">
-              <Shirt className="w-4 h-4" /> Create Outfit
-            </span>
+            <Shirt className="h-5 w-5 shrink-0" aria-hidden />
+            {!collapsed ? (
+              <span className="whitespace-nowrap">Create Outfit</span>
+            ) : null}
           </button>
 
-          <CheckList variant="sidebar" />
+          <button
+            type="button"
+            onClick={() => toggleSidebar(true)}
+            title="Getting started checklist"
+            aria-label="Open getting started checklist"
+            className={`${navBtnClass(false)} ${collapsed ? "" : "hidden"}`}
+          >
+            <ListChecks className="h-5 w-5 shrink-0" aria-hidden />
+          </button>
 
-          {/* <button
-            id="desktop-sidebar-button"
-            onClick={() => onClickTravelMode()}
-            className={`w-full inline-flex items-center justify-center gap-2 font-medium text-base px-4 py-2 rounded-xl m-1 cursor-pointer border hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-colors duration-200 ${
-              view === "travelMode"
-                ? "bg-indigo-500 text-white"
-                : "bg-indigo-100/70 text-indigo-900"
+          {/* Keep mounted while collapsed to avoid remounting queries/animations.
+              Stable min-width + overflow clip prevents wrap during rail shrink. */}
+          <div
+            className={`overflow-hidden ${
+              collapsed ? "hidden" : "w-full min-w-[196px]"
             }`}
           >
-            <span className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />
-              Travel Mode
-            </span>
-          </button>*/}
+            <CheckList variant="sidebar" />
+          </div>
         </div>
-        {/* credits display */}
-        <div className="flex flex-col items-center justify-center ">
-          <CreditsBalanceButton
-            credits={credits}
-            isLoading={isLoadingCredits}
-            onBuyCredits={onBuyCredits}
-            active={view === "buyCredits"}
-          />
+
+        <div
+          className={`flex flex-col items-center justify-center ${
+            collapsed ? "w-full gap-1" : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={onBuyCredits}
+            title={
+              credits != null
+                ? `Credits: ${credits}. Buy more`
+                : "Buy more credits"
+            }
+            aria-label={
+              credits != null
+                ? `Credits ${credits}. Buy more`
+                : "Buy more credits"
+            }
+            disabled={isLoadingCredits && credits == null}
+            className={`${navBtnClass(view === "buyCredits")} ${
+              collapsed ? "" : "hidden"
+            }`}
+          >
+            <Coins className="h-5 w-5 shrink-0" aria-hidden />
+          </button>
+
+          <div className={collapsed ? "hidden" : "w-full"}>
+            <CreditsBalanceButton
+              credits={credits}
+              isLoading={isLoadingCredits}
+              onBuyCredits={onBuyCredits}
+              active={view === "buyCredits"}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleSidebar(collapsed)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+            aria-controls="desktop-sidebar"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={`mt-2 inline-flex items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors ${
+              collapsed ? "h-10 w-10" : "h-9 w-full"
+            }`}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            ) : (
+              <ChevronLeft className="h-5 w-5" aria-hidden />
+            )}
+          </button>
         </div>
       </ul>
     </div>

@@ -123,29 +123,42 @@ function CheckList({ variant = "floating" }: CheckListProps) {
       {steps.map((step, index) => (
         <li key={step.id}>
           <div
-            className={`flex items-start gap-2.5 rounded-xl border border-indigo-200/80 bg-white/70 p-2.5 text-left shadow-sm ${
-              isSidebar ? "" : "bg-white/80"
+            className={`flex gap-2.5 rounded-xl border border-indigo-200/80 bg-white/70 p-2.5 text-left shadow-sm ${
+              isSidebar
+                ? "items-center overflow-hidden"
+                : "items-start bg-white/80"
             }`}
           >
             <span
-              className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-sm"
+              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-sm ${
+                isSidebar ? "" : "mt-0.5"
+              }`}
               aria-hidden
             >
               {step.icon}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p
+                className={`text-[11px] font-semibold uppercase tracking-wide text-indigo-500 ${
+                  isSidebar ? "truncate whitespace-nowrap" : ""
+                }`}
+              >
                 Step {completedCount + index + 1}
               </p>
               <p
-                className={`font-semibold leading-snug text-indigo-950 ${
-                  isSidebar ? "text-sm" : "text-xs"
+                className={`font-semibold text-indigo-950 ${
+                  isSidebar
+                    ? "truncate whitespace-nowrap text-sm leading-5"
+                    : "text-xs leading-snug"
                 }`}
               >
                 {step.label}
               </p>
               {isSidebar ? (
-                <p className="mt-0.5 text-xs leading-snug text-indigo-800/70">
+                <p
+                  className="mt-0.5 truncate whitespace-nowrap text-xs leading-4 text-indigo-800/70"
+                  title={step.description}
+                >
                   {step.description}
                 </p>
               ) : null}
@@ -153,7 +166,7 @@ function CheckList({ variant = "floating" }: CheckListProps) {
                 type="button"
                 onClick={step.onGo}
                 disabled={isLoadingOnboarding}
-                className={`mt-2 inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 ${
+                className={`mt-2 inline-flex w-full shrink-0 items-center justify-center rounded-lg bg-indigo-600 px-3 text-xs font-semibold whitespace-nowrap text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSidebar ? "h-8" : "h-7"
                 }`}
               >
@@ -169,17 +182,17 @@ function CheckList({ variant = "floating" }: CheckListProps) {
   if (isSidebar) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="mt-3 w-full overflow-hidden rounded-2xl border border-indigo-300/70 bg-gradient-to-b from-white/75 to-indigo-50/60 p-3 text-left shadow-md backdrop-blur"
+        transition={{ duration: 0.2 }}
+        className="mt-3 w-full min-w-[196px] overflow-hidden rounded-2xl border border-indigo-300/70 bg-gradient-to-b from-white/75 to-indigo-50/60 p-3 text-left shadow-md backdrop-blur"
       >
-        <div className="mb-2.5 flex items-start justify-between gap-2 px-0.5">
-          <div>
-            <p className="text-sm font-semibold text-indigo-950">
+        <div className="mb-2.5 flex items-center justify-between gap-2 overflow-hidden px-0.5">
+          <div className="min-w-0 overflow-hidden">
+            <p className="truncate whitespace-nowrap text-sm font-semibold text-indigo-950">
               Getting started
             </p>
-            <p className="text-xs text-indigo-800/70">
+            <p className="truncate whitespace-nowrap text-xs text-indigo-800/70">
               {completedCount === 0
                 ? "Two quick steps to begin"
                 : "One step left"}
