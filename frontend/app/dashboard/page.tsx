@@ -1,7 +1,6 @@
 "use client";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import NavBar from "../components/navBar";
-import SideBar from "../components/sideBar";
 import React, { useEffect, useState } from "react";
 import DisplayClothes from "./components/displayClothes";
 import CreateOutfitUI from "./CreateOutfit/createOutfitUI";
@@ -10,13 +9,12 @@ import ClothingDetailsView from "./components/ClothingDetailsView";
 import AddClothesUI from "./addClothes/addClothesUI";
 import MobileNavBar from "../components/mobileNavbar";
 import MobileSearchBar from "../components/MobileSearchBar";
-import { useClothesStore } from "../store/useClothesStore";
 import CheckList from "./components/CheckList";
 import BuyCredits from "./components/BuyCredits";
 import { useRole } from "../hooks/useRole";
 import { View, ClothingItem } from "../types/clothes";
 import { warmupAiClothingService } from "../utils/warmupAiService";
-import { PanelLeftOpen } from "lucide-react";
+import DesktopSidebarRail from "../components/DesktopSidebarRail";
 // import { startOnboardingTourOutfit } from "../components/OnBoardingTourOutfit";
 /*
 the main part of the  website, it loads the normal componets that any onlogged in user will have accses to, such as the nav bar and teh side bar
@@ -44,7 +42,6 @@ export default function Dashboard() {
     selectedClothingItem,
     setSelectedClothingItem,
   ] = useState<ClothingItem | null>(null);
-  const { menuOpen, setMenuOpen } = useClothesStore();
 
   useRole();
 
@@ -107,38 +104,11 @@ export default function Dashboard() {
       </div>
       {/* bottom row container, this contains the side bar and the content area*/}
       <div className="relative h-full min-h-0 grid md:grid-cols-[auto_1fr]">
-        {/* side bar*/}
-        <div
-          id="desktop-sidebar"
-          className={`z-10 hidden md:block overflow-hidden transition-[width] duration-300 ease-out ${
-            menuOpen ? "w-[clamp(100px,20vw,280px)]" : "w-0"
-          }`}
-        >
-          <div
-            className={`sidebar-container h-full transition-transform duration-300 ease-out ${
-              menuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-            style={{ width: "clamp(100px,20vw,280px)" }}
-            aria-hidden={!menuOpen}
-          >
-            <SideBar
-              view={view}
-              setView={setView}
-              onBuyCredits={openBuyCredits}
-            ></SideBar>
-          </div>
-        </div>
-        {!menuOpen ? (
-          <button
-            type="button"
-            aria-label="Expand sidebar"
-            title="Show sidebar"
-            onClick={() => setMenuOpen(true)}
-            className="absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 rounded-r-xl border border-l-0 border-indigo-300 bg-indigo-100/90 p-2 text-indigo-900 shadow-md backdrop-blur hover:bg-indigo-500 hover:text-white md:inline-flex"
-          >
-            <PanelLeftOpen className="h-5 w-5" aria-hidden />
-          </button>
-        ) : null}
+        <DesktopSidebarRail
+          view={view}
+          setView={setView}
+          onBuyCredits={openBuyCredits}
+        />
         {/* content area*/}
         <div
           className={`${

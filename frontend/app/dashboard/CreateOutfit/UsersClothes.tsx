@@ -22,7 +22,6 @@ const UsersClothes = ({
   categoryFilter,
   onCategoryFilterChange,
   lastSelectedItemId,
-  onStyleThisItem,
   swapMode,
   swapTargetSlot,
   onCancelSwap,
@@ -43,7 +42,6 @@ const UsersClothes = ({
   categoryFilter: Slot | "all";
   onCategoryFilterChange: (value: Slot | "all") => void;
   lastSelectedItemId?: string | null;
-  onStyleThisItem: () => void;
   swapMode?: boolean;
   swapTargetSlot?: Slot | null;
   onCancelSwap?: () => void;
@@ -91,7 +89,6 @@ const UsersClothes = ({
     });
   }, [clothes, categoryFilter, searchQuery, swapMode, swapTargetSlot]);
 
-  const hasSelection = selectedItems.some((group) => group.length > 0);
   const replacementLabel = swapTargetSlot
     ? SLOT_LABELS[swapTargetSlot] || swapTargetSlot
     : null;
@@ -193,18 +190,6 @@ const UsersClothes = ({
                 className="h-10 w-full rounded-xl border border-indigo-200 bg-white px-3 text-sm text-indigo-900 placeholder:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </label>
-
-            {hasSelection && !swapMode ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onStyleThisItem}
-                  className="inline-flex min-h-9 items-center justify-center rounded-xl border border-indigo-300 bg-indigo-100/70 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-500 hover:text-white sm:text-sm"
-                >
-                  Style this item
-                </button>
-              </div>
-            ) : null}
           </>
         )}
       </div>
@@ -295,11 +280,11 @@ const UsersClothes = ({
                         </span>
                         {isAnchored ? (
                           <span
-                            className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-indigo-700 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                            className="absolute right-1.5 top-1.5 inline-flex items-center justify-center rounded-full bg-indigo-700 p-1 text-white shadow-sm"
                             title="This item will remain in future generations"
                           >
                             <Anchor className="h-3 w-3" aria-hidden />
-                            Anchored
+                            <span className="sr-only">Anchored</span>
                           </span>
                         ) : isSelected ? (
                           <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
@@ -356,22 +341,10 @@ const UsersClothes = ({
                         </button>
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-between gap-1 px-2 py-1.5">
+                    <div className="flex items-center px-2 py-1.5">
                       <span className="truncate text-[11px] font-medium text-indigo-900">
                         {SLOT_LABELS[item.slot] || item.slot}
                       </span>
-                      {onToggleAnchor ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleAnchor(item._id);
-                          }}
-                          className="shrink-0 text-[10px] font-semibold text-indigo-700 underline-offset-2 hover:underline"
-                        >
-                          {isAnchored ? "Unanchor" : "Anchor"}
-                        </button>
-                      ) : null}
                     </div>
                   </div>
                 );

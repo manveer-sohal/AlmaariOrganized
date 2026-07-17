@@ -20,7 +20,6 @@ type WardrobeDrawerProps = {
   categoryFilter: Slot | "all";
   onCategoryFilterChange: (value: Slot | "all") => void;
   lastSelectedItemId?: string | null;
-  onStyleThisItem: () => void;
   swapMode?: boolean;
   swapTargetSlot?: Slot | null;
   onCancelSwap?: () => void;
@@ -43,7 +42,6 @@ export default function WardrobeDrawer({
   categoryFilter,
   onCategoryFilterChange,
   lastSelectedItemId,
-  onStyleThisItem,
   swapMode,
   swapTargetSlot,
   onCancelSwap,
@@ -123,7 +121,6 @@ export default function WardrobeDrawer({
             categoryFilter={categoryFilter}
             onCategoryFilterChange={onCategoryFilterChange}
             lastSelectedItemId={lastSelectedItemId}
-            onStyleThisItem={onStyleThisItem}
             swapMode={swapMode}
             swapTargetSlot={swapTargetSlot}
             onCancelSwap={onCancelSwap}

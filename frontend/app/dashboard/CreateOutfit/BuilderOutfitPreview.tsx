@@ -15,10 +15,10 @@ const SLOT_LAYOUT: Record<
   Slot,
   { top: string; height: string; maxWidth: string; z: number }
 > = {
-  head: { top: "2%", height: "18%", maxWidth: "22%", z: 40 },
-  body: { top: "14%", height: "38%", maxWidth: "62%", z: 30 },
-  legs: { top: "46%", height: "36%", maxWidth: "68%", z: 20 },
-  feet: { top: "78%", height: "20%", maxWidth: "48%", z: 10 },
+  head: { top: "13%", height: "18%", maxWidth: "22%", z: 40 },
+  body: { top: "26%", height: "28%", maxWidth: "62%", z: 30 },
+  legs: { top: "44%", height: "36%", maxWidth: "83%", z: 20 },
+  feet: { top: "73%", height: "20%", maxWidth: "48%", z: 10 },
 };
 
 type BuilderOutfitPreviewProps = {
@@ -336,7 +336,7 @@ export default function BuilderOutfitPreview({
                   <button
                     type="button"
                     onClick={() => onReplaceSlot?.(slot)}
-                    className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl bg-white/40 text-indigo-400 transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-600"
+                    className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl  text-indigo-400 transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-600"
                     aria-label={`Select ${label}`}
                   >
                     <SlotIcon slot={slot} />
