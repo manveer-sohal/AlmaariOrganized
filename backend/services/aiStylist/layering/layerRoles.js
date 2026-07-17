@@ -121,6 +121,9 @@ export const resolveLayerRoles = (item) => {
 
   if (isDress(item)) return ["none"];
   if (isNeckwearType(item)) return ["neckwear"];
+  // Caps/hats and other non-neckwear head items are accessories, not tops.
+  // (resolveTopSubtype maps unknown head pieces to other_top — do not treat as base.)
+  if (slot === "head") return ["none"];
   if (isOuterLayerType(item)) return ["outer_layer"];
 
   const subtype = resolveTopSubtype(item);
@@ -147,8 +150,8 @@ export const resolveLayerRoles = (item) => {
     subtype === "blouse" ||
     subtype === "other_top"
   ) {
-    // Generic / non-openable tops are base only — and only for body-slot items
-    if (slot && slot !== "body" && slot !== "head") return ["none"];
+    // Generic / non-openable tops are base only — body-slot items only
+    if (slot && slot !== "body") return ["none"];
     return ["base_top"];
   }
 
@@ -157,7 +160,6 @@ export const resolveLayerRoles = (item) => {
   if (isBaseTopType(item)) return ["base_top"];
 
   if (slot === "body") return ["base_top"];
-  if (slot === "head" && !isNeckwearType(item)) return ["none"];
   return ["none"];
 };
 

@@ -319,13 +319,8 @@ export default function AiStylistPanel({
             <div className="mt-3 space-y-2 border-t border-indigo-100 pt-3">
               {status === "idle" && (
                 <>
-                  {emptyHint ? (
+                  {emptyHint && (
                     <p className="text-sm text-indigo-800">{emptyHint}</p>
-                  ) : (
-                    <p className="text-sm text-indigo-800">
-                      Choose preferences in the next step, then Almaari will
-                      build three complete looks.
-                    </p>
                   )}
                   <button
                     type="button"

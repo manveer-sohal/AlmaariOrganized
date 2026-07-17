@@ -218,9 +218,19 @@ export const generateConstrainedCandidates = (bySlot, constraints) => {
               beltScoreBoost = scored.total * 0.05;
             }
 
-            const items = [...upperItems, legs, feet, head, belt].filter(
+            const rawItems = [...upperItems, legs, feet, head, belt].filter(
               Boolean,
             );
+            // Guard against the same garment appearing as both a layer and an
+            // accessory (e.g. a cap misclassified as base_top).
+            const seenIds = new Set();
+            const items = [];
+            for (const item of rawItems) {
+              const id = itemId(item);
+              if (seenIds.has(id)) continue;
+              seenIds.add(id);
+              items.push(item);
+            }
             if (items.length < 2) continue;
             if (!containsAllRequired(items, requiredItemIds)) continue;
 

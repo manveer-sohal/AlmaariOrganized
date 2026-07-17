@@ -10,8 +10,6 @@ import {
 
 type StylistConfigModalProps = {
   open: boolean;
-  mode: "generate" | "style-item";
-  anchorItemName?: string;
   preferences: StylistPreferences;
   onChange: (preferences: StylistPreferences) => void;
   onClose: () => void;
@@ -39,8 +37,6 @@ const STYLE_OPTIONS: StylistStyle[] = [
 
 export default function StylistConfigModal({
   open,
-  mode,
-  anchorItemName,
   preferences,
   onChange,
   onClose,
@@ -58,12 +54,10 @@ export default function StylistConfigModal({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-indigo-900">
-              {mode === "style-item" ? "Style this item" : "Generate outfits"}
+              Generate outfits
             </h3>
             <p className="mt-1 text-sm text-indigo-700/80">
-              {mode === "style-item" && anchorItemName
-                ? `Build three looks around your ${anchorItemName}.`
-                : "Almaari will build three complete looks from your wardrobe."}
+              Almaari will build three complete looks from your wardrobe.
             </p>
           </div>
           <button

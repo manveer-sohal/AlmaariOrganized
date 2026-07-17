@@ -478,35 +478,6 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     }
   };
 
-  const handleStyleThisItem = () => {
-    const id = lastSelectedItemId;
-    if (!id) return;
-    const item = clothesById.get(id);
-    if (!item) return;
-
-    setStylistMode("selected");
-    setSelectedBySlot((prev) => {
-      const slot = item.slot as Slot;
-      const current = prev[slot] || [];
-      if (current.some((c) => c._id === id)) return prev;
-      return { ...prev, [slot]: [...current, item] };
-    });
-    if (credits != null && credits < 1) {
-      onBuyCredits?.();
-      return;
-    }
-    setPendingRefinement(null);
-    setIsWardrobeDrawerOpen(false);
-    const isMobile =
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches;
-    if (isMobile) {
-      setIsAIStylistOpen(true);
-    } else {
-      setConfigOpen(true);
-    }
-  };
-
   const handleUseOutfit = (recommendation: OutfitRecommendation) => {
     setSelectedBySlot(applyRecommendationToSlots(recommendation, clothesById));
     exitSwapMode();
@@ -624,14 +595,6 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
     >
       <StylistConfigModal
         open={configOpen}
-        mode={stylistMode === "selected" ? "style-item" : "generate"}
-        anchorItemName={
-          stylistMode === "selected" && requiredItemsForMode.length === 1
-            ? requiredItemsForMode[0]?.type
-            : stylistMode === "selected" && requiredItemsForMode.length > 1
-              ? `${requiredItemsForMode.length} selected items`
-              : undefined
-        }
         preferences={preferences}
         onChange={setPreferences}
         onClose={() => setConfigOpen(false)}
@@ -682,7 +645,6 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         lastSelectedItemId={lastSelectedItemId}
-        onStyleThisItem={handleStyleThisItem}
         swapMode={swapMode}
         swapTargetSlot={swapTargetSlot}
         onCancelSwap={exitSwapMode}
@@ -763,7 +725,6 @@ function CreateOutfitUI({ onBuyCredits, onAddClothes }: CreateOutfitUIProps) {
               categoryFilter={categoryFilter}
               onCategoryFilterChange={setCategoryFilter}
               lastSelectedItemId={lastSelectedItemId}
-              onStyleThisItem={handleStyleThisItem}
               swapMode={swapMode}
               swapTargetSlot={swapTargetSlot}
               onCancelSwap={exitSwapMode}

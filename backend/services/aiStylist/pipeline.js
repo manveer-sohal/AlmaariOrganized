@@ -299,6 +299,8 @@ export const runStylistPipeline = async ({ auth0Id, requestBody }) => {
     const scored = combinations
       .map(normalize)
       .filter((candidate) => {
+        const ids = candidate.items.map((item) => item._id.toString());
+        if (new Set(ids).size !== ids.length) return false;
         if (
           resolved.priorOutfitSignatures.length > 0 &&
           candidate.components.novelty === 0
