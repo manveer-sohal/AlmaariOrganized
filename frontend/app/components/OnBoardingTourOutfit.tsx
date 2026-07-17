@@ -52,7 +52,7 @@ function desktopSteps(): DriveStep[] {
       popover: {
         title: "Pick from your wardrobe",
         description:
-          "Click items to add them to your look. Use Style this item or pin pieces so the AI keeps them.",
+          "Click items to add them to your look. Anchor pieces you want the AI to keep.",
         side: "right",
         showButtons: ["next"],
         align: "start",
