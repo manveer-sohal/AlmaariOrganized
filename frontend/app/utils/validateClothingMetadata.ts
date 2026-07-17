@@ -191,6 +191,7 @@ export function normalizeClothingItem(raw: Record<string, unknown>): ClothingIte
     pattern: raw.pattern != null ? String(raw.pattern) : undefined,
     slot: String(raw.slot ?? "body") as Slot,
     imageSrc: String(raw.imageSrc ?? ""),
+    isSample: Boolean(raw.isSample),
     stylingMetadata: normalizeStylingMetadata(raw.stylingMetadata),
   };
 }

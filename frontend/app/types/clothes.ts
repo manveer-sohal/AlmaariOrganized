@@ -66,6 +66,7 @@ export type ClothingItem = {
   pattern?: string;
   slot: Slot;
   imageSrc: string;
+  isSample?: boolean;
   stylingMetadata?: StylingMetadata | null;
 };
 

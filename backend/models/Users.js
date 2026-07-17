@@ -78,6 +78,8 @@ const ClothesSchema = new mongoose.Schema({
   type: { type: String, required: true, index: true },
   imageSrc: { type: String, required: true },
   favourite: { type: Boolean, default: false },
+  /** Demo wardrobe items seeded for trying AI outfits */
+  isSample: { type: Boolean, default: false, index: true },
   createdAt: { type: Date, default: Date.now },
   colour: { type: [String], required: true },
   season: { type: [String], default: [] },

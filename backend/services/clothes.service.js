@@ -20,6 +20,7 @@ import {
   normalizeClothingAnalysisResponse,
   clampFormalityToStyleCategory,
 } from "../utils/normalizeClothingAnalysisResponse.js";
+import { SAMPLE_WARDROBE_ITEMS } from "../data/sampleWardrobe.js";
 
 // Helper to invalidate all userClothes cache keys for a user (any page/limit)
 const invalidateUserClothesCache = async (auth0Id) => {
@@ -602,6 +603,181 @@ export const createOutfit = async ({
     throw {
       status: 500,
       message: "Failed to create outfit",
+      details: e.message || null,
+    };
+  }
+};
+
+const buildSampleStylingMetadata = (meta) => {
+  const now = new Date();
+  return {
+    ...defaultStylingMetadata(),
+    styleCategory: meta.styleCategory,
+    occasionTags: meta.occasionTags,
+    formalityScore: meta.formalityScore,
+    statementLevel: meta.statementLevel,
+    outfitRole: meta.outfitRole,
+    subtype: meta.subtype ?? null,
+    confidence: {
+      type: 1,
+      colour: 1,
+      material: 1,
+      fit: 1,
+      pattern: 1,
+      styleCategory: 1,
+      occasionTags: 1,
+      formalityScore: 1,
+      statementLevel: 1,
+      outfitRole: 1,
+      subtype: 1,
+    },
+    styleCategorySource: "user",
+    occasionTagsSource: "user",
+    enrichmentStatus: "completed",
+    enrichmentError: null,
+    enrichedAt: now,
+    processingStartedAt: null,
+    lastRetryAt: null,
+    enrichmentAttemptCount: 0,
+    userReviewedAt: now,
+  };
+};
+
+/**
+ * Seed the shared sample wardrobe into the current user's clothes.
+ * Idempotent by imageSrc: existing samples are kept; only missing catalog
+ * items are inserted (so catalog additions like shoes can be synced).
+ */
+export const seedSampleWardrobe = async ({ auth0Id }) => {
+  try {
+    const user = await User.findOne({ auth0Id });
+    if (!user) {
+      throw { status: 404, message: "User not found" };
+    }
+
+    const existing = await Clothes.find({
+      userId: user._id,
+      isSample: true,
+    }).lean();
+
+    const existingSrcs = new Set(existing.map((item) => item.imageSrc));
+    const missingItems = SAMPLE_WARDROBE_ITEMS.filter(
+      (item) => !existingSrcs.has(item.imageSrc),
+    );
+
+    if (missingItems.length === 0) {
+      return {
+        status: 200,
+        message: "Sample wardrobe already loaded",
+        created: false,
+        count: existing.length,
+        clothes: existing,
+      };
+    }
+
+    const docs = missingItems.map((item) => {
+      const uniqueId = new mongoose.Types.ObjectId().toString();
+      return {
+        userId: user._id,
+        uniqueId,
+        type: item.type,
+        imageSrc: item.imageSrc,
+        favourite: false,
+        isSample: true,
+        colour: item.colour,
+        season: [],
+        waterproof: false,
+        slot: item.slot || mapTypeToSlot(item.type),
+        material: item.material,
+        fit: item.fit,
+        pattern: item.pattern,
+        stylingMetadata: buildSampleStylingMetadata(item.stylingMetadata),
+      };
+    });
+
+    const created = await Clothes.insertMany(docs);
+    const ids = created.map((c) => c._id);
+
+    await User.findByIdAndUpdate(user._id, {
+      $push: { clothes: { $each: ids } },
+    });
+
+    await invalidateUserClothesCache(auth0Id);
+
+    const allSamples = [...existing, ...created];
+    return {
+      status: existing.length > 0 ? 200 : 201,
+      message:
+        existing.length > 0
+          ? "Sample wardrobe updated with new items"
+          : "Sample wardrobe added",
+      created: true,
+      count: allSamples.length,
+      clothes: allSamples,
+    };
+  } catch (e) {
+    console.error(e);
+    if (e.status) throw e;
+    throw {
+      status: 500,
+      message: "Failed to seed sample wardrobe",
+      details: e.message || null,
+    };
+  }
+};
+
+/**
+ * Remove only sample wardrobe items for the current user.
+ */
+export const clearSampleWardrobe = async ({ auth0Id }) => {
+  try {
+    const user = await User.findOne({ auth0Id });
+    if (!user) {
+      throw { status: 404, message: "User not found" };
+    }
+
+    const samples = await Clothes.find({
+      userId: user._id,
+      isSample: true,
+    }).select("_id");
+
+    if (samples.length === 0) {
+      return {
+        status: 200,
+        message: "No sample clothes to remove",
+        removed: 0,
+      };
+    }
+
+    const ids = samples.map((s) => s._id);
+
+    await Promise.all([
+      User.findByIdAndUpdate(user._id, { $pullAll: { clothes: ids } }),
+      Outfits.updateMany(
+        { outfit_items: { $in: ids } },
+        { $pull: { outfit_items: { $in: ids } } },
+      ),
+      Clothes.deleteMany({ _id: { $in: ids } }),
+    ]);
+
+    await invalidateUserClothesCache(auth0Id);
+    try {
+      await redis.del("userOutfits:" + auth0Id);
+    } catch (err) {
+      console.warn("Redis delete failed after clearing samples:", err);
+    }
+
+    return {
+      status: 200,
+      message: "Sample wardrobe cleared",
+      removed: ids.length,
+    };
+  } catch (e) {
+    console.error(e);
+    if (e.status) throw e;
+    throw {
+      status: 500,
+      message: "Failed to clear sample wardrobe",
       details: e.message || null,
     };
   }

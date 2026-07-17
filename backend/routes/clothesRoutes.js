@@ -9,6 +9,8 @@ import {
   deleteOutfit,
   cropImageForClient,
   retryStyleEnrichment,
+  seedSampleWardrobe,
+  clearSampleWardrobe,
 } from "../controllers/clothesController.js";
 import uploadMiddleware from "../middleware/upload.middleware.js";
 import { validateImageFile } from "../middleware/validateImageFile.js";
@@ -24,6 +26,8 @@ router.use(requireAuth);
 
 router.post("/getOutfits", getOutfits);
 router.post("/listClothes", getData);
+router.post("/seedSamples", seedSampleWardrobe);
+router.post("/clearSamples", clearSampleWardrobe);
 router.post(
   "/upload",
   uploadRateLimiter,

@@ -5,6 +5,10 @@ import { getOutfits as getOutfitsService } from "../services/clothes.service.js"
 import { getData as getDataService } from "../services/clothes.service.js";
 import { createOutfit as createOutfitService } from "../services/clothes.service.js";
 import { updateClothing as updateClothingService } from "../services/clothes.service.js";
+import {
+  seedSampleWardrobe as seedSampleWardrobeService,
+  clearSampleWardrobe as clearSampleWardrobeService,
+} from "../services/clothes.service.js";
 import { retryStyleEnrichmentForUser } from "../services/stylingEnrichment.service.js";
 import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
 import { cropImage, toBase64 } from "../services/image.service.js";
@@ -362,6 +366,50 @@ export const retryStyleEnrichment = async (request, response) => {
       error: e.message || "Failed to retry style enrichment",
       code: e.code,
       retryAfterMs: e.retryAfterMs,
+    });
+  }
+};
+
+export const seedSampleWardrobe = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await seedSampleWardrobeService({ auth0Id });
+    return response.status(result.status || 200).json({
+      message: result.message,
+      created: result.created,
+      count: result.count,
+      clothes: result.clothes,
+    });
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to seed sample wardrobe",
+      details: e.details || null,
+    });
+  }
+};
+
+export const clearSampleWardrobe = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await clearSampleWardrobeService({ auth0Id });
+    return response.status(result.status || 200).json({
+      message: result.message,
+      removed: result.removed,
+    });
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to clear sample wardrobe",
+      details: e.details || null,
     });
   }
 };
