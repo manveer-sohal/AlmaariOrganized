@@ -77,6 +77,21 @@ describe("stylist layering", () => {
     expect(getLayeringMetadata(dressShirt).supportsTie).to.equal(true);
   });
 
+  it("does not treat caps/hats as base tops", () => {
+    const cap = makeItem({
+      id: "cap-1",
+      type: "Cap",
+      colour: "Beige",
+      slot: "head",
+    });
+    const capWithMeta = {
+      ...cap,
+      stylingMetadata: { subtype: "cap", outfitRole: "Accent" },
+    };
+    expect(resolveLayerRoles(cap)).to.deep.equal(["none"]);
+    expect(resolveLayerRoles(capWithMeta)).to.deep.equal(["none"]);
+  });
+
   it("accepts T-shirt + open button-up", () => {
     const result = validateLayerCombination({
       baseTop: tee,
