@@ -1,33 +1,85 @@
-"use client";
-import { UserProvider } from "@auth0/nextjs-auth0/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import type { Metadata } from "next";
 import "./globals.css";
-import GoogleAnalytics from "./components/GoogleAnalytics";
+import Providers from "./providers";
+import SiteJsonLd from "./components/SiteJsonLd";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_TITLE,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_URL,
+} from "./lib/seo";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: DEFAULT_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "lifestyle",
+  alternates: {
+    canonical: SITE_URL,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "48x48" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  manifest: "/manifest.webmanifest",
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [client] = useState(() => new QueryClient());
-
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.png" type="image/png" sizes="48x48" />
-        <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/driver.js/dist/driver.css"
-        />
-        <GoogleAnalytics />
-      </head>
-      <body className="text-gray-900 min-w-[360px]">
-        <UserProvider>
-          <QueryClientProvider client={client}>{children}</QueryClientProvider>
-        </UserProvider>
+      <body className="min-w-[360px] text-gray-900">
+        <SiteJsonLd />
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
