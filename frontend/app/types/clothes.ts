@@ -78,11 +78,13 @@ export type Outfit = {
 
 export type View =
   | "home"
+  | "wardrobe"
   | "outfits"
   | "createOutfit"
   | "addClothes"
   | "buyCredits"
   | "clothingDetails"
+  | "outfitDetails"
   | "travelMode";
 
 export type coloursList =

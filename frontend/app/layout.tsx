@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import SiteJsonLd from "./components/SiteJsonLd";
@@ -10,6 +11,18 @@ import {
   SITE_NAME,
   SITE_URL,
 } from "./lib/seo";
+
+const displayFont = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-almaari-display",
+  display: "swap",
+});
+
+const sansFont = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-almaari-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -78,8 +91,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-w-[360px] text-gray-900">
+    <html lang="en" className={`${displayFont.variable} ${sansFont.variable}`}>
+      <body className="min-w-[360px] bg-almaari-bg font-sans text-almaari-ink antialiased">
         <SiteJsonLd />
         <Providers>{children}</Providers>
       </body>

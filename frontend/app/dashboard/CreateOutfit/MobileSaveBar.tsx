@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Save } from "lucide-react";
 import { OutfitRecommendation } from "../../types/aiStylist";
 import { stylistNegativeReasons_List } from "../../data/constants";
 
@@ -9,8 +10,7 @@ type MobileSaveBarProps = {
   saving: boolean;
   canSave: boolean;
   onSave: () => void;
-  outfitPosition?: { current: number; total: number } | null;
-  /** When set, pins Use Outfit + feedback above Save so they stay on-screen. */
+  /** When set, pins Use Outfit + feedback (AI slides only). */
   activeRecommendation?: OutfitRecommendation | null;
   feedbackSubmitted?: Record<string, "positive" | "negative">;
   onFeedback?: (
@@ -19,20 +19,21 @@ type MobileSaveBarProps = {
     reasons?: string[],
   ) => void;
   onUseOutfit?: (recommendation: OutfitRecommendation) => void;
+  /** Name + Save only on the builder preview slide. */
+  showSaveControls?: boolean;
   name?: string;
   onNameChange?: (value: string) => void;
 };
 
 export default function MobileSaveBar({
-  selectedCount,
   saving,
   canSave,
   onSave,
-  outfitPosition = null,
   activeRecommendation = null,
   feedbackSubmitted = {},
   onFeedback,
   onUseOutfit,
+  showSaveControls = true,
   name,
   onNameChange,
 }: MobileSaveBarProps) {
@@ -46,12 +47,10 @@ export default function MobileSaveBar({
   }, [activeRecommendation?.id]);
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-[4.25rem] z-30 border-t border-indigo-200 bg-white/95 px-3 py-2 shadow-[0_-4px_16px_rgba(79,70,229,0.08)] backdrop-blur md:hidden"
-    >
+    <div className="fixed inset-x-0 bottom-[4.25rem] z-30 border-t border-indigo-200 bg-white/95 px-3 py-2 shadow-[0_-4px_16px_rgba(79,70,229,0.08)] backdrop-blur md:hidden">
       <div className="mx-auto flex max-w-lg flex-col gap-1.5">
-        {showAiActions && activeRecommendation ? (
-          <>
+        {showSaveControls ? (
+          <div className="flex items-center gap-2">
             {onNameChange ? (
               <input
                 type="text"
@@ -59,10 +58,27 @@ export default function MobileSaveBar({
                 onChange={(e) => onNameChange(e.target.value)}
                 placeholder="Outfit name (optional)"
                 aria-label="Outfit name (optional)"
-                className="h-9 w-full rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
-            ) : null}
+            ) : (
+              <div className="min-w-0 flex-1" />
+            )}
+            <button
+              id="mobile-save-outfit-btn"
+              type="button"
+              disabled={saving || !canSave}
+              onClick={onSave}
+              aria-label={saving ? "Saving outfit" : "Save outfit"}
+              title={saving ? "Saving…" : "Save outfit"}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Save className={`h-5 w-5 ${saving ? "animate-pulse" : ""}`} aria-hidden />
+            </button>
+          </div>
+        ) : null}
 
+        {showAiActions && activeRecommendation ? (
+          <>
             {reasonPickerOpen &&
               feedbackSubmitted[activeRecommendation.id] !== "negative" && (
                 <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-2">
@@ -162,27 +178,6 @@ export default function MobileSaveBar({
             </div>
           </>
         ) : null}
-
-        <div className="flex items-center justify-between gap-3 py-0.5">
-          <p className="text-sm font-medium text-indigo-800">
-            {outfitPosition
-              ? `Outfit ${outfitPosition.current} of ${outfitPosition.total}`
-              : `${selectedCount} ${selectedCount === 1 ? "item" : "items"} selected`}
-          </p>
-          <button
-            id="mobile-save-outfit-btn"
-            type="button"
-            disabled={saving || !canSave}
-            onClick={onSave}
-            className={`inline-flex min-h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
-              showAiActions
-                ? "border border-indigo-300 bg-white text-indigo-900 hover:bg-indigo-50"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
-            }`}
-          >
-            {saving ? "Saving..." : "Save Outfit"}
-          </button>
-        </div>
       </div>
     </div>
   );

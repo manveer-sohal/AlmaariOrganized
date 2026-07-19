@@ -1,16 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Pencil, Trash } from "lucide-react";
-import { ClothingItem } from "../../types/clothes";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  Heart,
+  MoreHorizontal,
+  Pencil,
+  Sparkles,
+  Trash,
+} from "lucide-react";
+import { ClothingItem, Outfit } from "../../types/clothes";
 import { useOutfits } from "../../hooks/useOutfits";
 import { useUpdateClothing } from "../../hooks/useUpdateClothing";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
 import { useClothingEnrichmentPoll } from "../../hooks/useClothingEnrichmentPoll";
 import { useClothesData } from "../../hooks/useClothesData";
+import { useFavouritesStore } from "../../store/useFavouritesStore";
 import OutfitBrowser from "../PreviewOutfit/OutfitBrowser";
 import ClothingMetadataEditor from "./ClothingMetadataEditor";
+import ContextualStylistAction from "../../components/ux/ContextualStylistAction";
+import InlineSuccessState from "../../components/ux/InlineSuccessState";
 import {
   clothingItemToDraft,
   validateClothingMetadata,
@@ -22,30 +32,16 @@ type ClothingDetailsViewProps = {
   item: ClothingItem;
   onBack: () => void;
   onItemUpdated?: (item: ClothingItem) => void;
+  onStyleItem?: (item: ClothingItem) => void;
+  onAddToOutfit?: (item: ClothingItem) => void;
+  onSelectOutfit?: (outfit: Outfit) => void;
 };
 
 function MetadataChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm bg-indigo-100 text-indigo-900 border border-indigo-200">
+    <span className="inline-flex items-center rounded-full bg-almaari-accent-soft px-2.5 py-1 text-xs font-medium text-almaari-ink">
       {label}
     </span>
-  );
-}
-
-function MetadataRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-      <dt className="text-sm font-medium text-indigo-700 sm:w-28 shrink-0">
-        {label}
-      </dt>
-      <dd className="flex flex-wrap gap-2">{children}</dd>
-    </div>
   );
 }
 
@@ -53,6 +49,9 @@ export default function ClothingDetailsView({
   item,
   onBack,
   onItemUpdated,
+  onStyleItem,
+  onAddToOutfit,
+  onSelectOutfit,
 }: ClothingDetailsViewProps) {
   const [displayItem, setDisplayItem] = useState(item);
   const [isEditing, setIsEditing] = useState(false);
@@ -63,14 +62,17 @@ export default function ClothingDetailsView({
     type: "success" | "error";
     message: string;
   } | null>(null);
-  const [mobileSection, setMobileSection] = useState<"details" | "outfits">(
-    "details",
-  );
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { data: outfits = [], isLoading } = useOutfits();
   const { clothes } = useClothesData();
   const updateClothing = useUpdateClothing();
   const deleteClothing = useDeleteClothing(displayItem._id);
+  const isFavourite = useFavouritesStore((s) =>
+    s.clothingIds.includes(displayItem._id),
+  );
+  const toggleClothing = useFavouritesStore((s) => s.toggleClothing);
 
   useClothingEnrichmentPoll(
     displayItem._id,
@@ -95,9 +97,7 @@ export default function ClothingDetailsView({
     }
 
     setDisplayItem(fresh);
-    if (!isEditing) {
-      setDraft(clothingItemToDraft(fresh));
-    }
+    if (!isEditing) setDraft(clothingItemToDraft(fresh));
     onItemUpdated?.(fresh);
   }, [clothes, item._id, displayItem.stylingMetadata, isEditing, onItemUpdated]);
 
@@ -106,7 +106,7 @@ export default function ClothingDetailsView({
     setDraft(clothingItemToDraft(item));
     setIsEditing(false);
     setFeedback(null);
-    setMobileSection("details");
+    setAdvancedOpen(false);
   }, [item]);
 
   const relatedOutfits = useMemo(
@@ -120,90 +120,50 @@ export default function ClothingDetailsView({
   );
 
   const subtypeLabel = humanizeClothingSubtype(displayItem);
+  const primaryChips = [
+    displayItem.type,
+    ...(displayItem.colour?.slice(0, 2) ?? []),
+    displayItem.stylingMetadata?.styleCategory,
+  ].filter(Boolean) as string[];
 
-  const metadataRows = [
-    {
-      label: "Type",
-      value: displayItem.type,
-      render: () => <MetadataChip label={displayItem.type} />,
-    },
-    {
-      label: "Subtype",
-      value:
-        subtypeLabel &&
-        subtypeLabel.toLowerCase() !== displayItem.type.toLowerCase()
-          ? subtypeLabel
-          : null,
-      render: () => <MetadataChip label={subtypeLabel} />,
-    },
-    {
-      label: "Colours",
-      value: displayItem.colour?.length,
-      render: () =>
-        displayItem.colour.map((colour) => (
-          <MetadataChip key={colour} label={colour} />
-        )),
-    },
-    {
-      label: "Material",
-      value: displayItem.material,
-      render: () => <MetadataChip label={displayItem.material!} />,
-    },
-    {
-      label: "Fit",
-      value: displayItem.fit,
-      render: () => <MetadataChip label={displayItem.fit!} />,
-    },
-    {
-      label: "Pattern",
-      value: displayItem.pattern,
-      render: () => <MetadataChip label={displayItem.pattern!} />,
-    },
-    {
-      label: "Slot",
-      value: displayItem.slot,
-      render: () => (
-        <MetadataChip
-          label={
-            displayItem.slot.charAt(0).toUpperCase() + displayItem.slot.slice(1)
-          }
-        />
-      ),
-    },
-    {
-      label: "Style",
-      value: displayItem.stylingMetadata?.styleCategory,
-      render: () => (
-        <MetadataChip label={displayItem.stylingMetadata!.styleCategory!} />
-      ),
-    },
-    {
-      label: "Occasions",
-      value: displayItem.stylingMetadata?.occasionTags?.length,
-      render: () =>
-        (displayItem.stylingMetadata?.occasionTags || []).map((tag) => (
-          <MetadataChip key={tag} label={tag} />
-        )),
-    },
-  ].filter((row) => {
-    if (Array.isArray(row.value)) return row.value.length > 0;
-    return row.value != null && row.value !== "";
-  });
+  const advancedChips = [
+    subtypeLabel !== displayItem.type ? subtypeLabel : null,
+    displayItem.material,
+    displayItem.fit,
+    displayItem.pattern,
+    displayItem.slot
+      ? displayItem.slot.charAt(0).toUpperCase() + displayItem.slot.slice(1)
+      : null,
+    ...(displayItem.stylingMetadata?.occasionTags || []),
+  ].filter(Boolean) as string[];
 
-  const handleEdit = () => {
-    setDraft(clothingItemToDraft(displayItem));
+  const handleSave = async () => {
+    const validationError = validateClothingMetadata(draft);
+    if (validationError) {
+      setFeedback({ type: "error", message: validationError });
+      return;
+    }
     setFeedback(null);
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setDraft(clothingItemToDraft(displayItem));
-    setFeedback(null);
-    setIsEditing(false);
+    try {
+      const updated = await updateClothing.mutateAsync({
+        ...draft,
+        uniqueId: displayItem._id,
+      });
+      setDisplayItem(updated);
+      onItemUpdated?.(updated);
+      setIsEditing(false);
+      setFeedback({ type: "success", message: "Saved" });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message:
+          error instanceof Error ? error.message : "Failed to save changes.",
+      });
+    }
   };
 
   const handleDelete = async () => {
-    setFeedback(null);
+    setMenuOpen(false);
     try {
       await deleteClothing.mutateAsync();
       onBack();
@@ -216,188 +176,144 @@ export default function ClothingDetailsView({
     }
   };
 
-  const handleSave = async () => {
-    const validationError = validateClothingMetadata(draft);
-    if (validationError) {
-      setFeedback({ type: "error", message: validationError });
-      return;
-    }
-
-    setFeedback(null);
-
-    try {
-      const updated = await updateClothing.mutateAsync({
-        ...draft,
-        uniqueId: displayItem._id,
-      });
-      setDisplayItem(updated);
-      onItemUpdated?.(updated);
-      setIsEditing(false);
-      setFeedback({ type: "success", message: "Changes saved." });
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : "Failed to save changes.",
-      });
-    }
-  };
-
-  const displayTitle = isEditing
-    ? draft.type || displayItem.type
-    : displayItem.type;
-
-  const mobileDeleteButton = (
-    <button
-      type="button"
-      onClick={handleDelete}
-      disabled={deleteClothing.isPending || isEditing}
-      aria-label="Delete clothing item"
-      className="md:hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-red-300 bg-red-50 text-red-700 hover:bg-red-500 hover:text-white active:bg-red-600 transition-colors duration-200 text-sm shrink-0 disabled:opacity-60"
-    >
-      <Trash className="w-3.5 h-3.5" />
-      {deleteClothing.isPending ? "Deleting…" : "Delete"}
-    </button>
-  );
-
-  const editActions = !isEditing ? (
-    <button
-      type="button"
-      onClick={handleEdit}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-indigo-600 transition-colors duration-200 text-sm shrink-0"
-    >
-      <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-      Edit
-    </button>
-  ) : (
-    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-      <button
-        type="button"
-        onClick={handleCancel}
-        disabled={updateClothing.isPending}
-        className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-indigo-300 bg-white text-indigo-900 hover:bg-indigo-100 transition-colors duration-200 disabled:opacity-60 text-sm"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={updateClothing.isPending}
-        className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-60 text-sm"
-      >
-        {updateClothing.isPending ? "Saving..." : "Save"}
-      </button>
-    </div>
-  );
-
   return (
-    <div className="bg-indigo-200 px-2 py-2 pb-20 sm:p-3 sm:pb-3 w-full max-w-5xl lg:max-w-6xl mx-auto h-auto overflow-x-hidden md:rounded-tl-3xl">
-      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+    <div className="mx-auto min-h-full w-full max-w-3xl bg-almaari-bg pb-8">
+      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 bg-almaari-bg/95 px-3 py-3 backdrop-blur-md safe-pt">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-indigo-300 bg-white/80 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-indigo-600 transition-colors duration-200 text-sm"
+          aria-label="Go back"
+          className="touch-target inline-flex items-center justify-center rounded-full text-almaari-ink hover:bg-almaari-accent-soft"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back
+          <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="md:hidden flex items-center gap-1.5">
-          {mobileDeleteButton}
-          {editActions}
+        <div className="relative flex items-center gap-1">
+          <button
+            type="button"
+            aria-label={isFavourite ? "Unfavourite" : "Favourite"}
+            aria-pressed={isFavourite}
+            onClick={() => toggleClothing(displayItem._id)}
+            className="touch-target inline-flex items-center justify-center rounded-full"
+          >
+            <Heart
+              className={`h-5 w-5 ${
+                isFavourite ? "fill-rose-500 text-rose-500" : ""
+              }`}
+            />
+          </button>
+          <button
+            type="button"
+            aria-label="More actions"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+            className="touch-target inline-flex items-center justify-center rounded-full"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          {menuOpen ? (
+            <div
+              className="absolute right-0 top-full z-30 mt-1 min-w-[9rem] overflow-hidden rounded-xl bg-almaari-surface-raised py-1 shadow-soft"
+              role="menu"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-red-700 hover:bg-red-50"
+                onClick={handleDelete}
+                disabled={deleteClothing.isPending}
+              >
+                <Trash className="h-3.5 w-3.5" />
+                {deleteClothing.isPending ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* Mobile: switch between details and outfits to avoid long scroll */}
-      <div className="md:hidden flex rounded-xl border border-indigo-200 bg-white/80 p-1 mb-2 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setMobileSection("details")}
-          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mobileSection === "details"
-              ? "bg-indigo-600 text-white shadow-sm"
-              : "text-indigo-800 hover:bg-indigo-50"
-          }`}
-        >
-          Details
-        </button>
-        <button
-          type="button"
-          onClick={() => setMobileSection("outfits")}
-          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mobileSection === "outfits"
-              ? "bg-indigo-600 text-white shadow-sm"
-              : "text-indigo-800 hover:bg-indigo-50"
-          }`}
-        >
-          Outfits ({relatedOutfits.length})
-        </button>
+      <div className="relative mx-3 aspect-[4/5] overflow-hidden rounded-almaari-lg bg-almaari-warm shadow-card sm:aspect-[16/12] sm:max-h-[28rem]">
+        <Image
+          src={displayItem.imageSrc}
+          alt={subtypeLabel}
+          fill
+          priority
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 640px"
+        />
       </div>
 
-      <div className="flex flex-col md:flex-row gap-2 sm:gap-4">
-        <div
-          className={`bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 sm:p-4 shadow-md w-full md:w-2/5 ${
-            mobileSection === "outfits" ? "hidden md:block" : ""
-          }`}
-        >
-          <div className="hidden md:flex items-start justify-between gap-3 mb-4">
-            <h2 className="font-medium text-indigo-900">Clothing Details</h2>
-            {editActions}
-          </div>
+      <div className="space-y-5 px-4 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-display text-2xl text-almaari-ink">
+            {isEditing ? draft.type || displayItem.type : subtypeLabel}
+          </h1>
+          <InlineSuccessState show={feedback?.type === "success"} />
+        </div>
 
-          {feedback && (
-            <p
-              className={`mb-2 sm:mb-4 text-sm rounded-lg px-3 py-2 border ${
-                feedback.type === "success"
-                  ? "bg-green-50 text-green-800 border-green-200"
-                  : "bg-red-50 text-red-700 border-red-200"
-              }`}
-            >
-              {feedback.message}
-            </p>
-          )}
+        {feedback?.type === "error" ? (
+          <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            {feedback.message}
+          </p>
+        ) : null}
 
-          {/* Mobile: compact image + title row */}
-          <div
-            className={`flex gap-3 items-start mb-3 ${
-              isEditing ? "flex-col" : ""
-            }`}
-          >
-            <div
-              className={`relative shrink-0 aspect-square rounded-lg  border border-indigo-200 shadow-md ${
-                isEditing
-                  ? "w-full max-w-xs mx-auto"
-                  : "w-full max-w-xs mx-auto md:h-full md:w-full md:max-w-80 md:max-h-80 md:mx-auto"
-              }`}
-            >
-              <Image
-                src={displayItem.imageSrc}
-                alt={displayItem.type}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 144px, 400px"
-                priority
+        {!isEditing ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <ContextualStylistAction
+                primary
+                label="Style this item"
+                icon={<Sparkles className="h-4 w-4" />}
+                onClick={() => onStyleItem?.(displayItem)}
+              />
+              <ContextualStylistAction
+                label="Edit"
+                icon={<Pencil className="h-4 w-4" />}
+                onClick={() => {
+                  setDraft(clothingItemToDraft(displayItem));
+                  setIsEditing(true);
+                }}
+              />
+              <ContextualStylistAction
+                label="Add to outfit"
+                onClick={() => onAddToOutfit?.(displayItem)}
               />
             </div>
 
-            {!isEditing && (
-              <div className="flex-1 min-w-0 md:hidden pt-0.5">
-                <h3 className="text-lg font-semibold text-indigo-900 leading-tight">
-                  {displayTitle}
-                </h3>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {metadataRows.map((row) => (
-                    <Fragment key={row.label}>{row.render()}</Fragment>
-                  ))}
-                </div>
+            <div className="flex flex-wrap gap-2">
+              {primaryChips.map((chip) => (
+                <MetadataChip key={chip} label={chip} />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className="text-sm font-semibold text-almaari-accent"
+              aria-expanded={advancedOpen}
+            >
+              {advancedOpen ? "Hide details" : "More details"}
+            </button>
+
+            {advancedOpen ? (
+              <div className="flex flex-wrap gap-2">
+                {advancedChips.map((chip) => (
+                  <MetadataChip key={chip} label={chip} />
+                ))}
               </div>
-            )}
-          </div>
+            ) : null}
 
-          <h3 className="hidden md:block text-xl font-semibold text-indigo-900 mb-4">
-            {displayTitle}
-          </h3>
-
-          {isEditing ? (
+            {displayItem.stylingMetadata?.enrichmentStatus &&
+            ["pending", "processing", "failed"].includes(
+              displayItem.stylingMetadata.enrichmentStatus,
+            ) ? (
+              <p className="text-xs text-almaari-muted">
+                {displayItem.stylingMetadata.enrichmentStatus === "failed"
+                  ? "Style analysis unavailable"
+                  : "Adding style details…"}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <div className="space-y-3">
             <ClothingMetadataEditor
               value={draft}
               onChange={setDraft}
@@ -408,44 +324,41 @@ export default function ClothingDetailsView({
                 displayItem.stylingMetadata?.userReviewedAt ?? null
               }
             />
-          ) : (
-            <>
-              <dl className="md:block hidden space-y-4">
-                {metadataRows.map((row) => (
-                  <MetadataRow key={row.label} label={row.label}>
-                    {row.render()}
-                  </MetadataRow>
-                ))}
-              </dl>
-              {displayItem.stylingMetadata?.enrichmentStatus &&
-                ["pending", "processing", "failed"].includes(
-                  displayItem.stylingMetadata.enrichmentStatus,
-                ) && (
-                  <p className="mt-3 text-xs text-indigo-600/80">
-                    {displayItem.stylingMetadata.enrichmentStatus === "failed"
-                      ? "Style analysis unavailable"
-                      : "Analyzing style…"}
-                  </p>
-                )}
-            </>
-          )}
-        </div>
-
-        <div
-          className={`w-full md:w-3/5 bg-white/80 backdrop-blur border border-indigo-200 rounded-xl p-3 sm:p-4 shadow-md flex-1 min-h-0 ${
-            mobileSection === "details" ? "hidden md:block" : ""
-          }`}
-        >
-          <div className="md:max-h-none max-h-[calc(100vh-220px)] overflow-y-auto">
-            <OutfitBrowser
-              outfits={relatedOutfits}
-              loading={isLoading}
-              title="Outfits Using This Item"
-              emptyMessage="This item is not used in any outfits yet."
-              showDelete={false}
-            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(clothingItemToDraft(displayItem));
+                  setIsEditing(false);
+                }}
+                className="min-h-touch flex-1 rounded-almaari border border-almaari-border text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={updateClothing.isPending}
+                className="min-h-touch flex-1 rounded-almaari bg-almaari-accent text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {updateClothing.isPending ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        <section>
+          <h2 className="mb-3 font-display text-lg text-almaari-ink">
+            Outfit ideas
+          </h2>
+          <OutfitBrowser
+            outfits={relatedOutfits}
+            loading={isLoading}
+            title=""
+            emptyMessage="No outfits with this piece yet."
+            onSelectOutfit={onSelectOutfit}
+          />
+        </section>
       </div>
     </div>
   );

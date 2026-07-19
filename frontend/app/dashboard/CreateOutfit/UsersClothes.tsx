@@ -29,6 +29,7 @@ const UsersClothes = ({
   anchoredItemIds = [],
   onToggleAnchor,
   embedded = false,
+  pageScroll = false,
   className = "",
 }: {
   isLoadingClothes: boolean;
@@ -50,6 +51,8 @@ const UsersClothes = ({
   onToggleAnchor?: (id: string) => void;
   /** Hide outer card chrome when nested in a drawer. */
   embedded?: boolean;
+  /** Grow with the page instead of an internal scroll pane (mobile builder). */
+  pageScroll?: boolean;
   className?: string;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,17 +100,17 @@ const UsersClothes = ({
     <div
       id="create-outfit-form"
       className={
-        embedded
-          ? `relative flex min-h-0 flex-col ${className}`
+        embedded || pageScroll
+          ? `relative flex flex-col ${pageScroll ? "" : "min-h-0"} ${className}`
           : `relative flex min-h-0 flex-col rounded-2xl border border-indigo-200 bg-white/80 p-4 shadow-md backdrop-blur ${className}`
       }
     >
       <div
         className={`shrink-0 space-y-3 ${
-          embedded ? "" : "border-b border-indigo-100 pb-3"
+          embedded || pageScroll ? "" : "border-b border-indigo-100 pb-3"
         }`}
       >
-        {embedded ? null : (
+        {embedded || pageScroll ? null : (
           <BuilderSectionHeader
             step="01"
             title="Your Clothes"
@@ -130,7 +133,7 @@ const UsersClothes = ({
           />
         )}
 
-        {embedded ? (
+        {embedded || pageScroll ? (
           <div className="space-y-2">
             <label className="block">
               <span className="sr-only">Search your wardrobe</span>
@@ -178,7 +181,7 @@ const UsersClothes = ({
           </div>
         ) : null}
 
-        {embedded ? null : (
+        {embedded || pageScroll ? null : (
           <>
             <label className="block">
               <span className="sr-only">Search your wardrobe</span>
@@ -194,7 +197,13 @@ const UsersClothes = ({
         )}
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div
+        className={
+          pageScroll
+            ? "mt-3"
+            : "mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        }
+      >
         {isLoadingClothes ? (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {Array.from({ length: 9 }, (_, index) => (

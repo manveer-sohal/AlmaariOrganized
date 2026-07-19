@@ -5,19 +5,33 @@
 @tailwind utilities;
 
 :root {
-  --background: #ededed;
-  --foreground: #ededed;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ededed;
-    --foreground: #ededed;
-  }
+  /* Legacy aliases */
+  --background: #f4f1ec;
+  --foreground: #273157;
+
+  /* Almaari design tokens — warm wardrobe companion */
+  --almaari-bg: #f4f1ec;
+  --almaari-surface: #fbf9f5;
+  --almaari-surface-raised: #ffffff;
+  --almaari-ink: #273157;
+  --almaari-muted: #5c6478;
+  --almaari-accent: #4f5d9a;
+  --almaari-accent-soft: #e8ebf5;
+  --almaari-accent-strong: #3d4a7c;
+  --almaari-border: #d8d4cc;
+  --almaari-chrome: #c5cbe0;
+  --almaari-warm: #f9f7f1;
+  --almaari-radius: 1rem;
+  --almaari-radius-lg: 1.5rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --nav-height: 4.25rem;
 }
 
-@layer utilities {
-  .animate-wiggle {
-    animation: wiggle 2s ease-in-out infinite;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f4f1ec;
+    --foreground: #273157;
   }
 }
 
@@ -42,13 +56,46 @@
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--almaari-ink);
+  background: var(--almaari-bg);
+  font-family: var(--font-almaari-sans), system-ui, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer utilities {
+  .pb-nav {
+    padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 0.5rem);
+  }
+
+  .safe-pb {
+    padding-bottom: max(0.5rem, var(--safe-bottom));
+  }
+
+  .safe-pt {
+    padding-top: max(0.25rem, var(--safe-top));
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Container for cards */

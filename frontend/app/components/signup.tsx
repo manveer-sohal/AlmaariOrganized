@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from "react";
+
 export default function Signup({ type }: { type: "homepage" | "navbar" }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -7,7 +9,7 @@ export default function Signup({ type }: { type: "homepage" | "navbar" }) {
     if (isRedirecting) return;
     setIsRedirecting(true);
     window.location.assign(
-      `${window.location.origin}/api/auth/login?returnTo=/dashboard&screen_hint=signup`
+      `${window.location.origin}/api/auth/login?returnTo=/dashboard&screen_hint=signup`,
     );
   };
 
@@ -15,18 +17,20 @@ export default function Signup({ type }: { type: "homepage" | "navbar" }) {
     <>
       {type === "navbar" && (
         <button
+          type="button"
           onClick={handleSignup}
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700"
+          className="inline-flex min-h-11 items-center gap-2 rounded-almaari bg-almaari-accent px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-almaari-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-almaari-accent"
           disabled={isRedirecting}
         >
-          Try Free
+          Get started
         </button>
       )}
       {type === "homepage" && (
         <button
+          type="button"
           onClick={handleSignup}
           disabled={isRedirecting}
-          className="inline-flex items-center justify-center gap-2 font-semibold px-5 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-80"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-almaari bg-almaari-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-almaari-accent-strong disabled:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-almaari-accent"
         >
           {isRedirecting ? (
             <span className="inline-flex items-center gap-2">
@@ -43,17 +47,17 @@ export default function Signup({ type }: { type: "homepage" | "navbar" }) {
                   r="10"
                   stroke="currentColor"
                   strokeWidth="4"
-                ></circle>
+                />
                 <path
                   className="opacity-75"
                   fill="currentColor"
                   d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-                ></path>
+                />
               </svg>
               Redirecting…
             </span>
           ) : (
-            <span>Get Started - It’s Free!</span>
+            <span>Get started — it’s free</span>
           )}
         </button>
       )}
