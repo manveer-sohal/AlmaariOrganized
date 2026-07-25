@@ -1,0 +1,118 @@
+export const STYLE_OPTIONS = [
+  "Old money",
+  "Streetwear",
+  "Minimal",
+  "Casual",
+  "Smart casual",
+  "Quiet luxury",
+  "Preppy",
+  "Athletic",
+  "Bohemian",
+  "Vintage",
+  "Y2K",
+  "Formal",
+] as const;
+
+export type StyleOption = (typeof STYLE_OPTIONS)[number];
+
+export type SeasonalPalette = {
+  id: string;
+  name: string;
+  blurb: string;
+  swatches: string[];
+};
+
+export const SEASONAL_PALETTES: SeasonalPalette[] = [
+  {
+    id: "Spring",
+    name: "Spring",
+    blurb: "Warm, clear, and fresh",
+    swatches: ["#F6C1A0", "#E8A87C", "#7CB083", "#F2D27A", "#E87A6B"],
+  },
+  {
+    id: "Summer",
+    name: "Summer",
+    blurb: "Cool, soft, and muted",
+    swatches: ["#C9B8D4", "#A8C4D4", "#E8B4C8", "#9BB0C8", "#D4C4B0"],
+  },
+  {
+    id: "Autumn",
+    name: "Autumn",
+    blurb: "Warm, deep, and earthy",
+    swatches: ["#8B5A3C", "#C4783A", "#6B7A3A", "#A63D3D", "#D4A84B"],
+  },
+  {
+    id: "Winter",
+    name: "Winter",
+    blurb: "Cool, bold, and high contrast",
+    swatches: ["#1A1A2E", "#C41E3A", "#2E5A88", "#0D7377", "#F5F5F5"],
+  },
+];
+
+/** Popular brands for autocomplete; users can also add custom names. */
+export const BRAND_CATALOG = [
+  "A.P.C.",
+  "Abercrombie & Fitch",
+  "Adidas",
+  "Alo Yoga",
+  "American Eagle",
+  "Arc'teryx",
+  "ASOS",
+  "Balenciaga",
+  "Banana Republic",
+  "Birkenstock",
+  "Brandy Melville",
+  "Burberry",
+  "Calvin Klein",
+  "Carhartt",
+  "Chanel",
+  "Club Monaco",
+  "Coach",
+  "Converse",
+  "COS",
+  "Dickies",
+  "Dior",
+  "Dr. Martens",
+  "Everlane",
+  "Fashion Nova",
+  "Free People",
+  "Ganni",
+  "Gap",
+  "Gucci",
+  "H&M",
+  "Hermès",
+  "Hollister",
+  "J.Crew",
+  "Jacquemus",
+  "Lululemon",
+  "Levi's",
+  "Loewe",
+  "Louis Vuitton",
+  "Lululemon",
+  "Mango",
+  "Massimo Dutti",
+  "Nike",
+  "Nordstrom",
+  "Old Navy",
+  "Patagonia",
+  "Prada",
+  "Ralph Lauren",
+  "Reformation",
+  "Revolve",
+  "Saint Laurent",
+  "Sezane",
+  "Shein",
+  "Skims",
+  "Steve Madden",
+  "Supreme",
+  "The North Face",
+  "Theory",
+  "Tommy Hilfiger",
+  "Uniqlo",
+  "Urban Outfitters",
+  "Vans",
+  "Vince",
+  "Vuori",
+  "Zara",
+  "& Other Stories",
+].filter((brand, index, list) => list.indexOf(brand) === index);
