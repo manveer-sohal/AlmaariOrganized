@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Shirt,
-  Sparkles,
-  Layers,
-  Search,
-  Luggage,
-  Sun,
-} from "lucide-react";
+import { Shirt, Sparkles, Layers, Search, Luggage, Sun } from "lucide-react";
 import {
   revealTransition,
   revealUp,
@@ -52,7 +45,7 @@ const CARDS = [
     title: "Seasonal suggestions",
     body: "Rotate pieces that fit the weather and occasion.",
     icon: Sun,
-    span: "sm:col-span-2",
+    span: "sm:col-span-3",
   },
 ];
 

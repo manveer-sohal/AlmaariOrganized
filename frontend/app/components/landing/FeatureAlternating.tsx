@@ -1,12 +1,20 @@
 "use client";
 
 import { motion } from "framer-motion";
+import SampleClothingImage from "./SampleClothingImage";
+import { STYLIST_OUTFIT_ROWS, WARDROBE_PREVIEW } from "./sampleImages";
 import {
   revealTransition,
   revealUp,
   revealViewport,
   usePrefersReducedMotion,
 } from "./useLandingMotion";
+
+const STYLIST_LABELS = [
+  "Everyday · Mild",
+  "Dinner · Smart casual",
+  "Work · Minimal",
+];
 
 export default function FeatureAlternating() {
   const reduced = usePrefersReducedMotion();
@@ -36,7 +44,7 @@ export default function FeatureAlternating() {
             Almaari builds complete outfits from your wardrobe—then lets you
             refine, swap pieces, and save the one that feels right.
           </p>
-          <ul className="mt-5 space-y-2 text-sm text-almaari-ink">
+          <ul className="mt-5 space-y-2 flex flex-col gap-2 text-sm text-almaari-ink">
             <li className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-almaari-accent" />
               Occasion and weather aware
@@ -61,25 +69,28 @@ export default function FeatureAlternating() {
           aria-hidden
         >
           <div className="space-y-2">
-            {["Everyday · Mild", "Dinner · Smart casual", "Work · Minimal"].map(
-              (label, i) => (
-                <div
-                  key={label}
-                  className={`flex items-center gap-3 rounded-almaari bg-almaari-surface-raised px-3 py-2.5 ${
-                    i === 0 ? "ring-1 ring-almaari-accent/40" : ""
-                  }`}
-                >
-                  <div className="flex -space-x-1.5">
-                    <span className="h-8 w-8 rounded-md bg-[#d8cfc4]" />
-                    <span className="h-8 w-8 rounded-md bg-[#c5cbe0]" />
-                    <span className="h-8 w-8 rounded-md bg-[#b8a99a]" />
-                  </div>
-                  <span className="text-sm font-medium text-almaari-ink">
-                    {label}
-                  </span>
+            {STYLIST_LABELS.map((label, i) => (
+              <div
+                key={label}
+                className={`flex items-center gap-3 rounded-almaari bg-almaari-surface-raised px-3 py-2.5 ${
+                  i === 0 ? "ring-1 ring-almaari-accent/40" : ""
+                }`}
+              >
+                <div className="flex -space-x-1.5">
+                  {STYLIST_OUTFIT_ROWS[i].map((item) => (
+                    <SampleClothingImage
+                      key={item.src}
+                      item={item}
+                      className="h-8 w-8 rounded-md border border-almaari-border/50"
+                      sizes="32px"
+                    />
+                  ))}
                 </div>
-              ),
-            )}
+                <span className="text-sm font-medium text-almaari-ink">
+                  {label}
+                </span>
+              </div>
+            ))}
           </div>
         </motion.div>
       </section>
@@ -97,17 +108,12 @@ export default function FeatureAlternating() {
           aria-hidden
         >
           <div className="grid grid-cols-3 gap-2">
-            {[
-              "bg-[#e8ebf5]",
-              "bg-[#d8cfc4]",
-              "bg-[#c5cbe0]",
-              "bg-[#b8a99a]",
-              "bg-[#ebe4da]",
-              "bg-[#a8b0c8]",
-            ].map((tone, i) => (
-              <div
-                key={tone + i}
-                className={`aspect-square rounded-lg ${tone} transition hover:scale-[1.03]`}
+            {WARDROBE_PREVIEW.map((item) => (
+              <SampleClothingImage
+                key={item.src}
+                item={item}
+                className="aspect-square rounded-lg border border-almaari-border/40 transition hover:scale-[1.03]"
+                sizes="(max-width: 1024px) 28vw, 160px"
               />
             ))}
           </div>
@@ -133,7 +139,7 @@ export default function FeatureAlternating() {
             Upload once. Almaari cleans backgrounds, tags pieces, and keeps
             everything searchable—so getting dressed feels lighter.
           </p>
-          <ul className="mt-5 space-y-2 text-sm text-almaari-ink">
+          <ul className="mt-5 flex flex-row gap-4 text-sm text-almaari-ink">
             <li className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-almaari-accent" />
               Auto background removal

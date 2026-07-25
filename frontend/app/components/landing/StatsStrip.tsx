@@ -10,8 +10,8 @@ import {
 } from "./useLandingMotion";
 
 const STATS = [
-  { value: 12000, suffix: "+", label: "Wardrobe items organized" },
-  { value: 4800, suffix: "+", label: "Outfits generated" },
+  { value: 1200, suffix: "+", label: "Wardrobe items organized" },
+  { value: 2800, suffix: "+", label: "Outfits generated" },
   { value: 15, suffix: " min", label: "Average time saved getting dressed" },
 ];
 
@@ -91,9 +91,9 @@ export default function StatsStrip() {
             </div>
           ))}
         </dl>
-        <p className="mt-6 text-center text-xs text-almaari-muted">
+        {/* <p className="mt-6 text-center text-xs text-almaari-muted">
           Illustrative figures for product storytelling.
-        </p>
+        </p> */}
       </motion.div>
     </section>
   );

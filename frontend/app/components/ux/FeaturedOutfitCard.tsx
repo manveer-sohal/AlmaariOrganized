@@ -34,7 +34,7 @@ function outfitToSlots(
 export default function FeaturedOutfitCard({
   outfit,
   reason = "Ready for today",
-  onWear,
+  // onWear,
   onGenerate,
   emptyTitle = "Ask Almaari what to wear",
 }: FeaturedOutfitCardProps) {
@@ -86,8 +86,8 @@ export default function FeaturedOutfitCard({
 
       <div className="box-border flex w-full min-w-0 justify-center overflow-hidden py-0">
         <div
-          className="relative mx-auto w-full max-w-[20rem] overflow-hidden bg-transparent sm:max-w-[22rem]"
-          style={{ aspectRatio: "3 / 4" }}
+          className="relative mx-auto w-full max-w-[280px] overflow-hidden bg-transparent"
+          style={{ aspectRatio: "280 / 420" }}
         >
           <div className="absolute inset-0 overflow-hidden">
             <BuilderOutfitPreview

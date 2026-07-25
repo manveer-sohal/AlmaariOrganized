@@ -10,19 +10,22 @@ import {
 
 const QUOTES = [
   {
+    id: "intentional-mornings",
     quote:
       "I finally wear what I already own. Almaari makes mornings feel intentional instead of scrambled.",
-    role: "Early user · illustrative",
+    role: "Early user",
   },
   {
+    id: "stylist-friend",
     quote:
       "The stylist feels like a friend who knows my closet—not a feed trying to sell me more clothes.",
-    role: "Beta tester · illustrative",
+    role: "Beta tester",
   },
   {
+    id: "clean-tagged-cards",
     quote:
       "Uploading a few pieces and getting clean, tagged cards was the moment it clicked for me.",
-    role: "Wardrobe organizer · illustrative",
+    role: "Wardrobe organizer",
   },
 ];
 
@@ -55,7 +58,7 @@ export default function Testimonials() {
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {QUOTES.map((item, index) => (
           <motion.blockquote
-            key={item.role}
+            key={item.id}
             initial={reduced ? false : { opacity: 0, y: 14 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={revealViewport}
@@ -69,7 +72,9 @@ export default function Testimonials() {
             <p className="flex-1 font-display text-lg leading-snug text-almaari-ink">
               “{item.quote}”
             </p>
-            <footer className="mt-5 text-sm text-almaari-muted">{item.role}</footer>
+            <footer className="mt-5 text-sm text-almaari-muted">
+              {item.role}
+            </footer>
           </motion.blockquote>
         ))}
       </div>

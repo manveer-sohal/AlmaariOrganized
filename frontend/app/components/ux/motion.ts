@@ -17,6 +17,21 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
+/** Matches Tailwind `md` breakpoint — mobile layout below 768px. */
+export function useIsMobileViewport() {
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setMobile(mq.matches);
+    const onChange = () => setMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return mobile;
+}
+
 export const softTransition = {
   type: "spring" as const,
   stiffness: 380,
