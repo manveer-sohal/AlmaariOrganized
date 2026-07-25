@@ -140,6 +140,10 @@ const usersSchema = new mongoose.Schema({
   hasCompletedOnboardingForClothes: { type: Boolean, default: false },
   hasCompletedOnboardingForOutfits: { type: Boolean, default: false },
   onboardingTourSeenAt: { type: Date, default: null },
+  hasCompletedProfileOnboarding: { type: Boolean, default: false },
+  stylePreferences: { type: [String], default: [] },
+  seasonalColorPalette: { type: String, default: null },
+  favoriteBrands: { type: [String], default: [] },
   role: { type: String, default: "user" },
   creditBalance: { type: Number, default: 5, min: 0 },
 });

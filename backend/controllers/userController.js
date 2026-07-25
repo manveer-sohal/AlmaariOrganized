@@ -47,6 +47,10 @@ export const getData = async (req, res) => {
       hasCompletedOnboardingForClothes: 1,
       hasCompletedOnboardingForOutfits: 1,
       onboardingTourSeenAt: 1,
+      hasCompletedProfileOnboarding: 1,
+      stylePreferences: 1,
+      seasonalColorPalette: 1,
+      favoriteBrands: 1,
       role: 1,
       creditBalance: 1,
     },
@@ -62,6 +66,10 @@ export const getData = async (req, res) => {
       hasCompletedOnboardingForClothes: 1,
       hasCompletedOnboardingForOutfits: 1,
       onboardingTourSeenAt: 1,
+      hasCompletedProfileOnboarding: 1,
+      stylePreferences: 1,
+      seasonalColorPalette: 1,
+      favoriteBrands: 1,
       role: 1,
       creditBalance: 1,
     },
@@ -72,12 +80,97 @@ export const getData = async (req, res) => {
       ? refreshed.creditBalance
       : DEFAULT_CREDIT_BALANCE;
 
+  // Existing accounts that already saw the old tour skip the new wizard.
+  // Do not infer from clothes alone — sample seeding during onboarding sets that flag.
+  const hasCompletedProfileOnboarding = Boolean(
+    refreshed.hasCompletedProfileOnboarding || refreshed.onboardingTourSeenAt,
+  );
+
   return res.status(200).json({
     hasCompletedOnboardingForClothes: refreshed.hasCompletedOnboardingForClothes,
     hasCompletedOnboardingForOutfits: refreshed.hasCompletedOnboardingForOutfits,
     onboardingTourSeenAt: refreshed.onboardingTourSeenAt ?? null,
+    hasCompletedProfileOnboarding,
+    stylePreferences: refreshed.stylePreferences ?? [],
+    seasonalColorPalette: refreshed.seasonalColorPalette ?? null,
+    favoriteBrands: refreshed.favoriteBrands ?? [],
     role: refreshed.role,
     creditBalance,
+  });
+};
+
+export const completeProfileOnboarding = async (req, res) => {
+  const auth0Id = req.auth?.sub;
+  const {
+    stylePreferences,
+    seasonalColorPalette,
+    favoriteBrands,
+  } = req.body ?? {};
+
+  if (!auth0Id) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const styles = Array.isArray(stylePreferences)
+    ? stylePreferences
+        .map((s) => String(s).trim())
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+  const brands = Array.isArray(favoriteBrands)
+    ? favoriteBrands
+        .map((b) => String(b).trim())
+        .filter(Boolean)
+        .slice(0, 20)
+    : [];
+  const palette =
+    typeof seasonalColorPalette === "string" && seasonalColorPalette.trim()
+      ? seasonalColorPalette.trim()
+      : null;
+
+  if (styles.length < 1) {
+    return res
+      .status(400)
+      .json({ error: "Select at least one style preference" });
+  }
+  if (!palette) {
+    return res.status(400).json({ error: "seasonalColorPalette is required" });
+  }
+  if (brands.length < 3) {
+    return res.status(400).json({ error: "Select at least three brands" });
+  }
+
+  await connectMongoDB();
+  const user = await User.findOneAndUpdate(
+    { auth0Id },
+    {
+      $set: {
+        stylePreferences: styles,
+        seasonalColorPalette: palette,
+        favoriteBrands: brands,
+        hasCompletedProfileOnboarding: true,
+        onboardingTourSeenAt: new Date(),
+      },
+    },
+    {
+      new: true,
+      select:
+        "hasCompletedProfileOnboarding onboardingTourSeenAt stylePreferences seasonalColorPalette favoriteBrands hasCompletedOnboardingForClothes hasCompletedOnboardingForOutfits",
+    },
+  );
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  return res.status(200).json({
+    hasCompletedProfileOnboarding: true,
+    onboardingTourSeenAt: user.onboardingTourSeenAt,
+    stylePreferences: user.stylePreferences ?? [],
+    seasonalColorPalette: user.seasonalColorPalette ?? null,
+    favoriteBrands: user.favoriteBrands ?? [],
+    hasCompletedOnboardingForClothes: user.hasCompletedOnboardingForClothes,
+    hasCompletedOnboardingForOutfits: user.hasCompletedOnboardingForOutfits,
   });
 };
 
