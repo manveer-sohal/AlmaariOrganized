@@ -14,7 +14,7 @@ import { ClothingItem, Slot } from "../../types/clothes";
 import { SLOT_LABELS } from "../../types/aiStylist";
 import BuilderSectionHeader from "./BuilderSectionHeader";
 import { Anchor, Trash2 } from "lucide-react";
-import { usePrefersReducedMotion } from "../../components/ux/motion";
+import { usePrefersReducedMotion, useIsMobileViewport } from "../../components/ux/motion";
 
 const SLOT_ORDER: Slot[] = ["head", "body", "legs", "feet"];
 const LONG_PRESS_MS = 250;
@@ -29,17 +29,6 @@ const SLOT_LAYOUT: Record<
   body: { top: "26%", height: "28%", maxWidth: "62%", z: 30 },
   legs: { top: "44%", height: "36%", maxWidth: "83%", z: 20 },
   feet: { top: "73%", height: "20%", maxWidth: "48%", z: 10 },
-};
-
-/** Denser layout for Home featured look — uses more of the canvas. */
-const FILL_SLOT_LAYOUT: Record<
-  Slot,
-  { top: string; height: string; maxWidth: string; z: number }
-> = {
-  head: { top: "1%", height: "16%", maxWidth: "34%", z: 40 },
-  body: { top: "14%", height: "32%", maxWidth: "78%", z: 30 },
-  legs: { top: "38%", height: "40%", maxWidth: "92%", z: 20 },
-  feet: { top: "72%", height: "26%", maxWidth: "58%", z: 10 },
 };
 
 type DragState = {
@@ -292,6 +281,8 @@ export default function BuilderOutfitPreview({
   className = "",
 }: BuilderOutfitPreviewProps) {
   const reduced = usePrefersReducedMotion();
+  const isMobileViewport = useIsMobileViewport();
+  const dragToRemove = isMobileViewport && !readOnly;
   const trashRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<number | null>(null);
@@ -530,6 +521,12 @@ export default function BuilderOutfitPreview({
 
   useEffect(() => () => clearLongPress(), [clearLongPress]);
 
+  useEffect(() => {
+    if (!dragToRemove && dragItem) {
+      cancelDrag();
+    }
+  }, [dragToRemove, dragItem, cancelDrag]);
+
   const draggingId = dragItem?._id ?? null;
   return (
     <div
@@ -545,39 +542,43 @@ export default function BuilderOutfitPreview({
       } ${className}`}
     >
       {compact || fill ? null : (
-        <BuilderSectionHeader
-          step="02"
-          title={titleOverride || "Outfit Preview"}
-          action={
-            onAnchorAllPreview && pieceCount > 0 && !readOnly ? (
-              <button
-                type="button"
-                onClick={onAnchorAllPreview}
-                className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                  allPreviewAnchored
-                    ? "border-indigo-500 bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "border-indigo-400 bg-white text-indigo-800 hover:bg-indigo-50"
-                }`}
-                title={
-                  allPreviewAnchored
-                    ? "Unlock every item in the outfit preview"
-                    : "Lock every item currently in the outfit preview"
-                }
-              >
-                <Anchor className="h-3.5 w-3.5" aria-hidden />
-                {allPreviewAnchored ? "Unanchor preview" : "Anchor preview"}
-              </button>
-            ) : (
-              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-800">
-                {badgeOverride
-                  ? badgeOverride
-                  : pieceCount > filledSlots
-                    ? `${pieceCount} pieces · ${filledSlots} slots`
-                    : `${filledSlots} of 4 pieces`}
-              </span>
-            )
-          }
-        />
+        <div className="shrink-0 min-h-10">
+          <BuilderSectionHeader
+            step="02"
+            title={titleOverride || "Outfit Preview"}
+            action={
+              onAnchorAllPreview && pieceCount > 0 && !readOnly ? (
+                <button
+                  type="button"
+                  onClick={onAnchorAllPreview}
+                  className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    allPreviewAnchored
+                      ? "border-indigo-500 bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "border-indigo-400 bg-white text-indigo-800 hover:bg-indigo-50"
+                  }`}
+                  title={
+                    allPreviewAnchored
+                      ? "Unlock every item in the outfit preview"
+                      : "Lock every item currently in the outfit preview"
+                  }
+                >
+                  <Anchor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="whitespace-nowrap">
+                    {allPreviewAnchored ? "Unanchor preview" : "Anchor preview"}
+                  </span>
+                </button>
+              ) : (
+                <span className="inline-flex min-h-8 items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-indigo-800">
+                  {badgeOverride
+                    ? badgeOverride
+                    : pieceCount > filledSlots
+                      ? `${pieceCount} pieces · ${filledSlots} slots`
+                      : `${filledSlots} of 4 pieces`}
+                </span>
+              )
+            }
+          />
+        </div>
       )}
 
       <div
@@ -590,14 +591,13 @@ export default function BuilderOutfitPreview({
         }`}
       >
         <div
-          className={`relative overflow-hidden rounded-2xl ${
+          className={`relative shrink-0 overflow-hidden rounded-2xl ${
             fill
               ? "h-full w-full"
               : compact
                 ? "h-full w-full max-h-full max-w-full"
-                : "mx-auto w-full max-w-[280px] flex-1"
-          } ${dragItem ? "touch-none select-none" : ""}`}
-          style={compact || fill ? undefined : { minHeight: "420px" }}
+                : "mx-auto h-full w-full max-w-[280px]"
+          } ${dragItem && dragToRemove ? "touch-none select-none" : ""}`}
           aria-label="Outfit canvas"
         >
           <FittingRoomBackdrop />
@@ -612,7 +612,7 @@ export default function BuilderOutfitPreview({
             const isSwapTarget =
               swapMode && (swapTargetSlot == null || swapTargetSlot === slot);
             const label = SLOT_LABELS[slot] || slot;
-            const layout = (fill ? FILL_SLOT_LAYOUT : SLOT_LAYOUT)[slot];
+            const layout = SLOT_LAYOUT[slot];
 
             return (
               <div
@@ -633,7 +633,7 @@ export default function BuilderOutfitPreview({
                   <div className="relative h-full w-full">
                     {visibleItems.map((item, idx) => {
                       const layerCount = visibleItems.length;
-                      const layerGap = fill ? 10 : 30;
+                      const layerGap = 30;
                       const stackShiftPx =
                         idx * layerGap - ((layerCount - 1) * layerGap) / 2;
 
@@ -651,24 +651,45 @@ export default function BuilderOutfitPreview({
                             aria-label={
                               readOnly
                                 ? `${item.type} in ${label}`
-                                : `Hold and drag ${item.type} to remove from ${label}`
+                                : dragToRemove
+                                  ? `Hold and drag ${item.type} to remove from ${label}`
+                                  : `Click to remove ${item.type} from ${label}`
                             }
                             title={
                               readOnly
                                 ? item.type
-                                : "Hold, then drag to trash to remove"
+                                : dragToRemove
+                                  ? "Hold, then drag to trash to remove"
+                                  : "Click to remove from outfit"
+                            }
+                            onClick={
+                              readOnly || dragToRemove
+                                ? undefined
+                                : () => removeItem(item)
                             }
                             onContextMenu={(e) => {
                               if (!readOnly) e.preventDefault();
                             }}
-                            onPointerDown={(e) => onItemPointerDown(item, e)}
-                            onPointerMove={onItemPointerMove}
-                            onPointerUp={onItemPointerUp}
-                            onPointerCancel={cancelDrag}
+                            onPointerDown={
+                              dragToRemove
+                                ? (e) => onItemPointerDown(item, e)
+                                : undefined
+                            }
+                            onPointerMove={
+                              dragToRemove ? onItemPointerMove : undefined
+                            }
+                            onPointerUp={
+                              dragToRemove ? onItemPointerUp : undefined
+                            }
+                            onPointerCancel={
+                              dragToRemove ? cancelDrag : undefined
+                            }
                             className={`relative h-full w-full overflow-hidden rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                               readOnly
                                 ? "cursor-default"
-                                : "touch-none hover:z-50 hover:scale-[1.04] hover:shadow-lg"
+                                : dragToRemove
+                                  ? "touch-none hover:z-50 hover:scale-[1.04] hover:shadow-lg"
+                                  : "cursor-pointer hover:z-50 hover:scale-[1.02] hover:ring-2 hover:ring-red-200 hover:shadow-md"
                             }`}
                           >
                             <Image
@@ -712,7 +733,7 @@ export default function BuilderOutfitPreview({
         </div>
       </div>
 
-      {portalReady
+      {portalReady && dragToRemove
         ? createPortal(
             <AnimatePresence>
               {dragItem ? (

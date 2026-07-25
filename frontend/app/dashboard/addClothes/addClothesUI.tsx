@@ -57,9 +57,13 @@ import ImageUploadFlow, {
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
 type addClothesUIProm = {
   setView: (view: View) => void;
+  /** When set, called after a successful upload instead of navigating to wardrobe. */
+  onUploadSuccess?: () => void;
+  /** Override back navigation (e.g. return to onboarding). */
+  onBack?: () => void;
 };
 
-function AddClothesUI({ setView }: addClothesUIProm) {
+function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const { credits, isLoadingCredits } = useCredits();
   const {
     mutateAsync: analyzeClothing,
@@ -72,6 +76,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const queryClient = useQueryClient();
 
   const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     setView("wardrobe");
   };
 
@@ -481,8 +489,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         if (!rembgBlob) return;
 
         const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
-        // Soft-swap to transparent PNG; same WxH keeps zoom/offset valid.
+        // Soft-swap to transparent PNG; re-fit zoom/offset to the new dimensions.
+        imageRef.current = null;
         setPreview(rembgUrl);
+        drawCropPreview(rembgUrl, zoom, offset);
       } catch (err) {
         console.error("Failed to prepare image for rembg:", err);
         if (cancelled || generation !== rembgGenerationRef.current) return;
@@ -832,9 +842,13 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         await queryClient.invalidateQueries({
           queryKey: ["clothesData", user?.sub],
         });
-        setView("wardrobe");
-        goToNextTourStep();
         queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
+        if (onUploadSuccess) {
+          onUploadSuccess();
+        } else {
+          setView("wardrobe");
+          goToNextTourStep();
+        }
       } else {
         console.error("Failed to upload picture");
       }
@@ -926,8 +940,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 }}
               >
                 {preview ? (
-                  <div className="relative flex items-center justify-center w-full h-full">
-                    <div className="relative inline-flex max-h-full max-w-full">
+                  <div className="relative flex h-full w-full items-center justify-center">
+                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
                       <canvas
                         ref={canvasRef}
                         onMouseDown={handleMouseDown}
@@ -937,7 +951,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
-                        className="max-w-full max-h-full cursor-grab active:cursor-grabbing touch-none"
+                        className="block h-full w-full cursor-grab active:cursor-grabbing touch-none"
                       />
                       <div className="pointer-events-none absolute inset-0">
                         <CropOverlayGuide overlay={cropOverlay} />

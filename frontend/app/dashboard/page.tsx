@@ -13,6 +13,8 @@ import WardrobeScreen from "./Wardrobe/WardrobeScreen";
 import MobileBottomNavigation from "../components/ux/MobileBottomNavigation";
 import DesktopNavigation from "../components/ux/DesktopNavigation";
 import OnboardingTourBootstrap from "./components/OnboardingTourBootstrap";
+import OnboardingWizard from "./onboarding/OnboardingWizard";
+import { useOnboarding } from "../hooks/useOnboarding";
 import { useRole } from "../hooks/useRole";
 import { useDeleteOutfit } from "../hooks/useDeleteOutfit";
 import { View, ClothingItem, Outfit } from "../types/clothes";
@@ -20,6 +22,7 @@ import { warmupAiClothingService } from "../utils/warmupAiService";
 
 export default function Dashboard() {
   const { user, isLoading } = useUser();
+  const { onboarding, isLoadingOnboarding } = useOnboarding();
   const [hasLoaded, setHasLoaded] = useState(false);
   const [view, setView] = useState<View>("home");
   const [creditReturnView, setCreditReturnView] = useState<View>("home");
@@ -89,11 +92,26 @@ export default function Dashboard() {
     setView("createOutfit");
   };
 
+  const needsProfileOnboarding =
+    !!user &&
+    !isLoadingOnboarding &&
+    !!onboarding &&
+    !onboarding.hasCompletedProfileOnboarding;
+
   const hideChrome =
+    needsProfileOnboarding ||
     view === "addClothes" ||
     view === "buyCredits" ||
     view === "clothingDetails" ||
     view === "outfitDetails";
+
+  if (needsProfileOnboarding) {
+    return (
+      <main className="relative h-[100dvh] w-full max-w-[100vw] overflow-hidden bg-almaari-bg">
+        <OnboardingWizard onComplete={() => setView("home")} />
+      </main>
+    );
+  }
 
   return (
     <main className="relative grid h-[100dvh] w-full max-w-[100vw] grid-rows-1 overflow-hidden bg-almaari-bg">
@@ -114,7 +132,7 @@ export default function Dashboard() {
         ) : null}
 
         <div className="h-full min-h-0 w-full flex-1 overflow-hidden bg-almaari-bg md:rounded-none">
-          {isLoading ? (
+          {isLoading || (user && isLoadingOnboarding) ? (
             <div className="flex h-full items-center justify-center">
               <div className="h-10 w-10 animate-spin rounded-full border-2 border-almaari-accent border-t-transparent" />
             </div>
@@ -134,7 +152,7 @@ export default function Dashboard() {
             </div>
           ) : null}
 
-          {user ? (
+          {user && !isLoadingOnboarding ? (
             <div className="h-full min-h-0 w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto">
               <OnboardingTourBootstrap setView={setView} />
               {view === "home" && (
