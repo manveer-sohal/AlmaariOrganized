@@ -60,6 +60,7 @@ export default function BrandAutocomplete({
         <input
           ref={inputRef}
           type="text"
+          role="combobox"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -91,7 +92,7 @@ export default function BrandAutocomplete({
             className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-almaari border border-almaari-border bg-almaari-surface-raised py-1 shadow-soft"
           >
             {suggestions.map((brand) => (
-              <li key={brand} role="option">
+              <li key={brand} role="option" aria-selected={false}>
                 <button
                   type="button"
                   className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-almaari-ink hover:bg-almaari-accent-soft"
@@ -104,7 +105,7 @@ export default function BrandAutocomplete({
               </li>
             ))}
             {canAddCustom ? (
-              <li role="option">
+              <li role="option" aria-selected={false}>
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-almaari-accent hover:bg-almaari-accent-soft"

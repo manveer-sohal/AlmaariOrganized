@@ -38,7 +38,7 @@ export default function ConfettiBurst({
       rotate: (id % 2 === 0 ? 1 : -1) * (20 + (id % 8) * 18),
       size: 6 + (id % 5) * 2,
     }));
-  }, [burstId]);
+  }, []);
 
   useEffect(() => {
     if (!burstId || reduced) {

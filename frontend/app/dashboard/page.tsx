@@ -143,6 +143,8 @@ export default function Dashboard() {
               <p className="font-display text-2xl text-almaari-ink">
                 Sign in to open your wardrobe
               </p>
+              {/* Auth0 login requires a full document navigation, not next/link */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/api/auth/login?returnTo=/dashboard"
                 className="inline-flex min-h-touch items-center rounded-almaari bg-almaari-accent px-6 text-sm font-semibold text-white"
@@ -154,7 +156,7 @@ export default function Dashboard() {
 
           {user && !isLoadingOnboarding ? (
             <div className="h-full min-h-0 w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto">
-              <OnboardingTourBootstrap setView={setView} />
+              <OnboardingTourBootstrap />
               {view === "home" && (
                 <HomeHub
                   setView={setView}

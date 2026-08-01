@@ -63,7 +63,7 @@ export default function WardrobeDrawer({
     : { duration: 0.15, ease: "easeOut" as const };
   const slide = reduced
     ? { duration: 0 }
-    : { type: "tween" as const, duration: 0.18, ease: [0.22, 1, 0.36, 1] };
+    : { type: "tween" as const, duration: 0.18, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <AnimatePresence>

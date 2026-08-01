@@ -507,6 +507,8 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       cancelled = true;
       revokeTrackedUrls();
     };
+    // Intentionally omits zoom/offset — file pick resets crop state above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file, drawCropPreview, removeBackground]);
 
   useEffect(() => {
