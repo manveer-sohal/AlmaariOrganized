@@ -15,7 +15,7 @@ export const CROP_OVERLAY_OPTIONS: {
   label: string;
 }[] = [
   { id: "none", label: "No overlay" },
-  { id: "top", label: "Top" },
+  { id: "top", label: "T-shirt" },
   { id: "pants", label: "Pants" },
   { id: "shorts", label: "Shorts" },
   { id: "skirt", label: "Skirt" },

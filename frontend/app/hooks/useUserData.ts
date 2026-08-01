@@ -4,7 +4,7 @@ import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
 export const useUserData = () => {
   const { user: userAuth0 } = useUserAuth0();
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isPending, isError } = useQuery({
     queryKey: ["user", userAuth0?.sub],
     queryFn: async () => {
       const fetchUserData = async () =>
@@ -25,5 +25,5 @@ export const useUserData = () => {
     },
     enabled: !!userAuth0?.sub,
   });
-  return { user, isLoading };
+  return { user, isLoading: isPending, isError };
 };

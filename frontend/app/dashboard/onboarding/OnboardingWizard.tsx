@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  startOnboardingTourFromForm,
+  stopOnboardingTour,
+} from "../../components/OnBoardingTour";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@auth0/nextjs-auth0/client";
@@ -9,10 +13,12 @@ import {
   ArrowRight,
   Camera,
   Check,
+  Forward,
   Shirt,
   Sparkles,
 } from "lucide-react";
 import { usePrefersReducedMotion } from "../../components/ux/motion";
+import { useClothesData } from "../../hooks/useClothesData";
 import { useSampleWardrobe } from "../../hooks/useSampleWardrobe";
 import { completeProfileOnboarding } from "../../utils/completeProfileOnboarding";
 import AddClothesUI from "../addClothes/addClothesUI";
@@ -51,6 +57,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   const queryClient = useQueryClient();
   const reduced = usePrefersReducedMotion();
   const { seedSamples } = useSampleWardrobe();
+  const { clothes, isLoadingClothes } = useClothesData(1);
+  const hasExistingClothes = !isLoadingClothes && clothes.length > 0;
 
   const [step, setStep] = useState<Step>("styles");
   const [styles, setStyles] = useState<string[]>([]);
@@ -128,9 +136,26 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   };
 
   const handleUploadSuccess = () => {
+    stopOnboardingTour();
     fireConfetti();
     setStep("welcome");
   };
+
+  const handleSkipWardrobe = () => {
+    fireConfetti();
+    setStep("welcome");
+  };
+
+  useEffect(() => {
+    if (step !== "upload") {
+      stopOnboardingTour();
+      return;
+    }
+
+    void startOnboardingTourFromForm();
+
+    return () => stopOnboardingTour();
+  }, [step]);
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-almaari-bg">
@@ -360,6 +385,26 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     </span>
                   </span>
                 </button>
+
+                {hasExistingClothes ? (
+                  <button
+                    type="button"
+                    onClick={handleSkipWardrobe}
+                    className="flex items-start gap-4 rounded-almaari-lg border border-almaari-border bg-almaari-surface-raised p-4 text-left transition hover:border-almaari-accent/50 hover:shadow-soft"
+                  >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-almaari bg-almaari-chrome/50 text-almaari-ink">
+                      <Forward className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span>
+                      <span className="block font-display text-lg text-almaari-ink">
+                        Skip - I already have clothes added
+                      </span>
+                      <span className="mt-1 block text-sm text-almaari-muted">
+                        Head straight to Almaari with your existing wardrobe.
+                      </span>
+                    </span>
+                  </button>
+                ) : null}
               </div>
               {error ? (
                 <p className="mt-3 text-sm text-red-600" role="alert">

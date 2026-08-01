@@ -21,12 +21,9 @@ export default function BrandAutocomplete({
 
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) {
-      return BRAND_CATALOG.filter((b) => !selected.includes(b)).slice(0, 8);
-    }
-    return BRAND_CATALOG.filter(
-      (b) => b.toLowerCase().includes(q) && !selected.includes(b),
-    ).slice(0, 10);
+    const available = BRAND_CATALOG.filter((b) => !selected.includes(b));
+    if (!q) return available;
+    return available.filter((b) => b.toLowerCase().includes(q));
   }, [query, selected]);
 
   const exactMatch = BRAND_CATALOG.find(
@@ -55,7 +52,7 @@ export default function BrandAutocomplete({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3  p-1">
       <div className="relative">
         <input
           ref={inputRef}
@@ -85,39 +82,47 @@ export default function BrandAutocomplete({
           aria-controls="brand-suggestions"
         />
 
-        {open && (suggestions.length > 0 || canAddCustom) ? (
-          <ul
+        {suggestions.length > 0 || canAddCustom ? (
+          <div
             id="brand-suggestions"
-            role="listbox"
-            className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-almaari border border-almaari-border bg-almaari-surface-raised py-1 shadow-soft"
+            className="mt-2 max-h-60 overflow-y-auto overscroll-contain rounded-almaari border border-almaari-border bg-almaari-surface-raised shadow-soft"
           >
-            {suggestions.map((brand) => (
-              <li key={brand} role="option" aria-selected={false}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-almaari-ink hover:bg-almaari-accent-soft"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => addBrand(brand)}
-                >
-                  {brand}
-                  <Plus className="h-4 w-4 text-almaari-muted" aria-hidden />
-                </button>
-              </li>
-            ))}
-            {canAddCustom ? (
-              <li role="option" aria-selected={false}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-almaari-accent hover:bg-almaari-accent-soft"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => addBrand(query)}
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Add “{query.trim()}”
-                </button>
-              </li>
-            ) : null}
-          </ul>
+            <ul role="listbox" className="flex flex-col py-1">
+              {suggestions.map((brand) => (
+                <li key={brand} role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-almaari-ink hover:bg-almaari-accent-soft"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addBrand(brand)}
+                  >
+                    {brand}
+                    <Plus
+                      className="h-4 w-4 shrink-0 text-almaari-muted"
+                      aria-hidden
+                    />
+                  </button>
+                </li>
+              ))}
+              {canAddCustom ? (
+                <li role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-almaari-accent hover:bg-almaari-accent-soft"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addBrand(query)}
+                  >
+                    <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                    Add “{query.trim()}”
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ) : open ? (
+          <p className="mt-2 px-1 text-sm text-almaari-muted">
+            No matching brands. Try another search or add your own above.
+          </p>
         ) : null}
       </div>
 
