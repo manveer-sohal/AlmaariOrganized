@@ -2,6 +2,11 @@ import { User } from "../models/Users.js";
 import connectMongoDB from "../libs/mongodb.js";
 import { DEFAULT_CREDIT_BALANCE } from "../constants/credits.js";
 import { ensureCreditBalanceField } from "../services/credit.service.js";
+import {
+  createUserRecord,
+  ensureProfileOnboardingDefaults,
+  findOrCreateUserByAuth0Id,
+} from "../services/userBootstrap.service.js";
 
 export const setOnboardingStep = async (req, res) => {
   const auth0Id = req.auth?.sub;
@@ -41,25 +46,16 @@ export const getData = async (req, res) => {
     return res.status(500).json({ error: "Failed to connect to MongoDB" });
   }
 
-  let user = await User.findOne(
-    { auth0Id },
-    {
-      hasCompletedOnboardingForClothes: 1,
-      hasCompletedOnboardingForOutfits: 1,
-      onboardingTourSeenAt: 1,
-      hasCompletedProfileOnboarding: 1,
-      stylePreferences: 1,
-      seasonalColorPalette: 1,
-      favoriteBrands: 1,
-      role: 1,
-      creditBalance: 1,
-    },
-  );
+  let user = await findOrCreateUserByAuth0Id({
+    auth0Id,
+    email: req.auth?.email,
+  });
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
 
   await ensureCreditBalanceField(auth0Id);
+  await ensureProfileOnboardingDefaults(auth0Id);
   const refreshed = await User.findOne(
     { auth0Id },
     {
@@ -80,11 +76,19 @@ export const getData = async (req, res) => {
       ? refreshed.creditBalance
       : DEFAULT_CREDIT_BALANCE;
 
-  // Existing accounts that already saw the old tour skip the new wizard.
-  // Do not infer from clothes alone — sample seeding during onboarding sets that flag.
-  const hasCompletedProfileOnboarding = Boolean(
-    refreshed.hasCompletedProfileOnboarding || refreshed.onboardingTourSeenAt,
-  );
+  // Legacy users who finished the old driver.js tour (before profile onboarding)
+  // skip the wizard only when the profile flag was never written.
+  const profileFlag = refreshed.hasCompletedProfileOnboarding;
+  let hasCompletedProfileOnboarding;
+  if (profileFlag === true) {
+    hasCompletedProfileOnboarding = true;
+  } else if (profileFlag === false) {
+    hasCompletedProfileOnboarding = false;
+  } else if (refreshed.onboardingTourSeenAt) {
+    hasCompletedProfileOnboarding = true;
+  } else {
+    hasCompletedProfileOnboarding = false;
+  }
 
   return res.status(200).json({
     hasCompletedOnboardingForClothes: refreshed.hasCompletedOnboardingForClothes,
@@ -285,17 +289,9 @@ export const syncUserOnLogin = async (req, res) => {
     let dbUser = await User.findOne({ auth0Id });
 
     if (!dbUser) {
-      dbUser = await User.create({
-        auth0Id,
-        email,
-        Clothes: [],
-        Outfits: [],
-        hasCompletedOnboardingForClothes: false,
-        hasCompletedOnboardingForOutfits: false,
-        role: "user",
-        creditBalance: DEFAULT_CREDIT_BALANCE,
-      });
+      dbUser = await createUserRecord({ auth0Id, email });
     } else {
+      await ensureProfileOnboardingDefaults(auth0Id);
       await ensureCreditBalanceField(auth0Id);
       dbUser = await User.findOne({ auth0Id });
     }
