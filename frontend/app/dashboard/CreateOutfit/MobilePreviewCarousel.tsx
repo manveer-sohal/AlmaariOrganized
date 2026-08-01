@@ -53,27 +53,58 @@ export function recommendationToSlots(
 }
 
 type MobilePreviewCarouselProps = {
+  /** User’s current working outfit — always the first (leftmost) slide. */
+  currentSlots: Partial<Record<Slot, ClothingItem[] | null>>;
+  setCurrentSlots: (
+    updater: (
+      prev: Partial<Record<Slot, ClothingItem[] | null>>,
+    ) => Partial<Record<Slot, ClothingItem[] | null>>,
+  ) => void;
   recommendations: OutfitRecommendation[];
   clothesById: Map<string, ClothingItem>;
+  /** 0 = current outfit; 1+ = AI recommendation index - 1 */
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
+  /** Increment to force a smooth scroll to the active slide (e.g. after Use Outfit). */
+  scrollReturnNonce?: number;
   anchoredItemIds?: string[];
+  onToggleAnchor?: (id: string) => void;
+  onRemoveItem?: (id: string) => void;
+  onAnchorAllPreview?: () => void;
+  swapMode?: boolean;
+  swapTargetSlot?: Slot | null;
+  onReplaceSlot?: (slot: Slot) => void;
+  previewHighlight?: boolean;
+  dotsBottomClass?: string;
 };
 
 /**
- * Swipeable outfit preview: fills remaining height; canvas stays centered.
- * Use Outfit / feedback live in the fixed bottom bar.
+ * Swipeable previews: [Your look] · [AI 1] · [AI 2] · [AI 3]
+ * Swipe left to browse generated looks; Use Outfit returns to slide 0.
  */
 export default function MobilePreviewCarousel({
+  currentSlots,
+  setCurrentSlots,
   recommendations,
   clothesById,
   activeIndex,
   onActiveIndexChange,
+  scrollReturnNonce = 0,
   anchoredItemIds = [],
+  onToggleAnchor,
+  onRemoveItem,
+  onAnchorAllPreview,
+  swapMode = false,
+  swapTargetSlot = null,
+  onReplaceSlot,
+  previewHighlight = false,
+  dotsBottomClass = "bottom-3",
 }: MobilePreviewCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const ignoreScrollSyncRef = useRef(false);
+  const totalSlides = 1 + recommendations.length;
 
-  const slides = useMemo(
+  const aiSlides = useMemo(
     () =>
       recommendations.map((rec) => ({
         recommendation: rec,
@@ -82,128 +113,175 @@ export default function MobilePreviewCarousel({
     [recommendations, clothesById],
   );
 
-  const active = slides[activeIndex]?.recommendation ?? recommendations[0];
+  const onCurrentSlide = activeIndex === 0;
+  const activeAi =
+    activeIndex > 0 ? aiSlides[activeIndex - 1]?.recommendation : null;
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     const child = el.children[activeIndex] as HTMLElement | undefined;
     if (!child) return;
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    el.scrollTo({
-      left: child.offsetLeft,
-      behavior: reduceMotion ? "auto" : "smooth",
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches;
+
+    ignoreScrollSyncRef.current = true;
+
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        child.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          inline: "start",
+          block: "nearest",
+        });
+        el.scrollTo({
+          left: child.offsetLeft,
+          behavior: reduceMotion ? "auto" : "smooth",
+        });
+      });
     });
-  }, [activeIndex, recommendations.length]);
+
+    const clearIgnore = window.setTimeout(
+      () => {
+        ignoreScrollSyncRef.current = false;
+      },
+      reduceMotion ? 50 : 500,
+    );
+
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      window.clearTimeout(clearIgnore);
+    };
+  }, [activeIndex, totalSlides, scrollReturnNonce]);
 
   const onScroll = () => {
+    if (ignoreScrollSyncRef.current) return;
     const el = scrollerRef.current;
     if (!el || el.children.length === 0) return;
     const width = el.clientWidth;
     if (!width) return;
     const next = Math.round(el.scrollLeft / width);
-    const clamped = Math.min(
-      recommendations.length - 1,
-      Math.max(0, next),
-    );
+    const clamped = Math.min(totalSlides - 1, Math.max(0, next));
     if (clamped !== activeIndex) onActiveIndexChange(clamped);
   };
 
   const go = (delta: number) => {
     onActiveIndexChange(
-      Math.min(
-        recommendations.length - 1,
-        Math.max(0, activeIndex + delta),
-      ),
+      Math.min(totalSlides - 1, Math.max(0, activeIndex + delta)),
     );
   };
 
-  const noopSetSlots = () => {
-    /* read-only AI slides */
-  };
+  const headerLabel = onCurrentSlide
+    ? "Your look"
+    : `Look ${activeIndex} of ${recommendations.length}`;
 
   return (
     <section
-      aria-label="AI outfit previews"
-      className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden"
+      aria-label="Outfit previews"
+      className="relative h-full min-h-0 w-full max-w-full overflow-hidden"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          disabled={activeIndex <= 0}
-          aria-label="Previous outfit"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-indigo-200 bg-white text-indigo-800 disabled:opacity-40"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1 text-center">
-          <p className="text-sm font-semibold text-indigo-900">
-            Outfit {activeIndex + 1} of {recommendations.length}
-          </p>
-          {active ? (
-            <p className="truncate text-[11px] text-indigo-600">
-              {active.label}
-              {active.name ? ` · ${active.name}` : ""}
-            </p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={() => go(1)}
-          disabled={activeIndex >= recommendations.length - 1}
-          aria-label="Next outfit"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-indigo-200 bg-white text-indigo-800 disabled:opacity-40"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
-
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="mt-1.5 flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {slides.map(({ recommendation, slots }) => (
+        {/* Slide 0 — current working outfit */}
+        <div className="relative h-full min-h-0 w-full min-w-full shrink-0 snap-center snap-always">
+          <BuilderOutfitPreview
+            selectedBySlot={currentSlots}
+            setSelectedBySlot={setCurrentSlots}
+            swapMode={swapMode}
+            swapTargetSlot={swapTargetSlot}
+            onReplaceSlot={onReplaceSlot}
+            highlightApplied={previewHighlight}
+            anchoredItemIds={anchoredItemIds}
+            onToggleAnchor={onToggleAnchor}
+            onRemoveItem={onRemoveItem}
+            onAnchorAllPreview={onAnchorAllPreview}
+            compact
+            className="h-full w-full border-0 bg-transparent p-0 shadow-none"
+          />
+        </div>
+
+        {/* Slides 1+ — AI-generated looks */}
+        {aiSlides.map(({ recommendation, slots }) => (
           <div
             key={recommendation.id}
-            className="box-border flex h-full min-h-0 w-full min-w-full max-w-full shrink-0 snap-center snap-always flex-col items-center justify-center"
+            className="relative h-full min-h-0 w-full min-w-full shrink-0 snap-center snap-always"
           >
             <BuilderOutfitPreview
               selectedBySlot={slots}
-              setSelectedBySlot={noopSetSlots}
+              setSelectedBySlot={() => {}}
               readOnly
               compact
               anchoredItemIds={anchoredItemIds}
-              className="flex h-full max-h-full w-full items-center justify-center border-0 bg-transparent p-0 shadow-none"
+              className="h-full w-full border-0 bg-transparent p-0 shadow-none"
             />
-            {recommendation.explanation ? (
-              <p className="mt-1 line-clamp-1 max-w-[90%] shrink-0 text-center text-[11px] leading-snug text-indigo-800/90">
-                {recommendation.explanation}
-              </p>
-            ) : null}
           </div>
         ))}
       </div>
 
-      <div
-        className="mt-1.5 flex shrink-0 items-center justify-center gap-1.5"
-        role="tablist"
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white/90 via-white/35 to-transparent px-3 pb-6 pt-2">
+        <div className="pointer-events-auto mx-auto max-w-xs text-center">
+          <p className="text-sm font-semibold text-almaari-ink">{headerLabel}</p>
+          {activeAi ? (
+            <p className="truncate text-[11px] text-almaari-muted">
+              {activeAi.label}
+              {activeAi.name ? ` · ${activeAi.name}` : ""}
+            </p>
+          ) : (
+            <p className="truncate text-[11px] text-almaari-muted">
+              Swipe for AI looks
+            </p>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => go(-1)}
+        disabled={activeIndex <= 0}
+        aria-label="Previous outfit"
+        className="absolute left-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-almaari-border/80 bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40"
       >
-        {recommendations.map((rec, index) => (
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => go(1)}
+        disabled={activeIndex >= totalSlides - 1}
+        aria-label="Next outfit"
+        className="absolute right-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-almaari-border/80 bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
+
+      <div
+        className={`absolute left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-1.5 ${dotsBottomClass}`}
+        role="tablist"
+        aria-label="Outfit slides"
+      >
+        {Array.from({ length: totalSlides }, (_, index) => (
           <button
-            key={rec.id}
+            key={
+              index === 0 ? "current" : aiSlides[index - 1]?.recommendation.id
+            }
             type="button"
             role="tab"
             aria-selected={index === activeIndex}
-            aria-label={`Show outfit ${index + 1} of ${recommendations.length}`}
+            aria-label={
+              index === 0
+                ? "Show your look"
+                : `Show AI look ${index} of ${recommendations.length}`
+            }
             onClick={() => onActiveIndexChange(index)}
-            className={`h-1.5 rounded-full transition ${
+            className={`h-1.5 rounded-full shadow-sm transition ${
               index === activeIndex
-                ? "w-4 bg-indigo-600"
-                : "w-1.5 bg-indigo-200"
+                ? "w-4 bg-almaari-accent"
+                : "w-1.5 bg-white/90 ring-1 ring-almaari-border"
             }`}
           />
         ))}

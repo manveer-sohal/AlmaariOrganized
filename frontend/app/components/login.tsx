@@ -12,17 +12,15 @@ export default function Login({
   const handleLogin = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
-    //change url to http://localhost:3000/api/auth/login not http://localhost:3000/home/api/auth/login
     window.location.assign(
       `${window.location.origin}/api/auth/login?returnTo=/dashboard`,
     );
   };
 
-  //loading animation on the button when redirecting but keep the size of the button
   const loadingAnimation = (
-    <div className="inline-flex items-center gap-2 w-full justify-center text-indigo-700">
+    <div className="inline-flex w-full items-center justify-center gap-2 text-almaari-accent">
       <svg
-        className="h-4 w-11 animate-spin"
+        className="h-4 w-4 animate-spin"
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden="true"
@@ -34,50 +32,41 @@ export default function Login({
           r="10"
           stroke="currentColor"
           strokeWidth="4"
-        ></circle>
+        />
         <path
           className="opacity-75"
           fill="currentColor"
           d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-        ></path>
+        />
       </svg>
     </div>
   );
+
   return (
     <>
       {type === "navbar" && (
         <button
+          type="button"
           onClick={handleLogin}
-          className="hover:text-indigo-600 cursor-pointer transition-colors duration-300"
+          className="min-h-11 cursor-pointer text-sm font-medium text-almaari-muted transition-colors hover:text-almaari-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-almaari-accent"
           disabled={isRedirecting}
         >
-          {isRedirecting ? (
-            <div className="w-full justify-center">{loadingAnimation}</div>
-          ) : (
-            <span>Log In</span>
-          )}
+          {isRedirecting ? loadingAnimation : <span>Log in</span>}
         </button>
       )}
       {type === "homepage" && (
         <button
+          type="button"
           onClick={handleLogin}
           disabled={isRedirecting}
-          className="inline-flex items-center justify-center gap-2 font-semibold px-5 py-3 rounded-xl border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50 disabled:opacity-80 cursor-pointer"
+          className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-almaari border border-almaari-border bg-almaari-surface-raised px-5 py-2.5 text-sm font-semibold text-almaari-ink transition hover:bg-almaari-accent-soft disabled:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-almaari-accent"
         >
-          {isRedirecting ? (
-            <div className="w-full justify-center">{loadingAnimation}</div>
-          ) : (
-            <span>Log In</span>
-          )}
+          {isRedirecting ? loadingAnimation : <span>Log in</span>}
         </button>
       )}
       {type === "settings" && (
-        <button onClick={handleLogin} disabled={isRedirecting} className="">
-          {isRedirecting ? (
-            <div className="w-full justify-center">{loadingAnimation}</div>
-          ) : (
-            <span>Log In</span>
-          )}
+        <button type="button" onClick={handleLogin} disabled={isRedirecting}>
+          {isRedirecting ? loadingAnimation : <span>Log in</span>}
         </button>
       )}
     </>

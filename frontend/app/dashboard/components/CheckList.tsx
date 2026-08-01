@@ -1,15 +1,8 @@
-import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, type ReactNode } from "react";
 import { Camera, ChevronDown, ChevronUp, Shirt } from "lucide-react";
 import { useOnboarding } from "../../hooks/useOnboarding";
-import { useClothesData } from "../../hooks/useClothesData";
 import { startOnboardingTourOutfit } from "../../components/OnBoardingTourOutfit";
-import {
-  isOnboardingTourRunning,
-  startOnboardingTour,
-} from "../../components/OnBoardingTour";
-import { markOnboardingTourSeen } from "../../utils/markOnboardingTourSeen";
+import { startOnboardingTour } from "../../components/OnBoardingTour";
 import { AnimatePresence, motion } from "framer-motion";
 
 type CheckListProps = {
@@ -26,12 +19,8 @@ type Step = {
 };
 
 function CheckList({ variant = "floating" }: CheckListProps) {
-  const { user: authUser } = useUser();
-  const queryClient = useQueryClient();
   const { onboarding, isLoadingOnboarding } = useOnboarding();
-  const { clothes, isLoadingClothes } = useClothesData(1);
   const [active, setActive] = useState(true);
-  const hasTriggeredAutoTourRef = useRef(false);
   const isSidebar = variant === "sidebar";
 
   const startOnboardingOutfit = useMemo(() => {
@@ -45,44 +34,6 @@ function CheckList({ variant = "floating" }: CheckListProps) {
       startOnboardingTour();
     };
   }, []);
-
-  useEffect(() => {
-    const clothingCount = clothes.length;
-    const shouldAutoStartTour =
-      !!authUser &&
-      !isLoadingOnboarding &&
-      !isLoadingClothes &&
-      !onboarding?.onboardingTourSeenAt &&
-      clothingCount === 0 &&
-      !isOnboardingTourRunning() &&
-      !hasTriggeredAutoTourRef.current;
-
-    if (!shouldAutoStartTour) {
-      return;
-    }
-
-    hasTriggeredAutoTourRef.current = true;
-    startOnboardingTour();
-
-    markOnboardingTourSeen()
-      .then((seenAt) => {
-        if (!authUser?.sub) return;
-        queryClient.setQueryData(["user", authUser.sub], (current: unknown) => {
-          if (!current || typeof current !== "object") return current;
-          return { ...current, onboardingTourSeenAt: seenAt };
-        });
-      })
-      .catch((error) => {
-        console.error("Failed to persist onboarding tour seen state:", error);
-      });
-  }, [
-    authUser,
-    isLoadingOnboarding,
-    isLoadingClothes,
-    onboarding?.onboardingTourSeenAt,
-    clothes.length,
-    queryClient,
-  ]);
 
   const steps: Step[] = [];
   if (!onboarding?.hasCompletedOnboardingForClothes) {

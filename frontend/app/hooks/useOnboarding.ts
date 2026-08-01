@@ -10,6 +10,12 @@ export const useOnboarding = () => {
           hasCompletedOnboardingForOutfits:
             user.hasCompletedOnboardingForOutfits,
           onboardingTourSeenAt: user.onboardingTourSeenAt ?? null,
+          hasCompletedProfileOnboarding: Boolean(
+            user.hasCompletedProfileOnboarding,
+          ),
+          stylePreferences: user.stylePreferences ?? [],
+          seasonalColorPalette: user.seasonalColorPalette ?? null,
+          favoriteBrands: user.favoriteBrands ?? [],
         }
       : undefined,
     isLoadingOnboarding: isLoading,

@@ -38,10 +38,10 @@ function waitForElement(
 function desktopSteps(): DriveStep[] {
   return [
     {
-      element: "#desktop-sidebar-button",
+      element: "#create-outfit-btn-desktop",
       popover: {
         title: "Create an outfit",
-        description: "Click Create Outfit to open the outfit builder.",
+        description: "Click Create to open the outfit builder.",
         showButtons: [],
         side: "right",
         align: "start",
@@ -69,11 +69,11 @@ function desktopSteps(): DriveStep[] {
       },
     },
     {
-      element: "#builder-panel-ai",
+      element: "#desktop-ai-stylist-btn",
       popover: {
         title: "Meet your AI Stylist",
         description:
-          "Generate 3 outfit ideas for 1 credit. Choose Random, Complete, Improve, or style selected items — then you can prompt the AI with your own ideas or apply the look!",
+          "Click AI Stylist to open the panel from the right. Generate 3 outfit ideas for 1 credit, then browse them with the arrows in the preview carousel.",
         side: "left",
         align: "start",
       },
@@ -116,24 +116,26 @@ function mobileSteps(): DriveStep[] {
       },
     },
     {
-      element: "#mobile-ai-style-btn",
+      element: "#mobile-edit-pieces-btn",
       disableActiveInteraction: true,
       popover: {
-        title: "AI Style Me",
+        title: "Edit pieces",
         description:
-          "Open the stylist to generate 3 looks from your wardrobe. Uses 1 credit.",
-        side: "bottom",
+          "Tap Edit pieces to open your wardrobe and add items to the outfit yourself.",
+        side: "top",
+        showButtons: ["next"],
         align: "start",
       },
     },
     {
-      element: "#mobile-add-clothes-btn",
+      element: "#mobile-ask-stylist-btn",
       disableActiveInteraction: true,
       popover: {
-        title: "Add clothes",
+        title: "Ask stylist",
         description:
-          "Open your wardrobe drawer and tap items to build the outfit yourself.",
-        side: "bottom",
+          "Tap Ask stylist for AI outfit recommendations from your wardrobe. Almaari generates 3 looks for 1 credit.",
+        side: "top",
+        showButtons: ["next"],
         align: "end",
       },
     },
@@ -151,11 +153,14 @@ function mobileSteps(): DriveStep[] {
   ];
 }
 
-export function startOnboardingTourOutfit() {
+export async function startOnboardingTourOutfit() {
   if (tourRunning) return;
   tourRunning = true;
 
   const mobile = isMobileViewport();
+  const createSelector = mobile
+    ? "#create-outfit-btn"
+    : "#create-outfit-btn-desktop";
   const steps = mobile ? mobileSteps() : desktopSteps();
 
   if (mobile) {
@@ -166,20 +171,21 @@ export function startOnboardingTourOutfit() {
     });
   }
 
-  setTimeout(
-    () => {
-      tour = driver({
-        ...almaariDriverDefaults,
-        onDestroyed: () => {
-          tourRunning = false;
-          tour = null;
-        },
-        steps,
-      });
-      tour.drive();
+  const createBtn = await waitForElement(createSelector);
+  if (!createBtn) {
+    tourRunning = false;
+    return;
+  }
+
+  tour = driver({
+    ...almaariDriverDefaults,
+    onDestroyed: () => {
+      tourRunning = false;
+      tour = null;
     },
-    mobile ? 350 : 100,
-  );
+    steps,
+  });
+  tour.drive();
 }
 
 export async function goToNextTourStepOutfit() {

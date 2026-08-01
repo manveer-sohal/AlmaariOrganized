@@ -234,6 +234,14 @@ function AlmaariMascot() {
           transform-origin: 155px 85px;
           animation: blink 8s ease-in-out infinite;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+          .wave-right,
+          .eyes-blink.left-eye,
+          .eyes-blink.right-eye {
+            animation: none !important;
+          }
+        }
       `}</style>
     </>
   );

@@ -60,7 +60,11 @@ function silhouetteShape(overlay: CropOverlayId) {
         <path d="M38 20 L28 16 L10 30 L14 46 L22 42 L20 88 H80 L78 42 L86 46 L90 30 L72 16 L62 20 C58 30 42 30 38 20 Z" />
       );
     case "pants":
-      return <path d="M24 4 H76 V2 L92 98 H64 L50 42 L36 98 H8 L16 42 Z" />;
+      return (
+        <g transform="translate(50 54) scale(0.83) translate(-50 -50)">
+          <path d="M24 4 H76 V2 L92 98 H64 L50 42 L36 98 H8 L16 42 Z" />
+        </g>
+      );
     case "shorts":
       return <path d="M24 20 H73 V20 L89 80 H64 L50 42 L36 80 H12 L19 42 Z" />;
     case "skirt":

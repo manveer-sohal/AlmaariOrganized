@@ -700,6 +700,7 @@ export const seedSampleWardrobe = async ({ auth0Id }) => {
 
     await User.findByIdAndUpdate(user._id, {
       $push: { clothes: { $each: ids } },
+      $set: { hasCompletedOnboardingForClothes: true },
     });
 
     await invalidateUserClothesCache(auth0Id);

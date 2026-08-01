@@ -30,7 +30,7 @@ export default function MobileGenerationHistorySheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-50">
       <button
         type="button"
         className="absolute inset-0 bg-black/40"
@@ -42,10 +42,10 @@ export default function MobileGenerationHistorySheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="history-sheet-title"
-        className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-indigo-200 bg-white p-4 shadow-2xl"
+        className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-indigo-200 bg-white p-4 shadow-2xl md:inset-x-auto md:bottom-auto md:right-6 md:top-24 md:w-full md:max-w-sm md:rounded-2xl"
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-indigo-200" />
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-indigo-200 md:hidden" />
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2

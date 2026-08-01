@@ -12,7 +12,8 @@ export const useClothesData = (numberOfClothes: number = 40) => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
+    isFetching,
     error,
   } = useInfiniteQuery({
     queryKey: ["clothesData", user?.sub, numberOfClothes],
@@ -58,7 +59,7 @@ export const useClothesData = (numberOfClothes: number = 40) => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoadingClothes: isLoading,
+    isLoadingClothes: isPending || (isFetching && clothes.length === 0),
     error,
   };
 };

@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
 import { View, OccasionTag, StyleCategory } from "../../types/clothes";
 import {
@@ -52,11 +51,22 @@ import {
 } from "../../utils/cropOverlays";
 import CropOverlayGuide from "./CropOverlayGuide";
 import { warmupAiClothingService } from "../../utils/warmupAiService";
+import ImageUploadFlow, {
+  UploadStage,
+} from "../../components/ux/ImageUploadFlow";
+import InlineSuccessState from "../../components/ux/InlineSuccessState";
+
+const DEFAULT_CLOTHING_TYPE = "T-shirt";
+
 type addClothesUIProm = {
   setView: (view: View) => void;
+  /** When set, called after a successful upload instead of navigating to wardrobe. */
+  onUploadSuccess?: () => void;
+  /** Override back navigation (e.g. return to onboarding). */
+  onBack?: () => void;
 };
 
-function AddClothesUI({ setView }: addClothesUIProm) {
+function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const { credits, isLoadingCredits } = useCredits();
   const {
     mutateAsync: analyzeClothing,
@@ -69,7 +79,11 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const queryClient = useQueryClient();
 
   const handleBack = () => {
-    setView("home");
+    if (onBack) {
+      onBack();
+      return;
+    }
+    setView("wardrobe");
   };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -77,13 +91,17 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const [validColour, setValidColour] = useState<boolean | null>(null);
   const [validFile, setValidFile] = useState<boolean | null>(null);
 
-  const [validType, setValidType] = useState<boolean | null>(null);
+  const [validType, setValidType] = useState<boolean | null>(true);
 
   const [usersColours, setUsersColours] = useState<string[]>([]);
-  const [usersClothType, setUsersClothType] = useState<string>("");
+  const [usersClothType, setUsersClothType] = useState<string>(
+    DEFAULT_CLOTHING_TYPE,
+  );
 
   const [inputColourValue, setInputColourValue] = useState<string>("");
-  const [inputTypeValue, setInputTypeValue] = useState<string>("");
+  const [inputTypeValue, setInputTypeValue] = useState<string>(
+    DEFAULT_CLOTHING_TYPE,
+  );
 
   const [inputMaterialValue, setInputMaterialValue] = useState<string>("");
   const [usersClothMaterial, setUsersClothMaterial] = useState<string>("");
@@ -127,7 +145,9 @@ function AddClothesUI({ setView }: addClothesUIProm) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);
   const [minZoom, setMinZoom] = useState(0.2);
-  const [cropOverlay, setCropOverlay] = useState<CropOverlayId>("none");
+  const [cropOverlay, setCropOverlay] = useState<CropOverlayId>(() =>
+    cropOverlayFromClothingType(DEFAULT_CLOTHING_TYPE),
+  );
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
@@ -465,7 +485,6 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         const initialOffset = { x: 0, y: 0 };
         setZoom(1);
         setMinZoom(0.2);
-        setCropOverlay("none");
         setOffset(initialOffset);
         drawCropPreview(workingUrl, 1, initialOffset);
 
@@ -478,8 +497,10 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         if (!rembgBlob) return;
 
         const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
-        // Soft-swap to transparent PNG; same WxH keeps zoom/offset valid.
+        // Soft-swap to transparent PNG; re-fit zoom/offset to the new dimensions.
+        imageRef.current = null;
         setPreview(rembgUrl);
+        drawCropPreview(rembgUrl, zoom, offset);
       } catch (err) {
         console.error("Failed to prepare image for rembg:", err);
         if (cancelled || generation !== rembgGenerationRef.current) return;
@@ -494,6 +515,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
       cancelled = true;
       revokeTrackedUrls();
     };
+    // Intentionally omits zoom/offset — file pick resets crop state above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file, drawCropPreview, removeBackground]);
 
   useEffect(() => {
@@ -804,7 +827,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
 
   //If submit is clicked
   const handleSubmit = async (
-    event: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
+    event: React.MouseEvent | React.FormEvent,
   ) => {
     event.preventDefault();
     setLoading(true);
@@ -829,9 +852,13 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         await queryClient.invalidateQueries({
           queryKey: ["clothesData", user?.sub],
         });
-        setView("home");
-        goToNextTourStep();
         queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
+        if (onUploadSuccess) {
+          onUploadSuccess();
+        } else {
+          setView("wardrobe");
+          goToNextTourStep();
+        }
       } else {
         console.error("Failed to upload picture");
       }
@@ -873,11 +900,22 @@ function AddClothesUI({ setView }: addClothesUIProm) {
         : "border-indigo-300 focus:ring-indigo-300"
     }`;
 
+  const uploadStage: UploadStage = loading
+    ? "details"
+    : isAnalyzing
+      ? "identifying"
+      : preview && (usersClothType || usersColours.length > 0)
+        ? "ready"
+        : preview
+          ? "preview"
+          : "pick";
+
   return (
-    <div className="bg-indigo-200 w-full h-full min-h-0 overflow-x-hidden overflow-y-auto px-2 py-2 pb-24 sm:p-1 sm:pb-4">
+    <ImageUploadFlow stage={uploadStage}>
+    <div className="bg-almaari-bg w-full h-full min-h-0 overflow-x-hidden overflow-y-auto px-2 py-2 pb-24 sm:p-1 sm:pb-4">
       <form
         id="add-clothes-form"
-        className="mt-2 md:mt-16 bg-white border border-indigo-200 rounded-xl w-full max-w-lg md:max-w-4xl mx-auto p-3 sm:p-5 md:p-6 shadow-md text-base flex flex-col gap-3 sm:gap-4"
+        className="mt-2 md:mt-8 bg-almaari-surface-raised border border-almaari-border rounded-almaari-lg w-full max-w-lg md:max-w-4xl mx-auto p-3 sm:p-5 md:p-6 shadow-card text-base flex flex-col gap-3 sm:gap-4"
       >
         <div className="relative flex items-center min-h-10 w-full">
           <button
@@ -887,8 +925,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
           >
             ← Back
           </button>
-          <h1 className="absolute inset-x-0 text-sm sm:text-lg font-semibold text-indigo-900 uppercase tracking-wide text-center truncate px-14 pointer-events-none">
-            Add clothes
+          <h1 className="absolute inset-x-0 text-sm sm:text-lg font-display text-almaari-ink text-center truncate px-14 pointer-events-none">
+            Add to wardrobe
           </h1>
         </div>
         <div className="w-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:items-start gap-3 mx-auto">
@@ -912,8 +950,8 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                 }}
               >
                 {preview ? (
-                  <div className="relative flex items-center justify-center w-full h-full">
-                    <div className="relative inline-flex max-h-full max-w-full">
+                  <div className="relative flex h-full w-full items-center justify-center">
+                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
                       <canvas
                         ref={canvasRef}
                         onMouseDown={handleMouseDown}
@@ -923,7 +961,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
-                        className="max-w-full max-h-full cursor-grab active:cursor-grabbing touch-none"
+                        className="block h-full w-full cursor-grab active:cursor-grabbing touch-none"
                       />
                       <div className="pointer-events-none absolute inset-0">
                         <CropOverlayGuide overlay={cropOverlay} />
@@ -950,35 +988,41 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-indigo-900/60 text-sm px-4 text-center">
-                    Tap to add image
+                  <div className="relative flex h-full w-full items-center justify-center">
+                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
+                      <CropOverlayGuide overlay={cropOverlay} />
+                    </div>
+                    <p className="pointer-events-none absolute inset-x-0 bottom-4 px-4 text-center text-sm text-indigo-900/60">
+                      Tap to add image
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {preview && (
+            <label
+              htmlFor="crop-overlay-select"
+              className="text-sm font-medium text-indigo-900"
+            >
+              Crop guide
+            </label>
+            <select
+              id="crop-overlay-select"
+              value={cropOverlay}
+              onChange={(e) =>
+                setCropOverlay(e.target.value as CropOverlayId)
+              }
+              className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              {CROP_OVERLAY_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {preview ? (
               <>
-                <label
-                  htmlFor="crop-overlay-select"
-                  className="text-sm font-medium text-indigo-900"
-                >
-                  Crop guide
-                </label>
-                <select
-                  id="crop-overlay-select"
-                  value={cropOverlay}
-                  onChange={(e) =>
-                    setCropOverlay(e.target.value as CropOverlayId)
-                  }
-                  className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                >
-                  {CROP_OVERLAY_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
                 <input
                   type="range"
                   min={minZoom}
@@ -1015,7 +1059,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
                   <span>Zoom in</span>
                 </div>
               </>
-            )}
+            ) : null}
             {validFile == false && (
               <span className="text-sm text-red-600">Enter a Picture</span>
             )}
@@ -1036,7 +1080,7 @@ function AddClothesUI({ setView }: addClothesUIProm) {
             >
               <Sparkles className="w-4 h-4 shrink-0" />
               {isAnalyzing ? (
-                "Analyzing..."
+                "Identifying your item…"
               ) : (
                 <>
                   <span className="sm:hidden">Analyze (1 credit)</span>
@@ -1298,25 +1342,26 @@ function AddClothesUI({ setView }: addClothesUIProm) {
               className=" bottom-0 z-10 mt-2 pt-3 pb-1 -mx-1 px-1 bg-gradient-to-t from-white via-white/95 to-transparent sm:static sm:mt-auto sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 sm:bg-transparent shrink-0"
             >
               {loading ? (
-                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer bg-indigo-600 text-white">
-                  Loading...
+                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-almaari cursor-pointer bg-almaari-accent text-white">
+                  Adding details…
                 </div>
               ) : (
-                <Link
-                  href="/"
+                <button
                   type="button"
                   onClick={(event) => handleSubmit(event)}
-                  className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-md sm:shadow-none"
+                  className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-almaari cursor-pointer bg-almaari-accent text-white hover:bg-almaari-accent-strong shadow-soft"
                 >
                   <Send className="w-4 h-4 shrink-0" />
-                  Submit
-                </Link>
+                  Save to wardrobe
+                </button>
               )}
+              <InlineSuccessState show={false} className="mt-2 justify-center" />
             </div>
           </div>
         </div>
       </form>
     </div>
+    </ImageUploadFlow>
   );
 }
 
