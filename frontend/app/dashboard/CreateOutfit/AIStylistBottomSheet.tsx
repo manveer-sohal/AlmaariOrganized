@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import Image from "next/image";
 import { ClothingItem } from "../../types/clothes";
 import {
@@ -12,7 +12,7 @@ import {
   StylistWeather,
 } from "../../types/aiStylist";
 import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
-import { Anchor, ChevronDown } from "lucide-react";
+import { Anchor, CloudSun, Snowflake, Sun } from "lucide-react";
 import { useOverlayFocus } from "./useOverlayFocus";
 
 const MODE_ORDER: StylistMode[] = ["random", "complete", "improve", "selected"];
@@ -31,6 +31,23 @@ const STYLE_OPTIONS: StylistStyle[] = [
   "Minimal",
   "Streetwear",
 ];
+
+const WEATHER_META: Record<
+  StylistWeather,
+  { label: string; Icon: typeof Sun }
+> = {
+  Warm: { label: "Warm", Icon: Sun },
+  Mild: { label: "Mild", Icon: CloudSun },
+  Cold: { label: "Cold", Icon: Snowflake },
+};
+
+function pillClass(active: boolean) {
+  return `min-h-10 rounded-full px-4 text-sm font-semibold transition ${
+    active
+      ? "bg-almaari-accent text-white"
+      : "bg-almaari-accent-soft text-almaari-ink"
+  }`;
+}
 
 type AIStylistBottomSheetProps = {
   open: boolean;
@@ -86,7 +103,6 @@ export default function AIStylistBottomSheet({
   const modeMeta = STYLIST_MODE_META[mode];
   const hasCredits = credits == null || credits >= 1;
   const isLoading = status === "loading";
-  const [showMore, setShowMore] = useState(false);
 
   if (!open) return null;
 
@@ -180,7 +196,7 @@ export default function AIStylistBottomSheet({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-almaari-muted">
                   Occasion
@@ -198,11 +214,7 @@ export default function AIStylistBottomSheet({
                             occasion: option,
                           })
                         }
-                        className={`min-h-10 rounded-full px-4 text-sm font-semibold ${
-                          active
-                            ? "bg-almaari-accent text-white"
-                            : "bg-almaari-accent-soft text-almaari-ink"
-                        }`}
+                        className={pillClass(active)}
                       >
                         {option === "Party" ? "Event" : option}
                       </button>
@@ -211,166 +223,164 @@ export default function AIStylistBottomSheet({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowMore((o) => !o)}
-                className="inline-flex items-center gap-1 text-sm font-semibold text-almaari-accent"
-                aria-expanded={showMore}
-              >
-                More options
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${
-                    showMore ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {showMore ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-almaari-muted">
-                      Mode
-                    </p>
-                    <div
-                      role="tablist"
-                      aria-label="Stylist mode"
-                      className="mt-1.5 grid grid-cols-2 gap-1.5"
-                    >
-                      {MODE_ORDER.map((option) => {
-                        const active = option === mode;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            onClick={() => onModeChange(option)}
-                            className={`min-h-11 rounded-xl border px-2 py-2 text-left text-[11px] font-semibold leading-snug ${
-                              active
-                                ? "border-almaari-accent bg-almaari-accent text-white"
-                                : "border-almaari-border bg-white text-almaari-ink"
-                            }`}
-                          >
-                            {STYLIST_MODE_META[option].label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-2 text-xs text-almaari-muted">
-                      {modeMeta.description}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <label className="grid gap-1 text-sm text-almaari-ink">
-                      Weather
-                      <select
-                        value={preferences.weather}
-                        onChange={(e) =>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-almaari-muted">
+                  Weather
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {WEATHER_OPTIONS.map((option) => {
+                    const active = preferences.weather === option;
+                    const { label, Icon } = WEATHER_META[option];
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() =>
                           onPreferencesChange({
                             ...preferences,
-                            weather: e.target.value as StylistWeather,
+                            weather: option,
                           })
                         }
-                        className="min-h-11 rounded-xl border border-almaari-border px-3 py-2"
+                        className={`inline-flex items-center gap-1.5 ${pillClass(active)}`}
                       >
-                        {WEATHER_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-1 text-sm text-almaari-ink">
-                      Style
-                      <select
-                        value={preferences.style}
-                        onChange={(e) =>
-                          onPreferencesChange({
-                            ...preferences,
-                            style: e.target.value as StylistStyle,
-                          })
-                        }
-                        className="min-h-11 rounded-xl border border-almaari-border px-3 py-2"
-                      >
-                        {STYLE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-1 text-sm text-almaari-ink">
-                      Avoid
-                      <input
-                        type="text"
-                        value={preferences.avoid}
-                        onChange={(e) =>
-                          onPreferencesChange({
-                            ...preferences,
-                            avoid: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. No heavy jackets"
-                        className="min-h-11 rounded-xl border border-almaari-border px-3 py-2"
-                      />
-                    </label>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-almaari-muted">
-                        Anchored pieces
-                      </p>
-                      {onAnchorAllPreview && canAnchorAll ? (
-                        <button
-                          type="button"
-                          onClick={onAnchorAllPreview}
-                          className="text-[11px] font-semibold text-almaari-accent"
-                        >
-                          Anchor all in preview
-                        </button>
-                      ) : null}
-                    </div>
-                    {anchoredItems.length === 0 ? (
-                      <p className="mt-1 text-[11px] text-almaari-muted">
-                        Anchor items from the wardrobe to lock them in.
-                      </p>
-                    ) : (
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        {anchoredItems.map((item) => (
-                          <div
-                            key={item._id}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-almaari-accent-soft py-1 pl-1 pr-2"
-                          >
-                            <div className="relative h-6 w-6 overflow-hidden rounded-full bg-white">
-                              <Image
-                                src={item.imageSrc}
-                                alt={humanizeClothingSubtype(item)}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <Anchor className="h-3 w-3" aria-hidden />
-                            <span className="max-w-[7rem] truncate text-[11px] font-medium">
-                              {humanizeClothingSubtype(item)}
-                            </span>
-                            {onUnanchorItem ? (
-                              <button
-                                type="button"
-                                aria-label={`Unanchor ${humanizeClothingSubtype(item)}`}
-                                onClick={() => onUnanchorItem(item._id)}
-                              >
-                                ×
-                              </button>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : null}
+              </div>
+
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-almaari-muted">
+                  Style
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {STYLE_OPTIONS.map((option) => {
+                    const active = preferences.style === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() =>
+                          onPreferencesChange({
+                            ...preferences,
+                            style: option,
+                          })
+                        }
+                        className={pillClass(active)}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-almaari-muted">
+                  Mode
+                </p>
+                <div
+                  role="tablist"
+                  aria-label="Stylist mode"
+                  className="mt-1.5 grid grid-cols-2 gap-1.5"
+                >
+                  {MODE_ORDER.map((option) => {
+                    const active = option === mode;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => onModeChange(option)}
+                        className={`min-h-11 rounded-xl border px-2 py-2 text-left text-[11px] font-semibold leading-snug ${
+                          active
+                            ? "border-almaari-accent bg-almaari-accent text-white"
+                            : "border-almaari-border bg-white text-almaari-ink"
+                        }`}
+                      >
+                        {STYLIST_MODE_META[option].label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-almaari-muted">
+                  {modeMeta.description}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-almaari-muted">
+                  Avoid
+                </p>
+                <input
+                  type="text"
+                  value={preferences.avoid}
+                  onChange={(e) =>
+                    onPreferencesChange({
+                      ...preferences,
+                      avoid: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. No heavy jackets"
+                  className="min-h-11 w-full rounded-xl border border-almaari-border px-3 py-2 text-sm text-almaari-ink placeholder:text-almaari-muted"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-almaari-muted">
+                    Anchored pieces
+                  </p>
+                  {onAnchorAllPreview && canAnchorAll ? (
+                    <button
+                      type="button"
+                      onClick={onAnchorAllPreview}
+                      className="text-[11px] font-semibold text-almaari-accent"
+                    >
+                      Anchor all in preview
+                    </button>
+                  ) : null}
+                </div>
+                {anchoredItems.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-almaari-muted">
+                    Anchor items from the wardrobe to lock them in.
+                  </p>
+                ) : (
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {anchoredItems.map((item) => (
+                      <div
+                        key={item._id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-almaari-accent-soft py-1 pl-1 pr-2"
+                      >
+                        <div className="relative h-6 w-6 overflow-hidden rounded-full bg-white">
+                          <Image
+                            src={item.imageSrc}
+                            alt={humanizeClothingSubtype(item)}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <Anchor className="h-3 w-3" aria-hidden />
+                        <span className="max-w-[7rem] truncate text-[11px] font-medium">
+                          {humanizeClothingSubtype(item)}
+                        </span>
+                        {onUnanchorItem ? (
+                          <button
+                            type="button"
+                            aria-label={`Unanchor ${humanizeClothingSubtype(item)}`}
+                            onClick={() => onUnanchorItem(item._id)}
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {hasHistory ? (
                 <div className="rounded-almaari bg-almaari-warm p-3">

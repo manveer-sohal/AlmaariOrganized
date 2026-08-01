@@ -23,13 +23,16 @@ const MOVE_CANCEL_PX = 12;
 /** Vertical band for each slot on the outfit canvas (top → bottom). */
 const SLOT_LAYOUT: Record<
   Slot,
-  { top: string; height: string; maxWidth: string; z: number }
+  { top: string; height: string; width: string; z: number }
 > = {
-  head: { top: "13%", height: "18%", maxWidth: "22%", z: 40 },
-  body: { top: "26%", height: "28%", maxWidth: "62%", z: 30 },
-  legs: { top: "44%", height: "36%", maxWidth: "83%", z: 20 },
-  feet: { top: "73%", height: "20%", maxWidth: "48%", z: 10 },
+  head: { top: "13%", height: "18%", width: "16%", z: 40 },
+  body: { top: "26%", height: "28%", width: "52%", z: 30 },
+  legs: { top: "44%", height: "36%", width: "72%", z: 20 },
+  feet: { top: "73%", height: "20%", width: "42%", z: 10 },
 };
+
+/** Layer offset as % of stage width — scales with resize unlike fixed px. */
+const LAYER_GAP_PCT = 7;
 
 type DragState = {
   item: ClothingItem;
@@ -596,14 +599,19 @@ export default function BuilderOutfitPreview({
               ? "h-full w-full"
               : compact
                 ? "h-full w-full max-h-full max-w-full"
-                : "mx-auto h-full w-full max-w-[280px]"
+                : "mx-auto h-full w-full "
           } ${dragItem && dragToRemove ? "touch-none select-none" : ""}`}
           aria-label="Outfit canvas"
         >
-          <FittingRoomBackdrop />
-          <ModelStage compact={compact || fill} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="relative h-full max-h-full w-auto max-w-full min-h-0"
+              style={{ aspectRatio: fill ? "2 / 3" : "3 / 4" }}
+            >
+              <FittingRoomBackdrop />
+              <ModelStage compact={compact || fill} />
 
-          {SLOT_ORDER.map((slot) => {
+              {SLOT_ORDER.map((slot) => {
             const items = selectedBySlot[slot];
             const visibleItems = Array.isArray(items)
               ? items.filter((item) => item._id !== draggingId)
@@ -625,7 +633,7 @@ export default function BuilderOutfitPreview({
                 style={{
                   top: layout.top,
                   height: layout.height,
-                  width: layout.maxWidth,
+                  width: layout.width,
                   zIndex: layout.z,
                 }}
               >
@@ -633,16 +641,16 @@ export default function BuilderOutfitPreview({
                   <div className="relative h-full w-full">
                     {visibleItems.map((item, idx) => {
                       const layerCount = visibleItems.length;
-                      const layerGap = 30;
-                      const stackShiftPx =
-                        idx * layerGap - ((layerCount - 1) * layerGap) / 2;
+                      const stackShiftPct =
+                        idx * LAYER_GAP_PCT -
+                        ((layerCount - 1) * LAYER_GAP_PCT) / 2;
 
                       return (
                         <div
                           key={item._id}
                           className="absolute inset-0 overflow-hidden"
                           style={{
-                            transform: `translateX(${stackShiftPx}px)`,
+                            transform: `translateX(${stackShiftPct}%)`,
                             zIndex: idx + 1,
                           }}
                         >
@@ -708,17 +716,16 @@ export default function BuilderOutfitPreview({
                 ) : readOnly ? (
                   fill ? null : (
                     <div
-                      className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl bg-white/40 text-indigo-300"
+                      className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl  text-indigo-300"
                       aria-label={`Empty ${label}`}
                     >
-                      <SlotIcon slot={slot} />
                     </div>
                   )
                 ) : (
                   <button
                     type="button"
                     onClick={() => onReplaceSlot?.(slot)}
-                    className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl  text-indigo-400 transition hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-600"
+                    className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl  text-indigo-400 "
                     aria-label={`Select ${label}`}
                   >
                     <SlotIcon slot={slot} />
@@ -730,6 +737,8 @@ export default function BuilderOutfitPreview({
               </div>
             );
           })}
+            </div>
+          </div>
         </div>
       </div>
 

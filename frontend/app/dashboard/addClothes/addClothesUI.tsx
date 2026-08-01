@@ -55,6 +55,9 @@ import ImageUploadFlow, {
   UploadStage,
 } from "../../components/ux/ImageUploadFlow";
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
+
+const DEFAULT_CLOTHING_TYPE = "T-shirt";
+
 type addClothesUIProm = {
   setView: (view: View) => void;
   /** When set, called after a successful upload instead of navigating to wardrobe. */
@@ -88,13 +91,17 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const [validColour, setValidColour] = useState<boolean | null>(null);
   const [validFile, setValidFile] = useState<boolean | null>(null);
 
-  const [validType, setValidType] = useState<boolean | null>(null);
+  const [validType, setValidType] = useState<boolean | null>(true);
 
   const [usersColours, setUsersColours] = useState<string[]>([]);
-  const [usersClothType, setUsersClothType] = useState<string>("");
+  const [usersClothType, setUsersClothType] = useState<string>(
+    DEFAULT_CLOTHING_TYPE,
+  );
 
   const [inputColourValue, setInputColourValue] = useState<string>("");
-  const [inputTypeValue, setInputTypeValue] = useState<string>("");
+  const [inputTypeValue, setInputTypeValue] = useState<string>(
+    DEFAULT_CLOTHING_TYPE,
+  );
 
   const [inputMaterialValue, setInputMaterialValue] = useState<string>("");
   const [usersClothMaterial, setUsersClothMaterial] = useState<string>("");
@@ -138,7 +145,9 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);
   const [minZoom, setMinZoom] = useState(0.2);
-  const [cropOverlay, setCropOverlay] = useState<CropOverlayId>("none");
+  const [cropOverlay, setCropOverlay] = useState<CropOverlayId>(() =>
+    cropOverlayFromClothingType(DEFAULT_CLOTHING_TYPE),
+  );
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
@@ -476,7 +485,6 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         const initialOffset = { x: 0, y: 0 };
         setZoom(1);
         setMinZoom(0.2);
-        setCropOverlay("none");
         setOffset(initialOffset);
         drawCropPreview(workingUrl, 1, initialOffset);
 
@@ -980,35 +988,41 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-indigo-900/60 text-sm px-4 text-center">
-                    Tap to add image
+                  <div className="relative flex h-full w-full items-center justify-center">
+                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
+                      <CropOverlayGuide overlay={cropOverlay} />
+                    </div>
+                    <p className="pointer-events-none absolute inset-x-0 bottom-4 px-4 text-center text-sm text-indigo-900/60">
+                      Tap to add image
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {preview && (
+            <label
+              htmlFor="crop-overlay-select"
+              className="text-sm font-medium text-indigo-900"
+            >
+              Crop guide
+            </label>
+            <select
+              id="crop-overlay-select"
+              value={cropOverlay}
+              onChange={(e) =>
+                setCropOverlay(e.target.value as CropOverlayId)
+              }
+              className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              {CROP_OVERLAY_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {preview ? (
               <>
-                <label
-                  htmlFor="crop-overlay-select"
-                  className="text-sm font-medium text-indigo-900"
-                >
-                  Crop guide
-                </label>
-                <select
-                  id="crop-overlay-select"
-                  value={cropOverlay}
-                  onChange={(e) =>
-                    setCropOverlay(e.target.value as CropOverlayId)
-                  }
-                  className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                >
-                  {CROP_OVERLAY_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
                 <input
                   type="range"
                   min={minZoom}
@@ -1045,7 +1059,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                   <span>Zoom in</span>
                 </div>
               </>
-            )}
+            ) : null}
             {validFile == false && (
               <span className="text-sm text-red-600">Enter a Picture</span>
             )}

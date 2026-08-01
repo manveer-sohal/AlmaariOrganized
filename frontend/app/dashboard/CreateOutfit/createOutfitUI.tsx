@@ -18,9 +18,8 @@ import {
   StylistPreferences,
 } from "../../types/aiStylist";
 import UsersClothes from "./UsersClothes";
-import BuilderOutfitPreview from "./BuilderOutfitPreview";
-import AiStylistPanel from "./AiStylist";
-import StylistConfigModal from "./StylistConfigModal";
+import AIStylistSidebar from "./AIStylistSidebar";
+import DesktopOutfitBuilderShell from "./DesktopOutfitBuilderShell";
 import OutfitBuilderHeader from "./OutfitBuilderHeader";
 import MobileOutfitBuilderShell from "./MobileOutfitBuilderShell";
 import AIStylistBottomSheet from "./AIStylistBottomSheet";
@@ -132,7 +131,6 @@ function CreateOutfitUI({
   const [preferences, setPreferences] = useState<StylistPreferences>(
     DEFAULT_STYLIST_PREFERENCES,
   );
-  const [configOpen, setConfigOpen] = useState(false);
   const [stylistMode, setStylistMode] = useState<StylistMode>("random");
   const [refinementPrompt, setRefinementPrompt] = useState("");
   const [pendingRefinement, setPendingRefinement] = useState<string | null>(
@@ -392,34 +390,7 @@ function CreateOutfitUI({
     setAnchoredItemIds((prev) => [...new Set([...prev, ...ids])]);
   }, [previewItems, anchoredItemIds]);
 
-  const openDesktopGenerateModal = () => {
-    if (credits != null && credits < 1) {
-      onBuyCredits?.();
-      return;
-    }
-    if (
-      stylistMode !== "random" &&
-      requiredItemsForMode.length === 0 &&
-      anchoredItemIds.length === 0
-    ) {
-      setStylistStatus("error");
-      setStylistErrorCode(
-        stylistMode === "selected" ? "EMPTY_SELECTION" : "EMPTY_PREVIEW",
-      );
-      setStylistError(
-        stylistMode === "selected"
-          ? "Select one or more wardrobe items to style."
-          : stylistMode === "improve"
-          ? "Build an outfit first, then ask Almaari to improve it."
-          : "Add at least one item to your outfit preview first.",
-      );
-      return;
-    }
-    setPendingRefinement(null);
-    setConfigOpen(true);
-  };
-
-  const openMobileAISheet = () => {
+  const openAISheet = () => {
     if (credits != null && credits < 1) {
       onBuyCredits?.();
       return;
@@ -460,7 +431,6 @@ function CreateOutfitUI({
     const refinement =
       options?.refinement?.trim() || pendingRefinement?.trim() || "";
 
-    setConfigOpen(false);
     setStylistStatus("loading");
     setStylistError("");
     setStylistErrorCode(undefined);
@@ -519,7 +489,7 @@ function CreateOutfitUI({
       setActiveGeneratedIndex(1);
       setIsAIStylistOpen(false);
       const count = result.data.recommendations?.length || 3;
-      setAppliedConfirmation(`${count} outfits generated — swipe to compare`);
+      setAppliedConfirmation(`${count} outfits generated — browse to compare`);
     } catch (generationError) {
       if (
         generationError instanceof Error &&
@@ -649,7 +619,7 @@ function CreateOutfitUI({
   const infiniteScrollRef = (ref as unknown) as RefObject<HTMLDivElement>;
 
   return (
-    <div className="z-10 flex h-full min-h-0 w-full flex-col overflow-y-auto bg-almaari-bg p-3 pb-nav md:h-auto md:min-h-full md:overflow-visible md:p-4 md:pb-8">
+    <div className="z-10 flex h-full min-h-0 w-full flex-col overflow-hidden bg-almaari-bg p-3 pb-nav md:h-auto md:min-h-full md:overflow-y-auto md:overflow-visible md:p-4 md:pb-8">
       {showEntryPrompt && !session.hasHistory ? (
         <StylistEntryPrompt
           onSelectOccasion={handleOccasionSelect}
@@ -661,17 +631,32 @@ function CreateOutfitUI({
 
       {!(showEntryPrompt && !session.hasHistory) ? (
         <>
-          <StylistConfigModal
-            open={configOpen}
+          <AIStylistBottomSheet
+            open={isAIStylistOpen}
+            onClose={() => setIsAIStylistOpen(false)}
+            mode={stylistMode}
+            onModeChange={handleModeChange}
             preferences={preferences}
-            onChange={setPreferences}
-            onClose={() => setConfigOpen(false)}
-            onSubmit={() => runGeneration()}
-            isSubmitting={isGenerating}
+            onPreferencesChange={setPreferences}
+            anchoredItems={anchoredItems}
+            onUnanchorItem={unanchorItem}
+            onAnchorAllPreview={anchorAllPreviewItems}
+            canAnchorAll={previewItems.length > 0}
+            status={displayStatus}
+            errorMessage={stylistError}
+            errorCode={stylistErrorCode}
             credits={credits}
+            clothesCount={clothes.length}
+            canGenerate={canGenerate}
+            onGenerate={() => void runGeneration()}
+            onBuyCredits={onBuyCredits}
+            hasHistory={session.hasHistory}
+            refinementPrompt={refinementPrompt}
+            onRefinementPromptChange={setRefinementPrompt}
+            onRefine={handleRefine}
           />
 
-          <AIStylistBottomSheet
+          <AIStylistSidebar
             open={isAIStylistOpen}
             onClose={() => setIsAIStylistOpen(false)}
             mode={stylistMode}
@@ -732,7 +717,7 @@ function CreateOutfitUI({
             prompt={session.activeGeneration?.prompt}
           />
 
-          <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col md:h-auto">
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-1 flex-col md:h-auto">
             <div className="hidden md:block">
               <OutfitBuilderHeader
                 name={name}
@@ -766,7 +751,7 @@ function CreateOutfitUI({
               feedbackSubmitted={feedbackSubmitted}
               onFeedback={handleFeedback}
               onUseOutfit={handleUseOutfit}
-              onOpenAI={openMobileAISheet}
+              onOpenAI={openAISheet}
               onOpenWardrobe={() => setIsWardrobeDrawerOpen(true)}
               onOpenHistory={() => setIsHistorySheetOpen(true)}
               generationLabel={session.generationLabel}
@@ -777,7 +762,7 @@ function CreateOutfitUI({
               onSave={saveOutfit}
             />
 
-            <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:grid-cols-[minmax(340px,1.1fr)_minmax(280px,0.72fr)_minmax(360px,1fr)] xl:items-start">
+            <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:items-start">
               <section
                 id="builder-panel-clothes"
                 className={`min-h-0 ${panelHeightClass}`}
@@ -804,65 +789,33 @@ function CreateOutfitUI({
                 />
               </section>
 
-              <section
-                id="builder-panel-preview"
-                className={`min-h-0 xl:sticky xl:top-4 ${panelHeightClass}`}
-              >
-                <BuilderOutfitPreview
-                  selectedBySlot={selectedBySlot}
-                  setSelectedBySlot={setSelectedBySlot}
-                  swapMode={swapMode}
-                  swapTargetSlot={swapTargetSlot}
-                  onReplaceSlot={enterSwapMode}
-                  highlightApplied={previewHighlight}
-                  anchoredItemIds={anchoredItemIds}
-                  onToggleAnchor={toggleAnchorItem}
-                  onRemoveItem={removeItemFromPreview}
-                  onAnchorAllPreview={anchorAllPreviewItems}
-                  className="h-full min-h-[420px] md:min-h-0"
-                />
-              </section>
-
-              <section
-                id="builder-panel-ai"
-                className={`min-h-0 md:col-span-2 xl:col-span-1 ${panelHeightClass}`}
-              >
-                <AiStylistPanel
-                  status={displayStatus}
-                  mode={stylistMode}
-                  onModeChange={handleModeChange}
-                  recommendations={session.recommendations}
-                  clothesById={clothesById}
-                  requiredItems={requiredItemsForMode}
-                  anchoredItems={anchoredItems}
-                  onRemoveRequiredItem={unanchorItem}
-                  onUnanchorItem={unanchorItem}
-                  onAnchorAllPreview={anchorAllPreviewItems}
-                  errorMessage={stylistError}
-                  errorCode={stylistErrorCode}
-                  credits={credits}
-                  clothesCount={clothes.length}
-                  feedbackSubmitted={feedbackSubmitted}
-                  onGenerateClick={openDesktopGenerateModal}
-                  onTryAnother={openDesktopGenerateModal}
-                  onUseOutfit={handleUseOutfit}
-                  onSwapItem={enterSwapMode}
-                  onFeedback={handleFeedback}
-                  onBuyCredits={onBuyCredits}
-                  appliedConfirmation={appliedConfirmation}
-                  refinementPrompt={refinementPrompt}
-                  onRefinementPromptChange={setRefinementPrompt}
-                  onRefine={handleRefine}
-                  generationLabel={session.generationLabel}
-                  canGoPrev={session.activeIndex > 0}
-                  canGoNext={
-                    session.activeIndex < session.generations.length - 1
-                  }
-                  onHistoryPrev={session.goPrev}
-                  onHistoryNext={session.goNext}
-                  className="h-full"
-                />
-              </section>
+              <DesktopOutfitBuilderShell
+                filledSlotCount={filledSlotCount}
+                selectedBySlot={selectedBySlot}
+                setSelectedBySlot={setSelectedBySlot}
+                anchoredItemIds={anchoredItemIds}
+                onToggleAnchor={toggleAnchorItem}
+                onRemoveItem={removeItemFromPreview}
+                onAnchorAllPreview={anchorAllPreviewItems}
+                swapMode={swapMode}
+                swapTargetSlot={swapTargetSlot}
+                onReplaceSlot={enterSwapMode}
+                previewHighlight={previewHighlight}
+                recommendations={session.recommendations}
+                clothesById={clothesById}
+                activeGeneratedIndex={activeGeneratedIndex}
+                onActiveGeneratedIndexChange={setActiveGeneratedIndex}
+                feedbackSubmitted={feedbackSubmitted}
+                onFeedback={handleFeedback}
+                onUseOutfit={handleUseOutfit}
+                onOpenAI={openAISheet}
+                onOpenHistory={() => setIsHistorySheetOpen(true)}
+                generationLabel={session.generationLabel}
+                hasHistory={session.hasHistory}
+                appliedConfirmation={appliedConfirmation}
+                isGenerating={isGenerating}
+                panelHeightClass={panelHeightClass}
+              />
             </div>
           </div>
         </>

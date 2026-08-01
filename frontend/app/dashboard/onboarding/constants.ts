@@ -13,7 +13,7 @@ export const STYLE_OPTIONS = [
   "Formal",
 ] as const;
 
-export type StyleOption = (typeof STYLE_OPTIONS)[number];
+export type StyleOption = typeof STYLE_OPTIONS[number];
 
 export type SeasonalPalette = {
   id: string;
@@ -51,68 +51,427 @@ export const SEASONAL_PALETTES: SeasonalPalette[] = [
 
 /** Popular brands for autocomplete; users can also add custom names. */
 export const BRAND_CATALOG = [
-  "A.P.C.",
-  "Abercrombie & Fitch",
-  "Adidas",
-  "Alo Yoga",
-  "American Eagle",
-  "Arc'teryx",
-  "ASOS",
-  "Balenciaga",
-  "Banana Republic",
-  "Birkenstock",
-  "Brandy Melville",
-  "Burberry",
-  "Calvin Klein",
-  "Carhartt",
-  "Chanel",
-  "Club Monaco",
-  "Coach",
-  "Converse",
-  "COS",
-  "Dickies",
-  "Dior",
-  "Dr. Martens",
-  "Everlane",
-  "Fashion Nova",
-  "Free People",
-  "Ganni",
-  "Gap",
-  "Gucci",
-  "H&M",
-  "Hermès",
-  "Hollister",
-  "J.Crew",
-  "Jacquemus",
-  "Lululemon",
-  "Levi's",
-  "Loewe",
-  "Louis Vuitton",
-  "Lululemon",
-  "Mango",
-  "Massimo Dutti",
-  "Nike",
-  "Nordstrom",
-  "Old Navy",
-  "Patagonia",
-  "Prada",
-  "Ralph Lauren",
-  "Reformation",
-  "Revolve",
-  "Saint Laurent",
-  "Sezane",
-  "Shein",
-  "Skims",
-  "Steve Madden",
-  "Supreme",
-  "The North Face",
-  "Theory",
-  "Tommy Hilfiger",
-  "Uniqlo",
-  "Urban Outfitters",
-  "Vans",
-  "Vince",
-  "Vuori",
-  "Zara",
   "& Other Stories",
+
+  "7 For All Mankind",
+
+  "A Bathing Ape",
+
+  "A-Cold-Wall*",
+
+  "A.P.C.",
+
+  "Aerie",
+
+  "Aeropostale",
+
+  "Aimé Leon Dore",
+
+  "AKIRA",
+
+  "Aldo",
+
+  "Alexander McQueen",
+
+  "Alexander Wang",
+
+  "AllSaints",
+
+  "Alo Yoga",
+
+  "American Eagle",
+
+  "Amiri",
+
+  "Ann Taylor",
+
+  "Anthropologie",
+
+  "APL",
+
+  "Arcteryx",
+
+  "Arc'teryx",
+
+  "Armani",
+
+  "Armani Exchange",
+
+  "ASICS",
+
+  "ASOS",
+
+  "Athleta",
+
+  "Aviator Nation",
+
+  "Balenciaga",
+
+  "Balmain",
+
+  "Banana Republic",
+
+  "Barbour",
+
+  "Bershka",
+
+  "Billabong",
+
+  "Birkenstock",
+
+  "Boden",
+
+  "Boohoo",
+
+  "Boss",
+
+  "Bottega Veneta",
+
+  "Brandy Melville",
+
+  "Brooks",
+
+  "Brooks Brothers",
+
+  "Burberry",
+
+  "Canada Goose",
+
+  "Calvin Klein",
+
+  "Carhartt",
+
+  "Carhartt WIP",
+
+  "Casablanca",
+
+  "Champion",
+
+  "Charles & Keith",
+
+  "Chanel",
+
+  "Chaps",
+
+  "Chrome Hearts",
+
+  "Clarks",
+
+  "Club Monaco",
+
+  "Coach",
+
+  "Cole Haan",
+
+  "Columbia",
+
+  "Comme des Garçons",
+
+  "Converse",
+
+  "COS",
+
+  "Crocs",
+
+  "Daily Paper",
+
+  "Dickies",
+
+  "Diesel",
+
+  "Dior",
+
+  "Dockers",
+
+  "Dolce & Gabbana",
+
+  "Dr. Martens",
+
+  "Eddie Bauer",
+
+  "Ellesse",
+
+  "Everlane",
+
+  "Express",
+
+  "Fabletics",
+
+  "Fashion Nova",
+
+  "Fear of God",
+
+  "Fila",
+
+  "Foot Locker",
+
+  "Forever 21",
+
+  "Free People",
+
+  "French Connection",
+
+  "Fruit of the Loom",
+
+  "G-Star RAW",
+
+  "Ganni",
+
+  "Gap",
+
+  "GAP Factory",
+
+  "Givenchy",
+
+  "Golden Goose",
+
+  "Guess",
+
+  "Gymshark",
+
+  "H&M",
+
+  "Hanes",
+
+  "Helly Hansen",
+
+  "Hermès",
+
+  "Hoka",
+
+  "Hollister",
+
+  "House of CB",
+
+  "Hugo",
+
+  "Hurley",
+
+  "J.Crew",
+
+  "Jack & Jones",
+
+  "Jacquemus",
+
+  "Joe Fresh",
+
+  "Jordan",
+
+  "Juicy Couture",
+
+  "Kate Spade",
+
+  "Kappa",
+
+  "Kith",
+
+  "Knix",
+
+  "L.L.Bean",
+
+  "Lacoste",
+
+  "Lane Bryant",
+
+  "Le Château",
+
+  "Levi's",
+
+  "Loewe",
+
+  "Loro Piana",
+
+  "Louis Vuitton",
+
+  "Lululemon",
+
+  "Lucky Brand",
+
+  "Lugz",
+
+  "Mackage",
+
+  "Mango",
+
+  "Marc Jacobs",
+
+  "Massimo Dutti",
+
+  "Michael Kors",
+
+  "Missguided",
+
+  "Moncler",
+
+  "Montbell",
+
+  "Mountain Hardwear",
+
+  "New Balance",
+
+  "Nike",
+
+  "No Bull",
+
+  "Nordstrom",
+
+  "Oakley",
+
+  "Off-White",
+
+  "Old Navy",
+
+  "On",
+
+  "Outdoor Voices",
+
+  "Pacsun",
+
+  "Palm Angels",
+
+  "Patagonia",
+
+  "Paul Smith",
+
+  "Polo Ralph Lauren",
+
+  "Prada",
+
+  "PrettyLittleThing",
+
+  "Primark",
+
+  "Princess Polly",
+
+  "Pull&Bear",
+
+  "Puma",
+
+  "Quiksilver",
+
+  "Rag & Bone",
+
+  "Ralph Lauren",
+
+  "Ray-Ban",
+
+  "Reebok",
+
+  "Reformation",
+
+  "Reiss",
+
+  "Represent",
+
+  "Revolve",
+
+  "Rick Owens",
+
+  "Rip Curl",
+
+  "Roots",
+
+  "Roxy",
+
+  "Russell Athletic",
+
+  "Saint Laurent",
+
+  "Salomon",
+
+  "Saucony",
+
+  "Scotch & Soda",
+
+  "Sézane",
+
+  "Shein",
+
+  "Skims",
+
+  "Smartwool",
+
+  "Spanx",
+
+  "Sperry",
+
+  "Sport Chek",
+
+  "Steve Madden",
+
+  "Stone Island",
+
+  "Stüssy",
+
+  "Superdry",
+
+  "Supreme",
+
+  "Ted Baker",
+
+  "The Kooples",
+
+  "The North Face",
+
+  "Theory",
+
+  "Timberland",
+
+  "Tom Ford",
+
+  "Tommy Bahama",
+
+  "Tommy Hilfiger",
+
+  "Topman",
+
+  "Topshop",
+
+  "True Religion",
+
+  "UGG",
+
+  "Under Armour",
+
+  "Uniqlo",
+
+  "Urban Outfitters",
+
+  "Valentino",
+
+  "Vans",
+
+  "Varley",
+
+  "VEJA",
+
+  "Versace",
+
+  "Victoria's Secret",
+
+  "Vince",
+
+  "Vineyard Vines",
+
+  "Vuori",
+
+  "Weekday",
+
+  "White Fox",
+
+  "Windsor",
+
+  "Wrangler",
+
+  "Y-3",
+
+  "Yeezy",
+
+  "Zadig & Voltaire",
+
+  "Zara",
+
+  "Zimmermann",
+
+  "Z Supply",
 ].filter((brand, index, list) => list.indexOf(brand) === index);

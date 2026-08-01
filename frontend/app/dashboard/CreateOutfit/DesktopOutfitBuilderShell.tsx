@@ -3,14 +3,12 @@
 import { ClothingItem, Slot } from "../../types/clothes";
 import { OutfitRecommendation } from "../../types/aiStylist";
 import BuilderOutfitPreview from "./BuilderOutfitPreview";
-import MobilePreviewCarousel from "./MobilePreviewCarousel";
-import MobileSaveBar from "./MobileSaveBar";
+import DesktopPreviewCarousel from "./DesktopPreviewCarousel";
 import AiLookActionBar from "./AiLookActionBar";
+import BuilderSectionHeader from "./BuilderSectionHeader";
 import { History, Sparkles } from "lucide-react";
 
-type MobileOutfitBuilderShellProps = {
-  name: string;
-  onNameChange: (value: string) => void;
+type DesktopOutfitBuilderShellProps = {
   filledSlotCount: number;
   selectedBySlot: Partial<Record<Slot, ClothingItem[] | null>>;
   setSelectedBySlot: (
@@ -39,19 +37,17 @@ type MobileOutfitBuilderShellProps = {
   ) => void;
   onUseOutfit: (recommendation: OutfitRecommendation) => void;
   onOpenAI: () => void;
-  onOpenWardrobe: () => void;
   onOpenHistory: () => void;
   generationLabel: string | null;
   hasHistory: boolean;
   appliedConfirmation: string | null;
-  saving: boolean;
-  canSave: boolean;
-  onSave: () => void;
+  isGenerating: boolean;
+  panelHeightClass: string;
 };
 
-export default function MobileOutfitBuilderShell({
-  name,
-  onNameChange,
+const PREVIEW_MIN_H = "min-h-[420px]";
+
+export default function DesktopOutfitBuilderShell({
   filledSlotCount,
   selectedBySlot,
   setSelectedBySlot,
@@ -67,22 +63,18 @@ export default function MobileOutfitBuilderShell({
   clothesById,
   activeGeneratedIndex,
   onActiveGeneratedIndexChange,
-  carouselReturnNonce = 0,
   feedbackSubmitted,
   onFeedback,
   onUseOutfit,
   onOpenAI,
-  onOpenWardrobe,
   onOpenHistory,
   generationLabel,
   hasHistory,
   appliedConfirmation,
-  saving,
-  canSave,
-  onSave,
-}: MobileOutfitBuilderShellProps) {
+  isGenerating,
+  panelHeightClass,
+}: DesktopOutfitBuilderShellProps) {
   const hasAiResults = recommendations.length > 0;
-  const onBuilderSlide = !hasAiResults || activeGeneratedIndex === 0;
   const viewingAiLook = hasAiResults && activeGeneratedIndex > 0;
   const activeRecommendation = viewingAiLook
     ? recommendations[activeGeneratedIndex - 1] ?? null
@@ -90,71 +82,73 @@ export default function MobileOutfitBuilderShell({
 
   return (
     <div
-      id="mobile-outfit-builder"
-      className={`md:hidden flex min-h-[calc(100dvh-var(--nav-height)-var(--safe-bottom)-1.5rem)] flex-1 flex-col overflow-hidden ${
-        onBuilderSlide ? "pb-[3.75rem]" : ""
-      }`}
+      id="builder-panel-preview"
+      className={`flex min-h-0 flex-col rounded-2xl border border-indigo-200 bg-white/80 p-4 shadow-sm backdrop-blur ${panelHeightClass}`}
     >
-      <header className={`shrink-0 ${hasAiResults ? "mb-1" : "mb-2"}`}>
-        {!hasAiResults ? (
-          <>
-            <h2 className="font-display text-xl text-almaari-ink">Create</h2>
-            <p className="mt-1 text-sm text-almaari-muted">
-              Ask Almaari or build a look yourself.
-            </p>
-            <label className="mt-2 block">
-              <span className="mb-1 block text-xs font-medium text-almaari-muted">
-                Outfit name (optional)
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => onNameChange(e.target.value)}
-                placeholder="Weekend dinner"
-                className="h-10 w-full rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm text-almaari-ink focus:outline-none focus:ring-2 focus:ring-almaari-accent/30"
-              />
-            </label>
-          </>
-        ) : null}
-
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-almaari-muted">
-          <span>
-            {hasAiResults
-              ? "Swipe for AI looks · Use to apply"
-              : `${filledSlotCount} of 4 pieces selected`}
-          </span>
+      <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+        <BuilderSectionHeader
+          step="02"
+          title={hasAiResults ? "Your looks" : "Outfit Preview"}
+          action={
+            <span className="inline-flex min-h-8 items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-800">
+              {hasAiResults
+                ? "Use arrows to browse AI looks"
+                : `${filledSlotCount} of 4 pieces`}
+            </span>
+          }
+        />
+        <div className="flex shrink-0 items-center gap-2">
           {hasHistory ? (
             <button
               type="button"
               onClick={onOpenHistory}
-              className="inline-flex items-center gap-1 font-semibold text-almaari-accent underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-800 hover:bg-indigo-50"
             >
               <History className="h-3.5 w-3.5" aria-hidden />
               {generationLabel || "History"}
             </button>
           ) : null}
+          <button
+            type="button"
+            id="desktop-ai-stylist-btn"
+            onClick={onOpenAI}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+          >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            {hasAiResults ? "Generate more" : "AI Stylist"}
+          </button>
         </div>
-      </header>
+      </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-almaari-lg">
+      <div
+        className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl ${PREVIEW_MIN_H}`}
+      >
+        {isGenerating && !hasAiResults ? (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-white/80 text-center backdrop-blur-[1px]">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+            <p className="text-sm font-medium text-indigo-900">
+              Almaari is styling your look…
+            </p>
+          </div>
+        ) : null}
+
         {hasAiResults ? (
-          <MobilePreviewCarousel
+          <DesktopPreviewCarousel
             currentSlots={selectedBySlot}
             setCurrentSlots={setSelectedBySlot}
             recommendations={recommendations}
             clothesById={clothesById}
             activeIndex={activeGeneratedIndex}
             onActiveIndexChange={onActiveGeneratedIndexChange}
-            scrollReturnNonce={carouselReturnNonce}
             anchoredItemIds={anchoredItemIds}
             onToggleAnchor={onToggleAnchor}
             onRemoveItem={onRemoveItem}
             onAnchorAllPreview={onAnchorAllPreview}
             swapMode={swapMode}
             swapTargetSlot={swapTargetSlot}
-            onReplaceSlot={onReplaceSlot}
+            onReplaceSlot={(slot) => onReplaceSlot(slot)}
             previewHighlight={previewHighlight}
-            dotsBottomClass={viewingAiLook ? "bottom-11" : "bottom-3"}
+            dotsBottomClass={viewingAiLook ? "bottom-12" : "bottom-3"}
           />
         ) : (
           <BuilderOutfitPreview
@@ -162,7 +156,7 @@ export default function MobileOutfitBuilderShell({
             setSelectedBySlot={setSelectedBySlot}
             swapMode={swapMode}
             swapTargetSlot={swapTargetSlot}
-            onReplaceSlot={onReplaceSlot}
+            onReplaceSlot={(slot) => onReplaceSlot(slot)}
             highlightApplied={previewHighlight}
             anchoredItemIds={anchoredItemIds}
             onToggleAnchor={onToggleAnchor}
@@ -177,7 +171,7 @@ export default function MobileOutfitBuilderShell({
           <p
             role="status"
             aria-live="polite"
-            className="absolute left-3 right-3 top-12 z-20 rounded-xl border border-almaari-border bg-white/95 px-3 py-2 text-xs font-medium text-almaari-ink shadow-sm backdrop-blur-sm"
+            className="absolute left-3 right-3 top-14 z-20 rounded-xl border border-indigo-200 bg-white/95 px-3 py-2 text-xs font-medium text-indigo-900 shadow-sm backdrop-blur-sm"
           >
             {appliedConfirmation}
           </p>
@@ -192,46 +186,6 @@ export default function MobileOutfitBuilderShell({
           />
         ) : null}
       </div>
-
-      <div className="mt-2 shrink-0 grid w-full grid-cols-2 gap-2">
-        <button
-          id="mobile-edit-pieces-btn"
-          type="button"
-          onClick={onOpenWardrobe}
-          className="inline-flex min-h-10 items-center justify-center rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm font-semibold text-almaari-ink"
-        >
-          Edit pieces
-        </button>
-        <button
-          id="mobile-ask-stylist-btn"
-          type="button"
-          onClick={onOpenAI}
-          className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-almaari px-3 text-sm font-semibold ${
-            hasAiResults
-              ? "bg-almaari-accent text-white"
-              : "bg-almaari-accent-soft text-almaari-ink"
-          }`}
-        >
-          {hasAiResults ? (
-            <>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Generate more
-            </>
-          ) : (
-            "Ask stylist"
-          )}
-        </button>
-      </div>
-
-      <MobileSaveBar
-        selectedCount={filledSlotCount}
-        saving={saving}
-        canSave={canSave}
-        onSave={onSave}
-        showSaveControls={onBuilderSlide}
-        name={hasAiResults && onBuilderSlide ? name : undefined}
-        onNameChange={hasAiResults && onBuilderSlide ? onNameChange : undefined}
-      />
     </div>
   );
 }

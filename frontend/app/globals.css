@@ -35,17 +35,6 @@
   }
 }
 
-@layer utilities {
-  /* Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-}
-* {
-  touch-action: manipulation;
-}
-
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -53,6 +42,45 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .skeleton-block {
+    position: relative;
+    overflow: hidden;
+    background-color: color-mix(
+      in srgb,
+      var(--almaari-border) 55%,
+      var(--almaari-surface-raised)
+    );
+  }
+
+  .skeleton-block::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 42%,
+      rgba(255, 255, 255, 0.75) 50%,
+      rgba(255, 255, 255, 0.35) 58%,
+      transparent 100%
+    );
+    animation: shimmer 1.8s ease-in-out infinite;
+    animation-delay: var(--skeleton-delay, 0s);
+  }
+}
+
+* {
+  touch-action: manipulation;
 }
 
 body {

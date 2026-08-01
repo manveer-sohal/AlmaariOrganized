@@ -75,6 +75,7 @@ type MobilePreviewCarouselProps = {
   swapTargetSlot?: Slot | null;
   onReplaceSlot?: (slot: Slot) => void;
   previewHighlight?: boolean;
+  dotsBottomClass?: string;
 };
 
 /**
@@ -97,6 +98,7 @@ export default function MobilePreviewCarousel({
   swapTargetSlot = null,
   onReplaceSlot,
   previewHighlight = false,
+  dotsBottomClass = "bottom-3",
 }: MobilePreviewCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const ignoreScrollSyncRef = useRef(false);
@@ -179,22 +181,52 @@ export default function MobilePreviewCarousel({
   return (
     <section
       aria-label="Outfit previews"
-      className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden"
+      className="relative h-full min-h-0 w-full max-w-full overflow-hidden"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          disabled={activeIndex <= 0}
-          aria-label="Previous outfit"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-almaari-border bg-almaari-surface-raised text-almaari-ink disabled:opacity-40"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1 text-center">
-          <p className="text-sm font-semibold text-almaari-ink">
-            {headerLabel}
-          </p>
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {/* Slide 0 — current working outfit */}
+        <div className="relative h-full min-h-0 w-full min-w-full shrink-0 snap-center snap-always">
+          <BuilderOutfitPreview
+            selectedBySlot={currentSlots}
+            setSelectedBySlot={setCurrentSlots}
+            swapMode={swapMode}
+            swapTargetSlot={swapTargetSlot}
+            onReplaceSlot={onReplaceSlot}
+            highlightApplied={previewHighlight}
+            anchoredItemIds={anchoredItemIds}
+            onToggleAnchor={onToggleAnchor}
+            onRemoveItem={onRemoveItem}
+            onAnchorAllPreview={onAnchorAllPreview}
+            compact
+            className="h-full w-full border-0 bg-transparent p-0 shadow-none"
+          />
+        </div>
+
+        {/* Slides 1+ — AI-generated looks */}
+        {aiSlides.map(({ recommendation, slots }) => (
+          <div
+            key={recommendation.id}
+            className="relative h-full min-h-0 w-full min-w-full shrink-0 snap-center snap-always"
+          >
+            <BuilderOutfitPreview
+              selectedBySlot={slots}
+              setSelectedBySlot={() => {}}
+              readOnly
+              compact
+              anchoredItemIds={anchoredItemIds}
+              className="h-full w-full border-0 bg-transparent p-0 shadow-none"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white/90 via-white/35 to-transparent px-3 pb-6 pt-2">
+        <div className="pointer-events-auto mx-auto max-w-xs text-center">
+          <p className="text-sm font-semibold text-almaari-ink">{headerLabel}</p>
           {activeAi ? (
             <p className="truncate text-[11px] text-almaari-muted">
               {activeAi.label}
@@ -206,69 +238,31 @@ export default function MobilePreviewCarousel({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => go(1)}
-          disabled={activeIndex >= totalSlides - 1}
-          aria-label="Next outfit"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-almaari-border bg-almaari-surface-raised text-almaari-ink disabled:opacity-40"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
       </div>
 
-      <div
-        ref={scrollerRef}
-        onScroll={onScroll}
-        className="mt-1.5 flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      <button
+        type="button"
+        onClick={() => go(-1)}
+        disabled={activeIndex <= 0}
+        aria-label="Previous outfit"
+        className="absolute left-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-almaari-border/80 bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40"
       >
-        {/* Slide 0 — current working outfit */}
-        <div className="box-border flex h-full min-h-0 w-full min-w-full max-w-full shrink-0 snap-center snap-always flex-col items-center justify-center px-2">
-          <div className="relative mx-auto aspect-[3/4] w-[min(320px,86vw)] shrink-0 overflow-hidden">
-            <div className="absolute inset-0">
-              <BuilderOutfitPreview
-                selectedBySlot={currentSlots}
-                setSelectedBySlot={setCurrentSlots}
-                swapMode={swapMode}
-                swapTargetSlot={swapTargetSlot}
-                onReplaceSlot={onReplaceSlot}
-                highlightApplied={previewHighlight}
-                anchoredItemIds={anchoredItemIds}
-                onToggleAnchor={onToggleAnchor}
-                onRemoveItem={onRemoveItem}
-                onAnchorAllPreview={onAnchorAllPreview}
-                compact
-                className="h-full w-full border-0 bg-transparent p-0 shadow-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Slides 1+ — AI-generated looks to the right */}
-        {aiSlides.map(({ recommendation, slots }) => (
-          <div
-            key={recommendation.id}
-            className="box-border flex h-full min-h-0 w-full min-w-full max-w-full shrink-0 snap-center snap-always flex-col items-center justify-center px-2"
-          >
-            <div className="relative mx-auto aspect-[3/4] w-[min(320px,86vw)] shrink-0 overflow-hidden">
-              <div className="absolute inset-0">
-                <BuilderOutfitPreview
-                  selectedBySlot={slots}
-                  setSelectedBySlot={() => {}}
-                  readOnly
-                  compact
-                  anchoredItemIds={anchoredItemIds}
-                  className="h-full w-full border-0 bg-transparent p-0 shadow-none"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => go(1)}
+        disabled={activeIndex >= totalSlides - 1}
+        aria-label="Next outfit"
+        className="absolute right-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-almaari-border/80 bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
 
       <div
-        className="mt-1.5 flex shrink-0 items-center justify-center gap-1.5"
+        className={`absolute left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-1.5 ${dotsBottomClass}`}
         role="tablist"
+        aria-label="Outfit slides"
       >
         {Array.from({ length: totalSlides }, (_, index) => (
           <button
@@ -284,10 +278,10 @@ export default function MobilePreviewCarousel({
                 : `Show AI look ${index} of ${recommendations.length}`
             }
             onClick={() => onActiveIndexChange(index)}
-            className={`h-1.5 rounded-full transition ${
+            className={`h-1.5 rounded-full shadow-sm transition ${
               index === activeIndex
                 ? "w-4 bg-almaari-accent"
-                : "w-1.5 bg-almaari-chrome"
+                : "w-1.5 bg-white/90 ring-1 ring-almaari-border"
             }`}
           />
         ))}

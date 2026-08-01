@@ -9,6 +9,7 @@ import ClothingDetailsView from "./components/ClothingDetailsView";
 import AddClothesUI from "./addClothes/addClothesUI";
 import BuyCredits from "./components/BuyCredits";
 import HomeHub from "./Home/HomeHub";
+import HomeHubSkeleton from "./Home/HomeHubSkeleton";
 import WardrobeScreen from "./Wardrobe/WardrobeScreen";
 import MobileBottomNavigation from "../components/ux/MobileBottomNavigation";
 import DesktopNavigation from "../components/ux/DesktopNavigation";
@@ -18,6 +19,7 @@ import { useOnboarding } from "../hooks/useOnboarding";
 import { useRole } from "../hooks/useRole";
 import { useDeleteOutfit } from "../hooks/useDeleteOutfit";
 import { View, ClothingItem, Outfit } from "../types/clothes";
+import { goToNextTourStep } from "../components/OnBoardingTour";
 import { warmupAiClothingService } from "../utils/warmupAiService";
 
 export default function Dashboard() {
@@ -47,6 +49,7 @@ export default function Dashboard() {
   const onClickAddClothes = () => {
     warmupAiClothingService();
     setView("addClothes");
+    goToNextTourStep();
   };
 
   useEffect(() => {
@@ -95,8 +98,9 @@ export default function Dashboard() {
   const needsProfileOnboarding =
     !!user &&
     !isLoadingOnboarding &&
-    !!onboarding &&
-    !onboarding.hasCompletedProfileOnboarding;
+    !onboarding?.hasCompletedProfileOnboarding;
+
+  const showAuthSkeleton = isLoading || (!!user && isLoadingOnboarding);
 
   const hideChrome =
     needsProfileOnboarding ||
@@ -132,13 +136,11 @@ export default function Dashboard() {
         ) : null}
 
         <div className="h-full min-h-0 w-full flex-1 overflow-hidden bg-almaari-bg md:rounded-none">
-          {isLoading || (user && isLoadingOnboarding) ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-almaari-accent border-t-transparent" />
+          {showAuthSkeleton ? (
+            <div className="h-full min-h-0 w-full overflow-y-auto">
+              <HomeHubSkeleton />
             </div>
-          ) : null}
-
-          {!isLoading && !user ? (
+          ) : !user ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
               <p className="font-display text-2xl text-almaari-ink">
                 Sign in to open your wardrobe
@@ -152,9 +154,7 @@ export default function Dashboard() {
                 Log in
               </a>
             </div>
-          ) : null}
-
-          {user && !isLoadingOnboarding ? (
+          ) : (
             <div className="h-full min-h-0 w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto">
               <OnboardingTourBootstrap />
               {view === "home" && (
@@ -219,7 +219,7 @@ export default function Dashboard() {
                 <BuyCredits onBack={() => setView(creditReturnView)} />
               )}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 
