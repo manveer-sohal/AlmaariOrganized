@@ -8,7 +8,10 @@ import { useClothesData } from "../../hooks/useClothesData";
 import { useOutfits } from "../../hooks/useOutfits";
 import { useOnboarding } from "../../hooks/useOnboarding";
 import FeaturedOutfitCard from "../../components/ux/FeaturedOutfitCard";
+import { startOnboardingTour } from "../../components/OnBoardingTour";
+import { startOnboardingTourOutfit } from "../../components/OnBoardingTourOutfit";
 import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
+import HomeHubSkeleton from "./HomeHubSkeleton";
 import Image from "next/image";
 
 type HomeHubProps = {
@@ -30,8 +33,8 @@ export default function HomeHub({
 }: HomeHubProps) {
   const { user } = useUser();
   const { clothes, isLoadingClothes } = useClothesData(20);
-  const { data: outfits = [] } = useOutfits();
-  const { onboarding } = useOnboarding();
+  const { data: outfits = [], isPending: isLoadingOutfits } = useOutfits();
+  const { onboarding, isLoadingOnboarding } = useOnboarding();
 
   const greeting = greetingForHour(new Date().getHours());
   const firstName = String(
@@ -47,25 +50,29 @@ export default function HomeHub({
       items.push({
         id: "add",
         label: "Complete your wardrobe setup",
-        action: onAddClothes,
+        action: () => startOnboardingTour(),
       });
     }
     if (!onboarding?.hasCompletedOnboardingForOutfits) {
       items.push({
         id: "outfit",
         label: "Create your first look",
-        action: () => setView("createOutfit"),
+        action: () => startOnboardingTourOutfit(),
       });
     }
     return items;
-  }, [onboarding, onAddClothes, setView]);
+  }, [onboarding]);
 
-  const suggestion =
-    clothes.length < 5
-      ? "Add more pieces for better looks"
-      : featured
-        ? "Refresh today’s look"
-        : "Ask Almaari what to wear";
+  // const suggestion =
+  //   clothes.length < 5
+  //     ? "Add more pieces for better looks"
+  //     : featured
+  //     ? "Refresh today’s look"
+  //     : "Ask Almaari what to wear";
+
+  if (isLoadingClothes || isLoadingOutfits || isLoadingOnboarding) {
+    return <HomeHubSkeleton />;
+  }
 
   return (
     <div className="box-border w-full max-w-full min-w-0 overflow-x-hidden px-3 pt-3 pb-nav sm:mx-auto sm:max-w-3xl sm:px-4 sm:pt-4 md:pb-8">
@@ -117,7 +124,7 @@ export default function HomeHub({
             <h2 className="mb-1.5 text-xs font-semibold text-almaari-muted">
               Continue
             </h2>
-            <ul className="space-y-2">
+            <ul className="">
               {continueItems.map((item) => (
                 <li key={item.id} className="min-w-0">
                   <button
@@ -125,7 +132,9 @@ export default function HomeHub({
                     onClick={item.action}
                     className="box-border flex min-h-11 w-full max-w-full min-w-0 items-center justify-between gap-2 rounded-almaari bg-almaari-surface-raised px-3 py-2.5 text-left text-sm font-semibold text-almaari-ink shadow-card"
                   >
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.label}
+                    </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-almaari-muted" />
                   </button>
                 </li>
@@ -145,16 +154,7 @@ export default function HomeHub({
               See all
             </button>
           </div>
-          {isLoadingClothes ? (
-            <div className="flex w-full gap-2 overflow-hidden">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-20 w-[4.5rem] shrink-0 animate-pulse rounded-almaari bg-almaari-chrome/40"
-                />
-              ))}
-            </div>
-          ) : recent.length === 0 ? (
+          {recent.length === 0 ? (
             <button
               type="button"
               onClick={onAddClothes}
@@ -187,7 +187,7 @@ export default function HomeHub({
           )}
         </section>
 
-        <section aria-label="Suggestion" className="w-full min-w-0 pb-1">
+        {/* <section aria-label="Suggestion" className="w-full min-w-0 pb-1">
           <button
             type="button"
             onClick={() =>
@@ -198,7 +198,7 @@ export default function HomeHub({
             <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
             <span className="min-w-0 truncate">{suggestion}</span>
           </button>
-        </section>
+        </section> */}
       </div>
     </div>
   );
