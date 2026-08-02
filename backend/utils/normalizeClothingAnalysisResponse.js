@@ -5,6 +5,7 @@ import {
   STYLE_CATEGORIES,
 } from "../constants/clothingMetadata.js";
 import { countValidTags, sanitizeTagsPayload } from "./tagValidation.utils.js";
+import { applyClothingTypeInferences } from "./clothingTypeInferences.js";
 
 const clampConfidence = (value) => {
   if (typeof value !== "number" || Number.isNaN(value)) return null;
@@ -121,7 +122,9 @@ export const effectiveFormalityScore = (item) => {
  */
 export const normalizeClothingAnalysisResponse = (rawResponse) => {
   const raw = rawResponse && typeof rawResponse === "object" ? rawResponse : {};
-  const core = sanitizeTagsPayload(raw);
+  const subtypeField = readField(raw, "subtype");
+  let core = sanitizeTagsPayload(raw);
+  core = applyClothingTypeInferences(core, subtypeField.value);
   const validTagCount = countValidTags(core);
 
   const styleCategoryField = readField(raw, "styleCategory");
@@ -134,7 +137,6 @@ export const normalizeClothingAnalysisResponse = (rawResponse) => {
     core.fit = { value: null, confidence: core.fit.confidence ?? 0 };
   }
 
-  const subtypeField = readField(raw, "subtype");
   const subtypeRaw =
     typeof subtypeField.value === "string"
       ? subtypeField.value.trim().toLowerCase().replace(/[\s-]+/g, "_")

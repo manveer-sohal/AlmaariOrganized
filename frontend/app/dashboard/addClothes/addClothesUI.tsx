@@ -20,6 +20,7 @@ import {
   ColourListTagField,
 } from "../../types/clothingAnalysis";
 import { prepareImagePayloadForAnalysis } from "../../utils/imageAnalysis";
+import { applyClothingTypeInferencesToTags } from "../../utils/clothingTypeInferences";
 import {
   createClientTraceId,
   isAiAnalyzeTimingEnabled,
@@ -654,38 +655,40 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   };
 
   const applyAnalysisTags = (tags: ClothingAnalysisTags) => {
-    applyTagValue(tags.type, (formatted) => {
+    const inferredTags = applyClothingTypeInferencesToTags(tags);
+
+    applyTagValue(inferredTags.type, (formatted) => {
       setUsersClothType(formatted);
       setInputTypeValue(formatted);
       setValidType(type_List.includes(formatted));
       setCropOverlay(cropOverlayFromClothingType(formatted));
     });
 
-    applyColourList(tags.colour);
+    applyColourList(inferredTags.colour);
 
-    applyTagValue(tags.material, (formatted) => {
+    applyTagValue(inferredTags.material, (formatted) => {
       setUsersClothMaterial(formatted);
       setInputMaterialValue(formatted);
       setValidMaterial(materials_List.includes(formatted));
     });
 
-    applyTagValue(tags.fit, (formatted) => {
+    applyTagValue(inferredTags.fit, (formatted) => {
       setUsersClothFit(formatted);
       setInputFitValue(formatted);
       setValidFit(fits_List.includes(formatted));
     });
 
-    applyTagValue(tags.pattern, (formatted) => {
+    applyTagValue(inferredTags.pattern, (formatted) => {
       setUsersClothPattern(formatted);
       setInputPatternValue(formatted);
       setValidPattern(patterns_List.includes(formatted));
     });
 
-    if (tags.styleCategory?.value) {
+    if (inferredTags.styleCategory?.value) {
       const match = styleCategories_List.find(
         (item) =>
           item.toLowerCase() ===
-          String(tags.styleCategory?.value).toLowerCase(),
+          String(inferredTags.styleCategory?.value).toLowerCase(),
       );
       if (match) {
         setStyleCategory(match);
@@ -693,8 +696,8 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       }
     }
 
-    if (Array.isArray(tags.occasionTags?.value)) {
-      const next = tags.occasionTags.value.filter((tag): tag is OccasionTag =>
+    if (Array.isArray(inferredTags.occasionTags?.value)) {
+      const next = inferredTags.occasionTags.value.filter((tag): tag is OccasionTag =>
         occasionTags_List.includes(tag as OccasionTag),
       );
       if (next.length > 0) {
