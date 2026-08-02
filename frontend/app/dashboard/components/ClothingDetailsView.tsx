@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  Crop,
   Heart,
   MoreHorizontal,
   Pencil,
@@ -13,12 +14,14 @@ import {
 import { ClothingItem, Outfit } from "../../types/clothes";
 import { useOutfits } from "../../hooks/useOutfits";
 import { useUpdateClothing } from "../../hooks/useUpdateClothing";
+import { useReplaceClothingImage } from "../../hooks/useReplaceClothingImage";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
 import { useClothingEnrichmentPoll } from "../../hooks/useClothingEnrichmentPoll";
 import { useClothesData } from "../../hooks/useClothesData";
 import { useFavouritesStore } from "../../store/useFavouritesStore";
 import OutfitBrowser from "../PreviewOutfit/OutfitBrowser";
 import ClothingMetadataEditor from "./ClothingMetadataEditor";
+import ClothingImageCropEditor from "./ClothingImageCropEditor";
 import ContextualStylistAction from "../../components/ux/ContextualStylistAction";
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
 import {
@@ -64,10 +67,12 @@ export default function ClothingDetailsView({
   } | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isEditingImage, setIsEditingImage] = useState(false);
 
   const { data: outfits = [], isLoading } = useOutfits();
   const { clothes } = useClothesData();
   const updateClothing = useUpdateClothing();
+  const replaceClothingImage = useReplaceClothingImage();
   const deleteClothing = useDeleteClothing(displayItem._id);
   const isFavourite = useFavouritesStore((s) =>
     s.clothingIds.includes(displayItem._id),
@@ -105,6 +110,7 @@ export default function ClothingDetailsView({
     setDisplayItem(item);
     setDraft(clothingItemToDraft(item));
     setIsEditing(false);
+    setIsEditingImage(false);
     setFeedback(null);
     setAdvancedOpen(false);
   }, [item]);
@@ -160,6 +166,18 @@ export default function ClothingDetailsView({
           error instanceof Error ? error.message : "Failed to save changes.",
       });
     }
+  };
+
+  const handleSaveImage = async (blob: Blob) => {
+    setFeedback(null);
+    const updated = await replaceClothingImage.mutateAsync({
+      uniqueId: displayItem._id,
+      image: blob,
+    });
+    setDisplayItem(updated);
+    onItemUpdated?.(updated);
+    setIsEditingImage(false);
+    setFeedback({ type: "success", message: "Image updated" });
   };
 
   const handleDelete = async () => {
@@ -239,6 +257,16 @@ export default function ClothingDetailsView({
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 640px"
         />
+        {!displayItem.isSample && !isEditing ? (
+          <button
+            type="button"
+            onClick={() => setIsEditingImage(true)}
+            className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-2 text-sm font-semibold text-almaari-ink shadow-sm backdrop-blur-sm hover:bg-white"
+          >
+            <Crop className="h-4 w-4" aria-hidden />
+            Adjust image
+          </button>
+        ) : null}
       </div>
 
       <div className="space-y-5 px-4 pt-4">
@@ -360,6 +388,29 @@ export default function ClothingDetailsView({
           />
         </section>
       </div>
+
+      {isEditingImage ? (
+        <ClothingImageCropEditor
+          imageSrc={displayItem.imageSrc}
+          clothingType={displayItem.type}
+          saving={replaceClothingImage.isPending}
+          onCancel={() => setIsEditingImage(false)}
+          onSave={async (blob) => {
+            try {
+              await handleSaveImage(blob);
+            } catch (error) {
+              setFeedback({
+                type: "error",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to update image.",
+              });
+              throw error;
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
