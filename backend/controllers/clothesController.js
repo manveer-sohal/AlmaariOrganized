@@ -5,6 +5,7 @@ import { getOutfits as getOutfitsService } from "../services/clothes.service.js"
 import { getData as getDataService } from "../services/clothes.service.js";
 import { createOutfit as createOutfitService } from "../services/clothes.service.js";
 import { updateClothing as updateClothingService } from "../services/clothes.service.js";
+import { replaceClothingImage as replaceClothingImageService } from "../services/clothes.service.js";
 import {
   seedSampleWardrobe as seedSampleWardrobeService,
   clearSampleWardrobe as clearSampleWardrobeService,
@@ -337,6 +338,44 @@ export const updateData = async (request, response) => {
     console.error(e);
     return response.status(e.status || 500).json({
       error: e.message || "Failed to update clothing item",
+      details: e.details || null,
+    });
+  }
+};
+
+export const replaceImageData = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  const { uniqueId, clothingId, imageAlreadyCropped } = request.body;
+  const file = request.file;
+
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+
+  if (!file) {
+    return response.status(400).json({ error: "No file uploaded" });
+  }
+
+  try {
+    const alreadyCropped =
+      imageAlreadyCropped === true || String(imageAlreadyCropped) === "true";
+
+    const result = await replaceClothingImageService({
+      auth0Id,
+      uniqueId,
+      clothingId,
+      file,
+      imageAlreadyCropped: alreadyCropped,
+    });
+
+    return response.status(result.status || 200).json({
+      message: result.message,
+      clothing: result.clothing,
+    });
+  } catch (e) {
+    console.error(e);
+    return response.status(e.status || 500).json({
+      error: e.message || "Failed to update clothing image",
       details: e.details || null,
     });
   }
