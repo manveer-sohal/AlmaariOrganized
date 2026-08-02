@@ -6,12 +6,15 @@ import { CropOverlayId } from "../../utils/cropOverlays";
 type CropOverlayGuideProps = {
   overlay: CropOverlayId;
   className?: string;
+  /** Lighter strokes for live camera preview on dark backgrounds. */
+  variant?: "default" | "camera";
 };
 
 /** Semi-transparent silhouette guides for framing garments in the crop square. */
 export default function CropOverlayGuide({
   overlay,
   className = "",
+  variant = "default",
 }: CropOverlayGuideProps) {
   const reactId = useId().replace(/:/g, "");
   const maskId = `crop-mask-${overlay}-${reactId}`;
@@ -19,6 +22,16 @@ export default function CropOverlayGuide({
   if (overlay === "none") return null;
 
   const shape = silhouetteShape(overlay);
+  const isCamera = variant === "camera";
+  const tintFill = isCamera
+    ? "rgba(255, 255, 255, 0)"
+    : "rgba(49, 46, 129, 0.18)";
+  const shapeFill = isCamera
+    ? "rgba(255, 255, 255, 0.12)"
+    : "rgba(255, 255, 255, 0.1)";
+  const stroke = isCamera
+    ? "rgba(255, 255, 255, 0.92)"
+    : "rgba(79, 70, 229, 0.9)";
 
   return (
     <svg
@@ -33,16 +46,11 @@ export default function CropOverlayGuide({
           <g fill="black">{shape}</g>
         </mask>
       </defs>
-      <rect
-        width="100"
-        height="100"
-        fill="rgba(49, 46, 129, 0.18)"
-        mask={`url(#${maskId})`}
-      />
-      <g fill="rgba(255, 255, 255, 0.1)">{shape}</g>
+      <rect width="100" height="100" fill={tintFill} mask={`url(#${maskId})`} />
+      <g fill={shapeFill}>{shape}</g>
       <g
         fill="none"
-        stroke="rgba(79, 70, 229, 0.9)"
+        stroke={stroke}
         strokeWidth="1.6"
         strokeLinejoin="round"
         strokeLinecap="round"

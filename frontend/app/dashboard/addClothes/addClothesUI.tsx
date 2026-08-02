@@ -28,7 +28,7 @@ import {
   logAnalyzeStep,
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
-import { Sparkles, Send } from "lucide-react";
+import { Sparkles, Send, ArrowLeft } from "lucide-react";
 import {
   clearAuthTokenCache,
   getAuthHeaders,
@@ -56,8 +56,57 @@ import ImageUploadFlow, {
   UploadStage,
 } from "../../components/ux/ImageUploadFlow";
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
+import ClothingImageSourcePicker from "../../components/clothing-upload/ClothingImageSourcePicker";
+import ClothingOptionAutocomplete from "../components/ClothingOptionAutocomplete";
 
 const DEFAULT_CLOTHING_TYPE = "T-shirt";
+
+function FormSection({
+  title,
+  description,
+  children,
+  className = "",
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-almaari-lg border border-almaari-border/70 bg-almaari-surface p-4 space-y-3 overflow-visible ${className}`}
+    >
+      <div>
+        <h2 className="font-display text-base text-almaari-ink">{title}</h2>
+        {description ? (
+          <p className="mt-0.5 text-xs leading-relaxed text-almaari-muted">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function FieldLabel({
+  htmlFor,
+  children,
+  required,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="text-sm font-medium text-almaari-ink">
+      {children}
+      {required ? (
+        <span className="font-normal text-almaari-muted"> (required)</span>
+      ) : null}
+    </label>
+  );
+}
 
 type addClothesUIProm = {
   setView: (view: View) => void;
@@ -107,13 +156,6 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const [inputMaterialValue, setInputMaterialValue] = useState<string>("");
   const [usersClothMaterial, setUsersClothMaterial] = useState<string>("");
 
-  const [filtered_materials_List, set_Filtered_materials_List] = useState(
-    materials_List,
-  );
-  const [filtered_fits_List, set_Filtered_fits_List] = useState(fits_List);
-  const [filtered_patterns_List, set_Filtered_patterns_List] = useState(
-    patterns_List,
-  );
   const [inputFitValue, setInputFitValue] = useState<string>("");
   const [inputPatternValue, setInputPatternValue] = useState<string>("");
   const [validMaterial, setValidMaterial] = useState<boolean | null>(null);
@@ -134,12 +176,6 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const [file, setFile] = useState<File | null>(null);
   //file can either be of type string or type null
   const [preview, setPreview] = useState<string | null>(null);
-  //a filtered list of colours which will change depedending on the user input for filtered results
-  const [filtered_colours_List, set_Filtered_colours_List] = useState(
-    colours_List,
-  );
-  //a filtered list of clothes which will change depedending on the user input for filtered results
-  const [filtered_type_List, set_Filtered_type_List] = useState(type_List);
 
   const { user } = useUser();
 
@@ -349,17 +385,6 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         setUserPattern();
       }
     }
-  };
-
-  const filter = (
-    input: string,
-    list: string[],
-    setState: React.Dispatch<React.SetStateAction<string[]>>,
-  ) => {
-    const filtered = list
-      .filter((item) => item.toLowerCase().startsWith(input.toLowerCase()))
-      .slice(0, 10);
-    setState(filtered);
   };
 
   const drawCropPreview = useCallback(
@@ -697,8 +722,9 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     }
 
     if (Array.isArray(inferredTags.occasionTags?.value)) {
-      const next = inferredTags.occasionTags.value.filter((tag): tag is OccasionTag =>
-        occasionTags_List.includes(tag as OccasionTag),
+      const next = inferredTags.occasionTags.value.filter(
+        (tag): tag is OccasionTag =>
+          occasionTags_List.includes(tag as OccasionTag),
       );
       if (next.length > 0) {
         setOccasionTags(next);
@@ -799,8 +825,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       rembgBlobRef.current = rembgBlob;
     }
 
-    const sourceForFrame =
-      rembgBlob ?? workingBlobRef.current ?? file;
+    const sourceForFrame = rembgBlob ?? workingBlobRef.current ?? file;
     if (!sourceForFrame) return;
 
     const framed =
@@ -829,9 +854,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   };
 
   //If submit is clicked
-  const handleSubmit = async (
-    event: React.MouseEvent | React.FormEvent,
-  ) => {
+  const handleSubmit = async (event: React.MouseEvent | React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     console.log("submit clicked");
@@ -896,474 +919,448 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   //   height: 300px;
   //   margin: 0px 0 0 90px;
   // }
+  const handleFileSelected = (
+    picked: File,
+    overlayFromCamera?: CropOverlayId,
+  ) => {
+    setValidFile(true);
+    setFile(picked);
+    if (overlayFromCamera !== undefined) {
+      setCropOverlay(overlayFromCamera);
+    }
+  };
+
   const inputClassName = (invalid: boolean | null) =>
-    `w-full min-w-0 rounded-xl border bg-white px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 ${
+    `w-full min-w-0 rounded-almaari border bg-almaari-surface-raised px-3 py-2.5 text-base sm:text-sm text-almaari-ink placeholder:text-almaari-muted/70 focus:outline-none focus:ring-2 ${
       invalid === false
-        ? "border-red-300 focus:ring-red-300"
-        : "border-indigo-300 focus:ring-indigo-300"
+        ? "border-red-300 focus:ring-red-200"
+        : "border-almaari-border focus:ring-almaari-accent/25 focus:border-almaari-accent/40"
     }`;
+
+  const selectClassName =
+    "w-full min-h-11 rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm text-almaari-ink focus:outline-none focus:ring-2 focus:ring-almaari-accent/25 focus:border-almaari-accent/40";
+
+  const chipButtonClass =
+    "inline-flex items-center justify-center gap-1.5 rounded-almaari border border-almaari-border bg-almaari-surface-raised px-4 min-h-11 text-sm font-semibold text-almaari-ink transition hover:bg-almaari-accent-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-almaari-accent/30";
 
   const uploadStage: UploadStage = loading
     ? "details"
     : isAnalyzing
-      ? "identifying"
-      : preview && (usersClothType || usersColours.length > 0)
-        ? "ready"
-        : preview
-          ? "preview"
-          : "pick";
+    ? "identifying"
+    : preview && (usersClothType || usersColours.length > 0)
+    ? "ready"
+    : preview
+    ? "preview"
+    : "pick";
 
   return (
     <ImageUploadFlow stage={uploadStage}>
-    <div className="bg-almaari-bg w-full h-full min-h-0 overflow-x-hidden overflow-y-auto px-2 py-2 pb-24 sm:p-1 sm:pb-4">
-      <form
-        id="add-clothes-form"
-        className="mt-2 md:mt-8 bg-almaari-surface-raised border border-almaari-border rounded-almaari-lg w-full max-w-lg md:max-w-4xl mx-auto p-3 sm:p-5 md:p-6 shadow-card text-base flex flex-col gap-3 sm:gap-4"
-      >
-        <div className="relative flex items-center min-h-10 w-full">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="relative z-10 inline-flex items-center gap-1.5 font-medium px-2.5 sm:px-4 min-h-10 h-10 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white active:bg-purple-600 transition-colors duration-300 text-sm shrink-0"
-          >
-            ← Back
-          </button>
-          <h1 className="absolute inset-x-0 text-sm sm:text-lg font-display text-almaari-ink text-center truncate px-14 pointer-events-none">
-            Add to wardrobe
-          </h1>
-        </div>
-        <div className="w-full flex flex-col md:grid md:grid-cols-2 md:gap-6 md:items-start gap-3 mx-auto">
-          {/* Image upload & crop — left on md+, stacked first on small screens */}
-          <div className="flex flex-col gap-2 w-full md:sticky md:top-0 shrink-0">
-            <div className="rounded-lg w-full">
-              <input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                onChange={(e) => {
-                  setFile(e.target.files?.[0] ?? null);
-                }}
-                className="hidden"
-              />
-              <div
-                id="add-picture-btn"
-                className="relative bg-white border border-indigo-200 rounded-lg h-[min(220px,42vh)] sm:h-[260px] md:h-[320px] w-full max-w-full sm:max-w-sm mx-auto flex items-center overflow-hidden justify-center cursor-pointer hover:opacity-90 transition"
-                onClick={() => {
-                  if (!preview) fileInputRef.current?.click();
-                }}
+      <div className="bg-almaari-bg w-full h-full min-h-0 overflow-x-hidden overflow-y-auto px-3 py-3 pb-24 sm:px-4 sm:pb-6">
+        <form
+          id="add-clothes-form"
+          className="mx-auto flex w-full max-w-lg flex-col gap-4 md:max-w-4xl md:gap-5"
+        >
+          <header className="space-y-1">
+            <div className="relative flex min-h-10 items-center">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="relative z-10 inline-flex min-h-10 items-center gap-1.5 rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm font-medium text-almaari-ink transition hover:bg-almaari-accent-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-almaari-accent/30"
               >
-                {preview ? (
-                  <div className="relative flex h-full w-full items-center justify-center">
-                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
-                      <canvas
-                        ref={canvasRef}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        className="block h-full w-full cursor-grab active:cursor-grabbing touch-none"
-                      />
-                      <div className="pointer-events-none absolute inset-0">
-                        <CropOverlayGuide overlay={cropOverlay} />
-                      </div>
-                    </div>
+                <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                Back
+              </button>
+              <h1 className="pointer-events-none absolute inset-x-0 text-center font-display text-lg text-almaari-ink sm:text-xl">
+                Add to wardrobe
+              </h1>
+            </div>
+          </header>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                      className="absolute top-2 right-2 bg-white/90 text-xs px-2.5 py-1.5 rounded-lg shadow min-h-8 z-10"
-                    >
-                      Replace
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-[90%] text-center text-[11px] sm:text-xs text-indigo-700 bg-white/80 px-2 py-1 rounded z-10">
-                      <span className="sm:hidden">
-                        Drag to reposition • slider to zoom
-                      </span>
-                      <span className="hidden sm:inline">
-                        Drag to reposition • Zoom to crop
-                      </span>
+          <div className="mx-auto flex w-full flex-col gap-4 md:grid md:grid-cols-2 md:items-start md:gap-5">
+            {/* Photo column */}
+            <div className="flex w-full shrink-0 flex-col gap-4 md:sticky md:top-3">
+              <FormSection
+                title="Photo"
+                description="One item per photo on a plain background works best."
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const picked = e.target.files?.[0];
+                    if (picked) handleFileSelected(picked);
+                    e.target.value = "";
+                  }}
+                  className="hidden"
+                />
+                {preview ? (
+                  <div
+                    id="add-picture-btn"
+                    className="relative flex h-[min(220px,42vh)] w-full items-center justify-center overflow-hidden rounded-almaari-lg border border-almaari-border bg-almaari-warm sm:h-[260px] md:h-[300px]"
+                  >
+                    <div className="relative flex h-full w-full items-center justify-center">
+                      <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
+                        <canvas
+                          ref={canvasRef}
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                          onTouchStart={handleTouchStart}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          className="block h-full w-full cursor-grab touch-none active:cursor-grabbing"
+                        />
+                        <div className="pointer-events-none absolute inset-0">
+                          <CropOverlayGuide overlay={cropOverlay} />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        className="absolute right-2 top-2 z-10 min-h-8 rounded-lg border border-almaari-border bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-almaari-ink shadow-sm backdrop-blur-sm hover:bg-white"
+                      >
+                        Replace
+                      </button>
+                      <p className="absolute bottom-2 left-1/2 z-10 max-w-[90%] -translate-x-1/2 rounded-lg bg-white/90 px-2 py-1 text-center text-[11px] text-almaari-muted backdrop-blur-sm sm:text-xs">
+                        <span className="sm:hidden">
+                          Drag to reposition · slider to zoom
+                        </span>
+                        <span className="hidden sm:inline">
+                          Drag to reposition · use slider to zoom
+                        </span>
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="relative flex h-full w-full items-center justify-center">
-                    <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
-                      <CropOverlayGuide overlay={cropOverlay} />
-                    </div>
-                    <p className="pointer-events-none absolute inset-x-0 bottom-4 px-4 text-center text-sm text-indigo-900/60">
-                      Tap to add image
-                    </p>
-                  </div>
+                  <ClothingImageSourcePicker
+                    fileInputRef={fileInputRef}
+                    onFileSelected={handleFileSelected}
+                    clothingType={usersClothType || inputTypeValue}
+                  />
                 )}
-              </div>
+
+                {validFile === false ? (
+                  <p className="text-sm text-red-600" role="alert">
+                    Add a photo to continue.
+                  </p>
+                ) : null}
+
+                <div className="space-y-2">
+                  <FieldLabel htmlFor="crop-overlay-select">
+                    Crop guide
+                  </FieldLabel>
+                  <select
+                    id="crop-overlay-select"
+                    value={cropOverlay}
+                    onChange={(e) =>
+                      setCropOverlay(e.target.value as CropOverlayId)
+                    }
+                    className={selectClassName}
+                  >
+                    {CROP_OVERLAY_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {preview ? (
+                  <div className="space-y-1.5">
+                    <input
+                      type="range"
+                      min={minZoom}
+                      max={3}
+                      step="0.01"
+                      value={zoom}
+                      onChange={(e) => {
+                        const nextZoom = Number(e.target.value);
+                        setZoom(nextZoom);
+                        if (imageRef.current) {
+                          const img = imageRef.current;
+                          const scale = getDrawScale(
+                            img.naturalWidth,
+                            img.naturalHeight,
+                            nextZoom,
+                          );
+                          setOffset((prev) =>
+                            clampCropOffset(
+                              prev.x,
+                              prev.y,
+                              img.naturalWidth,
+                              img.naturalHeight,
+                              scale,
+                            ),
+                          );
+                        }
+                      }}
+                      className="min-h-8 w-full touch-manipulation accent-almaari-accent"
+                      aria-label="Zoom image for crop"
+                    />
+                    <div className="flex items-center justify-between text-xs text-almaari-muted">
+                      <span>Zoom out</span>
+                      <span>Adjust crop</span>
+                      <span>Zoom in</span>
+                    </div>
+                  </div>
+                ) : null}
+              </FormSection>
+
+              <FormSection
+                title="Smart fill"
+                description="Let Almaari read your photo and fill in the form. Uses 1 credit."
+              >
+                <button
+                  id="AI_analyze_button"
+                  type="button"
+                  disabled={
+                    isAnalyzing ||
+                    isLoadingCredits ||
+                    !file ||
+                    (credits ?? 0) < 1
+                  }
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-almaari border border-almaari-accent/25 bg-almaari-accent-soft px-4 text-sm font-semibold text-almaari-ink transition hover:border-almaari-accent/40 hover:bg-almaari-accent/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-almaari-accent/30 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => analyzeImage()}
+                >
+                  <Sparkles className="h-4 w-4 shrink-0 text-almaari-accent" />
+                  {isAnalyzing ? (
+                    "Identifying your item…"
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Analyze (1 credit)</span>
+                      <span className="hidden sm:inline">
+                        Analyze image (1 credit)
+                      </span>
+                    </>
+                  )}
+                </button>
+                {analyzeError ? (
+                  <p className="text-sm text-red-600" role="alert">
+                    {analyzeError.message}
+                  </p>
+                ) : null}
+                {analyzeMessage && !analyzeError ? (
+                  <p className="text-sm text-almaari-muted">{analyzeMessage}</p>
+                ) : null}
+                {!isLoadingCredits && (credits ?? 0) < 1 && !analyzeMessage ? (
+                  <p className="text-sm text-red-600" role="alert">
+                    Insufficient credits for analysis.
+                  </p>
+                ) : null}
+              </FormSection>
             </div>
 
-            <label
-              htmlFor="crop-overlay-select"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Crop guide
-            </label>
-            <select
-              id="crop-overlay-select"
-              value={cropOverlay}
-              onChange={(e) =>
-                setCropOverlay(e.target.value as CropOverlayId)
-              }
-              className="w-full min-h-11 rounded-xl border border-indigo-300 bg-white px-3 text-sm text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              {CROP_OVERLAY_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            {preview ? (
-              <>
-                <input
-                  type="range"
-                  min={minZoom}
-                  max={3}
-                  step="0.01"
-                  value={zoom}
-                  onChange={(e) => {
-                    const nextZoom = Number(e.target.value);
-                    setZoom(nextZoom);
-                    if (imageRef.current) {
-                      const img = imageRef.current;
-                      const scale = getDrawScale(
-                        img.naturalWidth,
-                        img.naturalHeight,
-                        nextZoom,
-                      );
-                      setOffset((prev) =>
-                        clampCropOffset(
-                          prev.x,
-                          prev.y,
-                          img.naturalWidth,
-                          img.naturalHeight,
-                          scale,
-                        ),
-                      );
-                    }
-                  }}
-                  className="w-full min-h-8 accent-indigo-600 touch-manipulation"
-                  aria-label="Zoom image for crop"
-                />
-                <div className="flex items-center justify-between text-xs text-indigo-700">
-                  <span>Zoom out</span>
-                  <span>Adjust crop</span>
-                  <span>Zoom in</span>
+            {/* Details column */}
+            <div className="flex min-w-0 w-full flex-col gap-4 overflow-visible">
+              <FormSection
+                title="Item details"
+                description="These fields help Almaari match and style this piece."
+              >
+                <div className="space-y-1.5">
+                  <FieldLabel htmlFor="add-type-btn" required>
+                    Type
+                  </FieldLabel>
+                  <ClothingOptionAutocomplete
+                    id="add-type-btn"
+                    placeholder="e.g. T-shirt, Jeans"
+                    required
+                    value={inputTypeValue}
+                    options={type_List}
+                    inputClassName={inputClassName(validType)}
+                    onChange={setInputTypeValue}
+                    onBlur={() => onBlur("type")}
+                    onKeyDown={handleKeyDown}
+                  />
+                  {validType == false && (
+                    <p className="text-sm text-red-600" role="alert">
+                      Enter a valid clothing type.
+                    </p>
+                  )}
                 </div>
-              </>
-            ) : null}
-            {validFile == false && (
-              <span className="text-sm text-red-600">Enter a Picture</span>
-            )}
-            <label
-              htmlFor="input-tag"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Fill Form with AI
-            </label>
-            <button
-              id="AI_analyze_button"
-              type="button"
-              disabled={
-                isAnalyzing || isLoadingCredits || !file || (credits ?? 0) < 1
-              }
-              className="inline-flex items-center justify-center gap-2 font-medium px-3 sm:px-4 min-h-11 h-11 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full text-sm sm:text-base"
-              onClick={() => analyzeImage()}
-            >
-              <Sparkles className="w-4 h-4 shrink-0" />
-              {isAnalyzing ? (
-                "Identifying your item…"
-              ) : (
-                <>
-                  <span className="sm:hidden">Analyze (1 credit)</span>
-                  <span className="hidden sm:inline">
-                    Analyze Image (1 credit)
-                  </span>
-                </>
-              )}
-            </button>
-            {analyzeError && (
-              <span className="text-sm text-red-600">
-                {analyzeError.message}
-              </span>
-            )}
-            {analyzeMessage && !analyzeError && (
-              <span className="text-sm text-indigo-700">{analyzeMessage}</span>
-            )}
-            {!isLoadingCredits && (credits ?? 0) < 1 && !analyzeMessage && (
-              <span className="text-sm text-red-600">
-                Insufficient credits for analysis.
-              </span>
-            )}
+
+                <div className="space-y-1.5">
+                  <FieldLabel htmlFor="add-colour-btn" required>
+                    Colour
+                  </FieldLabel>
+                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
+                    <div className="min-w-0 flex-1">
+                      <ClothingOptionAutocomplete
+                        id="add-colour-btn"
+                        placeholder="e.g. red, blue"
+                        value={inputColourValue}
+                        options={colours_List}
+                        inputClassName={inputClassName(validColour)}
+                        onChange={setInputColourValue}
+                        onBlur={() => onBlur("colour")}
+                        onKeyDown={handleKeyDown}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`${chipButtonClass} sm:w-24 sm:shrink-0`}
+                      onClick={setUserColour}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {validColour == false && (
+                    <p className="text-sm text-red-600" role="alert">
+                      Enter a valid colour.
+                    </p>
+                  )}
+                  {usersColours.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {usersColours.map((colour, index) => (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-almaari-border bg-almaari-accent-soft px-2.5 py-1 text-xs font-medium text-almaari-ink transition hover:border-almaari-accent/40 hover:bg-almaari-accent hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-almaari-accent/30"
+                          key={index}
+                          id={colour}
+                          onClick={(e) =>
+                            handleDeleteTag("colour", e.currentTarget.id)
+                          }
+                          aria-label={`Remove ${colour}`}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-full border border-almaari-border/60"
+                            style={
+                              colour === "Camo"
+                                ? { backgroundColor: "green" }
+                                : { backgroundColor: colour }
+                            }
+                            aria-hidden="true"
+                          />
+                          <span>{colour}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-almaari-muted">
+                      Add one or more colours, then tap Save.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <FieldLabel htmlFor="add-material-btn" required>
+                      Material
+                    </FieldLabel>
+                    <ClothingOptionAutocomplete
+                      id="add-material-btn"
+                      placeholder="e.g. cotton"
+                      required
+                      value={inputMaterialValue}
+                      options={materials_List}
+                      inputClassName={inputClassName(validMaterial)}
+                      onChange={setInputMaterialValue}
+                      onBlur={() => onBlur("material")}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {validMaterial == false && (
+                      <p
+                        className="text-xs text-red-600 sm:text-sm"
+                        role="alert"
+                      >
+                        Enter a valid material.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <FieldLabel htmlFor="add-fit-btn" required>
+                      Fit
+                    </FieldLabel>
+                    <ClothingOptionAutocomplete
+                      id="add-fit-btn"
+                      placeholder="e.g. slim"
+                      required
+                      value={inputFitValue}
+                      options={fits_List}
+                      inputClassName={inputClassName(validFit)}
+                      onChange={setInputFitValue}
+                      onBlur={() => onBlur("fit")}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {validFit == false && (
+                      <p
+                        className="text-xs text-red-600 sm:text-sm"
+                        role="alert"
+                      >
+                        Enter a valid fit.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2">
+                    <FieldLabel htmlFor="add-pattern-btn" required>
+                      Pattern
+                    </FieldLabel>
+                    <ClothingOptionAutocomplete
+                      id="add-pattern-btn"
+                      placeholder="e.g. striped"
+                      required
+                      value={inputPatternValue}
+                      options={patterns_List}
+                      inputClassName={inputClassName(validPattern)}
+                      onChange={setInputPatternValue}
+                      onBlur={() => onBlur("pattern")}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {validPattern == false && (
+                      <p
+                        className="text-xs text-red-600 sm:text-sm"
+                        role="alert"
+                      >
+                        Enter a valid pattern.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <StyleDetailsSection
+                      value={{ styleCategory, occasionTags }}
+                      userReviewedAt={styleFromAi ? null : "local"}
+                      onChange={(next) => {
+                        setStyleCategory(next.styleCategory);
+                        setOccasionTags(next.occasionTags);
+                        setStyleFromAi(false);
+                      }}
+                    />
+                  </div>
+                </div>
+              </FormSection>
+            </div>
           </div>
 
-          {/* Form inputs — right on md+, below image on small screens */}
-
-          <div className="flex flex-col gap-3 w-full min-w-0">
-            <label
-              htmlFor="input-type"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Type
-            </label>
-            <input
-              id="add-type-btn"
-              placeholder="e.g. pants, shirt"
-              autoComplete="on"
-              required
-              className={inputClassName(validType)}
-              type="text"
-              list="types"
-              value={inputTypeValue}
-              onBlur={() => onBlur("type")}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => {
-                const value = e.target.value;
-                filter(value, type_List, set_Filtered_type_List);
-                setInputTypeValue(value);
-              }}
-            ></input>
-            {validType == false && (
-              <span className="text-sm text-red-600">
-                Enter a valid Clothes type
-              </span>
-            )}
-
-            <datalist id="types">
-              {filtered_type_List.map((type, index) => (
-                <option key={index} value={type}></option>
-              ))}{" "}
-            </datalist>
-
-            <label
-              htmlFor="input-colour"
-              className="text-sm font-medium text-indigo-900"
-            >
-              Colour
-            </label>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <input
-                placeholder="e.g. red, blue"
-                enterKeyHint="next"
-                type="text"
-                id="add-colour-btn"
-                list="colours"
-                value={inputColourValue}
-                onBlur={() => onBlur("colour")}
-                onKeyDown={handleKeyDown}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  filter(value, colours_List, set_Filtered_colours_List);
-                  setInputColourValue(value);
-                }}
-                className={inputClassName(validColour)}
-              ></input>
+          <div
+            id="submit-btn"
+            className="mt-2 shrink-0 pb-[max(0.75rem,var(--safe-bottom))] md:mt-4"
+          >
+            {loading ? (
+              <div className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-almaari bg-almaari-accent/80 px-4 text-sm font-semibold text-white">
+                Adding to wardrobe…
+              </div>
+            ) : (
               <button
                 type="button"
-                className="inline-flex items-center justify-center font-medium px-4 min-h-11 h-11 rounded-xl cursor-pointer border border-indigo-300 bg-indigo-100/70 text-indigo-900 hover:bg-indigo-500 hover:text-white transition-colors duration-200 sm:shrink-0 sm:w-20"
-                onClick={setUserColour}
+                onClick={(event) => handleSubmit(event)}
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-almaari bg-almaari-accent px-4 text-sm font-semibold text-white shadow-soft transition hover:bg-almaari-accent-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-almaari-accent/40"
               >
-                Add
+                <Send className="h-4 w-4 shrink-0" aria-hidden />
+                Save to wardrobe
               </button>
-            </div>
-            {validColour == false && (
-              <span className="text-sm text-red-600">Enter a valid Colour</span>
             )}
-            <div className="flex flex-wrap gap-2">
-              {usersColours.map((colour, index) => (
-                <div
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-200 bg-indigo-100/60 text-indigo-900 text-xs cursor-pointer hover:bg-indigo-500 hover:text-white"
-                  key={index}
-                  id={colour}
-                  onClick={(e) => handleDeleteTag("colour", e.currentTarget.id)}
-                >
-                  <span
-                    className="h-3 w-3 rounded-full border border-indigo-200"
-                    style={
-                      colour === "Camo"
-                        ? { backgroundColor: "green" }
-                        : { backgroundColor: colour }
-                    }
-                    aria-hidden="true"
-                  />
-                  <span>{colour}</span>
-                </div>
-              ))}
-            </div>
-
-            <datalist id="colours">
-              {filtered_colours_List.map((colour, index) => (
-                <option key={index} value={colour}></option>
-              ))}{" "}
-            </datalist>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-4">
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <label
-                  htmlFor="input-material"
-                  className="text-sm font-medium text-indigo-900"
-                >
-                  Material
-                </label>
-                <input
-                  id="add-material-btn"
-                  placeholder="e.g. cotton"
-                  autoComplete="on"
-                  required
-                  className={inputClassName(validMaterial)}
-                  type="text"
-                  list="materials"
-                  value={inputMaterialValue}
-                  onBlur={() => onBlur("material")}
-                  onKeyDown={handleKeyDown}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    filter(value, materials_List, set_Filtered_materials_List);
-                    setInputMaterialValue(value);
-                  }}
-                ></input>
-                {validMaterial == false && (
-                  <span className="text-xs sm:text-sm text-red-600">
-                    Enter a valid material
-                  </span>
-                )}
-                <datalist id="materials">
-                  {filtered_materials_List.map((material, index) => (
-                    <option key={index} value={material}></option>
-                  ))}{" "}
-                </datalist>
-              </div>
-
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <label
-                  htmlFor="input-fit"
-                  className="text-sm font-medium text-indigo-900"
-                >
-                  Fit
-                </label>
-                <input
-                  id="add-fit-btn"
-                  placeholder="e.g. slim"
-                  autoComplete="on"
-                  required
-                  className={inputClassName(validFit)}
-                  type="text"
-                  list="fits"
-                  value={inputFitValue}
-                  onBlur={() => onBlur("fit")}
-                  onKeyDown={handleKeyDown}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    filter(value, fits_List, set_Filtered_fits_List);
-                    setInputFitValue(value);
-                  }}
-                ></input>
-                {validFit == false && (
-                  <span className="text-xs sm:text-sm text-red-600">
-                    Enter a valid fit
-                  </span>
-                )}
-                <datalist id="fits">
-                  {filtered_fits_List.map((fit, index) => (
-                    <option key={index} value={fit}></option>
-                  ))}{" "}
-                </datalist>
-              </div>
-
-              <div className="flex flex-col gap-1.5 min-w-0 sm:col-span-2">
-                <label
-                  htmlFor="input-pattern"
-                  className="text-sm font-medium text-indigo-900"
-                >
-                  Pattern
-                </label>
-                <input
-                  id="add-pattern-btn"
-                  placeholder="e.g. striped"
-                  autoComplete="on"
-                  required
-                  className={inputClassName(validPattern)}
-                  type="text"
-                  list="patterns"
-                  value={inputPatternValue}
-                  onBlur={() => onBlur("pattern")}
-                  onKeyDown={handleKeyDown}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    filter(value, patterns_List, set_Filtered_patterns_List);
-                    setInputPatternValue(value);
-                  }}
-                ></input>
-                {validPattern == false && (
-                  <span className="text-xs sm:text-sm text-red-600">
-                    Enter a valid pattern
-                  </span>
-                )}
-                <datalist id="patterns">
-                  {filtered_patterns_List.map((pattern, index) => (
-                    <option key={index} value={pattern}></option>
-                  ))}{" "}
-                </datalist>
-              </div>
-
-              <StyleDetailsSection
-                value={{ styleCategory, occasionTags }}
-                userReviewedAt={styleFromAi ? null : "local"}
-                onChange={(next) => {
-                  setStyleCategory(next.styleCategory);
-                  setOccasionTags(next.occasionTags);
-                  setStyleFromAi(false);
-                }}
-              />
-            </div>
-
-            {/* <input
-         
-         
-          }}
-        />
-        <label
-          htmlFor="input-file"
-          id="input-file-label"
-          className="inline-flex items-center justify-center gap-2 font-medium px-4 h-10 rounded-xl m-1 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
-        >
-          Add Picture
-        </label> */}
-            <div
-              id="submit-btn"
-              className=" bottom-0 z-10 mt-2 pt-3 pb-1 -mx-1 px-1 bg-gradient-to-t from-white via-white/95 to-transparent sm:static sm:mt-auto sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 sm:bg-transparent shrink-0"
-            >
-              {loading ? (
-                <div className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-almaari cursor-pointer bg-almaari-accent text-white">
-                  Adding details…
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(event) => handleSubmit(event)}
-                  className="w-full inline-flex items-center justify-center gap-2 font-medium px-4 min-h-11 h-11 rounded-almaari cursor-pointer bg-almaari-accent text-white hover:bg-almaari-accent-strong shadow-soft"
-                >
-                  <Send className="w-4 h-4 shrink-0" />
-                  Save to wardrobe
-                </button>
-              )}
-              <InlineSuccessState show={false} className="mt-2 justify-center" />
-            </div>
+            <InlineSuccessState show={false} className="mt-2 justify-center" />
           </div>
-        </div>
-      </form>
-    </div>
+        </form>
+      </div>
     </ImageUploadFlow>
   );
 }
