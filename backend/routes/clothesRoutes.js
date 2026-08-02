@@ -4,6 +4,7 @@ import {
   uploadData,
   removeData,
   updateData,
+  replaceImageData,
   createOutfit,
   getOutfits,
   deleteOutfit,
@@ -44,6 +45,13 @@ router.post(
 );
 router.post("/remove", removeData);
 router.post("/update", updateData);
+router.post(
+  "/replace-image",
+  uploadRateLimiter,
+  uploadMiddleware,
+  validateImageFile,
+  replaceImageData,
+);
 router.post(
   "/:id/style-enrichment/retry",
   styleEnrichmentRetryLimiter,
