@@ -3,10 +3,27 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { ClothingItem } from "../types/clothes";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 
+function removeClothingFromCache(
+  old: InfiniteData<ClothingItem[]> | undefined,
+  clothingId: string,
+) {
+  if (!old?.pages) return old;
+
+  const targetId = String(clothingId);
+  return {
+    ...old,
+    pages: old.pages.map((page) =>
+      page.filter((item) => String(item._id) !== targetId),
+    ),
+  };
+}
+
 export function useDeleteClothing(clothingId: string) {
+  const { user } = useUser();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -35,16 +52,8 @@ export function useDeleteClothing(clothingId: string) {
 
       queryClient.setQueriesData(
         { queryKey: ["clothesData"] },
-        (old: InfiniteData<ClothingItem[]> | undefined) => {
-          if (!old?.pages) return old;
-
-          return {
-            ...old,
-            pages: old.pages.map((page) =>
-              page.filter((item) => item._id !== clothingId),
-            ),
-          };
-        },
+        (old: InfiniteData<ClothingItem[]> | undefined) =>
+          removeClothingFromCache(old, clothingId),
       );
 
       return { previousQueries };
@@ -55,7 +64,21 @@ export function useDeleteClothing(clothingId: string) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["outfits"] });
+      queryClient.setQueriesData(
+        { queryKey: ["clothesData"] },
+        (old: InfiniteData<ClothingItem[]> | undefined) =>
+          removeClothingFromCache(old, clothingId),
+      );
+
+      // Home uses a separate page-size query and unmounts while details are open.
+      // refetchType "all" refreshes inactive caches (e.g. Recent on home).
+      void queryClient.invalidateQueries({
+        queryKey: ["clothesData"],
+        refetchType: "all",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["outfits", user?.sub],
+      });
     },
   });
 }
