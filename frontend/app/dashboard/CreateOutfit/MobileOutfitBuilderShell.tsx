@@ -4,7 +4,6 @@ import { ClothingItem, Slot } from "../../types/clothes";
 import { OutfitRecommendation } from "../../types/aiStylist";
 import BuilderOutfitPreview from "./BuilderOutfitPreview";
 import MobilePreviewCarousel from "./MobilePreviewCarousel";
-import MobileSaveBar from "./MobileSaveBar";
 import AiLookActionBar from "./AiLookActionBar";
 import { History, Sparkles } from "lucide-react";
 
@@ -95,9 +94,7 @@ export default function MobileOutfitBuilderShell({
   return (
     <div
       id="mobile-outfit-builder"
-      className={`md:hidden flex min-h-[calc(100dvh-var(--nav-height)-var(--safe-bottom)-1.5rem)] flex-1 flex-col overflow-hidden ${
-        onBuilderSlide ? "pb-[3.75rem]" : ""
-      }`}
+      className="md:hidden flex min-h-[calc(100dvh-var(--nav-height)-var(--safe-bottom)-1.5rem)] flex-1 flex-col overflow-hidden"
     >
       <header className={`shrink-0 ${hasAiResults ? "mb-1" : "mb-2"}`}>
         {!hasAiResults ? (
@@ -106,19 +103,35 @@ export default function MobileOutfitBuilderShell({
             <p className="mt-1 text-sm text-almaari-muted">
               Ask Almaari or build a look yourself.
             </p>
-            <label className="mt-2 block">
-              <span className="mb-1 block text-xs font-medium text-almaari-muted">
-                Outfit name (optional)
-              </span>
+          </>
+        ) : null}
+
+        {onBuilderSlide ? (
+          <label className={`block ${hasAiResults ? "" : "mt-2"}`}>
+            <span className="mb-1 block text-xs font-medium text-almaari-muted">
+              Outfit name (optional)
+            </span>
+            <div className="flex items-center gap-2">
               <input
+                id="create-outfit-form-name"
                 type="text"
                 value={name}
                 onChange={(e) => onNameChange(e.target.value)}
                 placeholder="Weekend dinner"
-                className="h-10 w-full rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm text-almaari-ink focus:outline-none focus:ring-2 focus:ring-almaari-accent/30"
+                className="h-10 min-w-0 flex-1 rounded-almaari border border-almaari-border bg-almaari-surface-raised px-3 text-sm text-almaari-ink focus:outline-none focus:ring-2 focus:ring-almaari-accent/30"
               />
-            </label>
-          </>
+              <button
+                id="mobile-save-outfit-btn"
+                type="button"
+                disabled={saving || !canSave}
+                onClick={onSave}
+                aria-label={saving ? "Saving outfit" : "Save outfit"}
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-almaari bg-almaari-accent px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </label>
         ) : null}
 
         <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-almaari-muted">
@@ -228,16 +241,6 @@ export default function MobileOutfitBuilderShell({
           )}
         </button>
       </div>
-
-      <MobileSaveBar
-        selectedCount={filledSlotCount}
-        saving={saving}
-        canSave={canSave}
-        onSave={onSave}
-        showSaveControls={onBuilderSlide}
-        name={hasAiResults && onBuilderSlide ? name : undefined}
-        onNameChange={hasAiResults && onBuilderSlide ? onNameChange : undefined}
-      />
     </div>
   );
 }
