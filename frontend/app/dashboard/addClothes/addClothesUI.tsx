@@ -34,23 +34,20 @@ import {
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
 import StyleDetailsSection from "../components/StyleDetailsSection";
+import ClothingCropSurface from "../components/ClothingCropSurface";
 import {
-  CROP_OUTPUT_SIZE,
-  canvasToPngBlob,
-  clampCropOffset,
   createWorkingImageBlob,
+  CropRotation,
   CropServiceMode,
-  drawSquareCrop,
-  frameImageBlob,
-  getDrawScale,
-  getMinUserZoom,
+  ABSOLUTE_MIN_USER_ZOOM,
 } from "../../utils/clientImageCrop";
+import { getCroppedClothingBlob } from "../../utils/getCroppedClothingBlob";
+import type { Area, Point } from "react-easy-crop";
 import {
   CROP_OVERLAY_OPTIONS,
   CropOverlayId,
   cropOverlayFromClothingType,
 } from "../../utils/cropOverlays";
-import CropOverlayGuide from "./CropOverlayGuide";
 import { warmupAiClothingService } from "../../utils/warmupAiService";
 import ImageUploadFlow, {
   UploadStage,
@@ -58,6 +55,7 @@ import ImageUploadFlow, {
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
 import ClothingImageSourcePicker from "../../components/clothing-upload/ClothingImageSourcePicker";
 import ClothingOptionAutocomplete from "../components/ClothingOptionAutocomplete";
+import CropAdjustControls from "../components/CropAdjustControls";
 
 const DEFAULT_CLOTHING_TYPE = "T-shirt";
 
@@ -179,16 +177,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
 
   const { user } = useUser();
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const croppedAreaPixelsRef = useRef<Area | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [minZoom, setMinZoom] = useState(0.2);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [cropOverlay, setCropOverlay] = useState<CropOverlayId>(() =>
     cropOverlayFromClothingType(DEFAULT_CLOTHING_TYPE),
   );
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const lastPosRef = useRef({ x: 0, y: 0 });
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [rotation, setRotation] = useState<CropRotation>(0);
   /** Working (downscaled) PNG used for framing + rembg input. */
   const workingBlobRef = useRef<Blob | null>(null);
   /** In-flight or completed rembg-only result for the current generation. */
@@ -387,58 +382,16 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     }
   };
 
-  const drawCropPreview = useCallback(
-    (
-      imageSrc: string,
-      zoomLevel: number,
-      drawOffset: { x: number; y: number },
-    ) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+  const resetCropState = useCallback(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setRotation(0);
+    croppedAreaPixelsRef.current = null;
+  }, []);
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      let img = imageRef.current;
-
-      if (!img || img.src !== imageSrc) {
-        img = new window.Image();
-        img.src = imageSrc;
-        imageRef.current = img;
-      }
-
-      if (!img.complete || img.naturalWidth === 0) {
-        img.onload = () => {
-          const nextMin = getMinUserZoom(img!.naturalWidth, img!.naturalHeight);
-          setMinZoom(nextMin);
-          setZoom((prev) => Math.max(nextMin, prev));
-          drawCropPreview(imageSrc, Math.max(nextMin, zoomLevel), drawOffset);
-        };
-        return;
-      }
-
-      canvas.width = CROP_OUTPUT_SIZE;
-      canvas.height = CROP_OUTPUT_SIZE;
-
-      const nextMin = getMinUserZoom(img.naturalWidth, img.naturalHeight);
-      const clampedZoom = Math.max(nextMin, zoomLevel);
-      const scale = getDrawScale(
-        img.naturalWidth,
-        img.naturalHeight,
-        clampedZoom,
-      );
-      const clampedOffset = clampCropOffset(
-        drawOffset.x,
-        drawOffset.y,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      );
-
-      drawSquareCrop(ctx, img, clampedZoom, clampedOffset);
-    },
-    [],
-  );
+  const handleCropComplete = useCallback((_area: Area, pixels: Area) => {
+    croppedAreaPixelsRef.current = pixels;
+  }, []);
 
   useEffect(() => {
     warmupAiClothingService();
@@ -506,13 +459,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         revokeTrackedUrls();
         const workingUrl = trackUrl(URL.createObjectURL(working.blob));
         setPreview(workingUrl);
-
-        imageRef.current = null;
-        const initialOffset = { x: 0, y: 0 };
-        setZoom(1);
-        setMinZoom(0.2);
-        setOffset(initialOffset);
-        drawCropPreview(workingUrl, 1, initialOffset);
+        resetCropState();
 
         const rembgPromise = removeBackground(working.blob, "rembg_only");
         rembgPromiseRef.current = rembgPromise;
@@ -523,17 +470,15 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         if (!rembgBlob) return;
 
         const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
-        // Soft-swap to transparent PNG; re-fit zoom/offset to the new dimensions.
-        imageRef.current = null;
         setPreview(rembgUrl);
-        drawCropPreview(rembgUrl, zoom, offset);
+        resetCropState();
       } catch (err) {
         console.error("Failed to prepare image for rembg:", err);
         if (cancelled || generation !== rembgGenerationRef.current) return;
         const fallbackUrl = trackUrl(URL.createObjectURL(file));
         workingBlobRef.current = file;
         setPreview(fallbackUrl);
-        drawCropPreview(fallbackUrl, 1, { x: 0, y: 0 });
+        resetCropState();
       }
     })();
 
@@ -541,95 +486,43 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       cancelled = true;
       revokeTrackedUrls();
     };
-    // Intentionally omits zoom/offset — file pick resets crop state above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, drawCropPreview, removeBackground]);
+  }, [file, removeBackground, resetCropState]);
 
   useEffect(() => {
-    if (preview) {
-      drawCropPreview(preview, zoom, offset);
+    setCrop({ x: 0, y: 0 });
+  }, [rotation]);
+
+  const exportFramedBlob = async (): Promise<Blob | null> => {
+    if (!croppedAreaPixelsRef.current) return null;
+
+    let rembgBlob = rembgBlobRef.current;
+    if (!rembgBlob && rembgPromiseRef.current) {
+      rembgBlob = await rembgPromiseRef.current;
+      rembgBlobRef.current = rembgBlob;
     }
-  }, [zoom, preview, offset, drawCropPreview]);
 
-  const generateCroppedImage = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !preview) return null;
+    let exportUrl = preview;
+    let tempUrl: string | null = null;
+    if (rembgBlob) {
+      tempUrl = URL.createObjectURL(rembgBlob);
+      exportUrl = tempUrl;
+    }
+    if (!exportUrl) return null;
 
-    // Ensure the canvas reflects the latest zoom/offset before export.
-    drawCropPreview(preview, zoom, offset);
-    return canvasToPngBlob(canvas);
+    try {
+      return await getCroppedClothingBlob(
+        exportUrl,
+        croppedAreaPixelsRef.current,
+        rotation,
+      );
+    } finally {
+      if (tempUrl) URL.revokeObjectURL(tempUrl);
+    }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isDraggingRef.current = true;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !preview || !imageRef.current) return;
-
-    const dx = e.clientX - lastPosRef.current.x;
-    const dy = e.clientY - lastPosRef.current.y;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-
-    const img = imageRef.current;
-    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
-
-    setOffset((prev) =>
-      clampCropOffset(
-        prev.x + dx,
-        prev.y + dy,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      ),
-    );
-  };
-
-  const getTouchPoint = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    return { x: t.clientX, y: t.clientY };
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    isDraggingRef.current = true;
-    lastPosRef.current = getTouchPoint(e);
-  };
-
-  const handleTouchEnd = () => {
-    isDraggingRef.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current || !preview || !imageRef.current) return;
-
-    const { x, y } = getTouchPoint(e);
-    const dx = x - lastPosRef.current.x;
-    const dy = y - lastPosRef.current.y;
-    lastPosRef.current = { x, y };
-
-    const img = imageRef.current;
-    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
-
-    setOffset((prev) =>
-      clampCropOffset(
-        prev.x + dx,
-        prev.y + dy,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      ),
-    );
-  };
-
-  /** Source blob for AI — always the user-framed canvas crop when available. */
+  /** Source blob for AI — always the user-framed crop when available. */
   const getAnalysisSourceBlob = async (): Promise<Blob | null> => {
-    const cropped = await generateCroppedImage();
+    const cropped = await exportFramedBlob();
     if (cropped) return cropped;
     if (file) return file;
     return null;
@@ -817,20 +710,11 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       formData.append("analysisSnapshot", JSON.stringify(analysisSnapshot));
     }
 
-    // Await early rembg_only (started on file pick). Then apply local pan/zoom framing.
+    // Await rembg if still running, then export the user's crop locally.
     // Do not call the crop service again on submit.
-    let rembgBlob = rembgBlobRef.current;
-    if (!rembgBlob && rembgPromiseRef.current) {
-      rembgBlob = await rembgPromiseRef.current;
-      rembgBlobRef.current = rembgBlob;
-    }
+    if (!preview) return;
 
-    const sourceForFrame = rembgBlob ?? workingBlobRef.current ?? file;
-    if (!sourceForFrame) return;
-
-    const framed =
-      (await frameImageBlob(sourceForFrame, zoom, offset)) ??
-      (await generateCroppedImage());
+    const framed = await exportFramedBlob();
     if (!framed) return;
 
     formData.append("image", framed, "cropped.png");
@@ -1000,22 +884,18 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                     className="relative flex h-[min(220px,42vh)] w-full items-center justify-center overflow-hidden rounded-almaari-lg border border-almaari-border bg-almaari-warm sm:h-[260px] md:h-[300px]"
                   >
                     <div className="relative flex h-full w-full items-center justify-center">
-                      <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
-                        <canvas
-                          ref={canvasRef}
-                          onMouseDown={handleMouseDown}
-                          onMouseMove={handleMouseMove}
-                          onMouseUp={handleMouseUp}
-                          onMouseLeave={handleMouseUp}
-                          onTouchStart={handleTouchStart}
-                          onTouchMove={handleTouchMove}
-                          onTouchEnd={handleTouchEnd}
-                          className="block h-full w-full cursor-grab touch-none active:cursor-grabbing"
-                        />
-                        <div className="pointer-events-none absolute inset-0">
-                          <CropOverlayGuide overlay={cropOverlay} />
-                        </div>
-                      </div>
+                      <ClothingCropSurface
+                        imageUrl={preview}
+                        crop={crop}
+                        zoom={zoom}
+                        rotation={rotation}
+                        minZoom={ABSOLUTE_MIN_USER_ZOOM}
+                        cropOverlay={cropOverlay}
+                        onCropChange={setCrop}
+                        onZoomChange={setZoom}
+                        onRotationChange={setRotation}
+                        onCropComplete={handleCropComplete}
+                      />
 
                       <button
                         type="button"
@@ -1029,10 +909,10 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                       </button>
                       <p className="absolute bottom-2 left-1/2 z-10 max-w-[90%] -translate-x-1/2 rounded-lg bg-white/90 px-2 py-1 text-center text-[11px] text-almaari-muted backdrop-blur-sm sm:text-xs">
                         <span className="sm:hidden">
-                          Drag to reposition · slider to zoom
+                          Drag · dial to rotate · zoom
                         </span>
                         <span className="hidden sm:inline">
-                          Drag to reposition · use slider to zoom
+                          Drag to reposition · use dial and slider to rotate and zoom
                         </span>
                       </p>
                     </div>
@@ -1072,43 +952,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                 </div>
 
                 {preview ? (
-                  <div className="space-y-1.5">
-                    <input
-                      type="range"
-                      min={minZoom}
-                      max={3}
-                      step="0.01"
-                      value={zoom}
-                      onChange={(e) => {
-                        const nextZoom = Number(e.target.value);
-                        setZoom(nextZoom);
-                        if (imageRef.current) {
-                          const img = imageRef.current;
-                          const scale = getDrawScale(
-                            img.naturalWidth,
-                            img.naturalHeight,
-                            nextZoom,
-                          );
-                          setOffset((prev) =>
-                            clampCropOffset(
-                              prev.x,
-                              prev.y,
-                              img.naturalWidth,
-                              img.naturalHeight,
-                              scale,
-                            ),
-                          );
-                        }
-                      }}
-                      className="min-h-8 w-full touch-manipulation accent-almaari-accent"
-                      aria-label="Zoom image for crop"
-                    />
-                    <div className="flex items-center justify-between text-xs text-almaari-muted">
-                      <span>Zoom out</span>
-                      <span>Adjust crop</span>
-                      <span>Zoom in</span>
-                    </div>
-                  </div>
+                  <CropAdjustControls
+                    zoom={zoom}
+                    minZoom={ABSOLUTE_MIN_USER_ZOOM}
+                    rotation={rotation}
+                    onZoomChange={setZoom}
+                    onRotationChange={setRotation}
+                  />
                 ) : null}
               </FormSection>
 
