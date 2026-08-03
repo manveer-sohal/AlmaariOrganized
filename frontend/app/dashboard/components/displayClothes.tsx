@@ -5,7 +5,7 @@ import { useClothesStore } from "../../store/useClothesStore";
 import LoadingClothesCard from "./loadingclothesCard";
 import { AnimatePresence, motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
-import { useClothesData } from "../../hooks/useClothesData";
+import { useClothesData, WARDROBE_IN_VIEW_OPTIONS, WARDROBE_PAGE_SIZE } from "../../hooks/useClothesData";
 import { useSampleWardrobe } from "../../hooks/useSampleWardrobe";
 import { useInView } from "react-intersection-observer";
 import { Sparkles } from "lucide-react";
@@ -181,7 +181,7 @@ function DisplayClothes({ onSelectItem }: DisplayClothesProps) {
   const { colour, type, material, fit, pattern, search } = useClothesStore(
     (s) => s.filters,
   );
-  const numberOfClothes = 20; // TODO: make this dynamic
+  const numberOfClothes = WARDROBE_PAGE_SIZE;
   const {
     clothes,
     fetchNextPage,
@@ -191,7 +191,7 @@ function DisplayClothes({ onSelectItem }: DisplayClothesProps) {
     error,
   } = useClothesData(numberOfClothes);
   const { seedSamples, clearSamples } = useSampleWardrobe();
-  const { ref, inView } = useInView();
+  const { ref, inView } = useInView(WARDROBE_IN_VIEW_OPTIONS);
 
   const seeding = seedSamples.isPending;
   const seedError =

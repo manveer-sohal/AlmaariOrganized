@@ -47,6 +47,8 @@ type MobileOutfitBuilderShellProps = {
   saving: boolean;
   canSave: boolean;
   onSave: () => void;
+  flashCarouselNext?: boolean;
+  onDismissCarouselNextHint?: () => void;
 };
 
 export default function MobileOutfitBuilderShell({
@@ -80,6 +82,8 @@ export default function MobileOutfitBuilderShell({
   saving,
   canSave,
   onSave,
+  flashCarouselNext = false,
+  onDismissCarouselNextHint,
 }: MobileOutfitBuilderShellProps) {
   const hasAiResults = recommendations.length > 0;
   const onBuilderSlide = !hasAiResults || activeGeneratedIndex === 0;
@@ -155,6 +159,8 @@ export default function MobileOutfitBuilderShell({
             onReplaceSlot={onReplaceSlot}
             previewHighlight={previewHighlight}
             dotsBottomClass={viewingAiLook ? "bottom-11" : "bottom-3"}
+            flashNextArrow={flashCarouselNext}
+            onDismissNextHint={onDismissCarouselNextHint}
           />
         ) : (
           <BuilderOutfitPreview

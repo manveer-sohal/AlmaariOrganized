@@ -44,7 +44,28 @@
   }
 }
 
+@keyframes carousel-next-hint {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 93, 154, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(79, 93, 154, 0);
+  }
+}
+
 @layer utilities {
+  .carousel-next-hint {
+    animation: carousel-next-hint 1.4s ease-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carousel-next-hint {
+      animation: none;
+      box-shadow: 0 0 0 3px rgba(79, 93, 154, 0.35);
+    }
+  }
+
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;

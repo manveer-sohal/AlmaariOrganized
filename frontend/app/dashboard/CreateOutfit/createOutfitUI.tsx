@@ -26,7 +26,7 @@ import AIStylistBottomSheet from "./AIStylistBottomSheet";
 import WardrobeDrawer from "./WardrobeDrawer";
 import MobileGenerationHistorySheet from "./MobileGenerationHistorySheet";
 import StylistEntryPrompt from "../../components/ux/StylistEntryPrompt";
-import { useClothesData } from "../../hooks/useClothesData";
+import { useClothesData, WARDROBE_IN_VIEW_OPTIONS, WARDROBE_PAGE_SIZE } from "../../hooks/useClothesData";
 import { useCredits } from "../../hooks/useCredits";
 import { useStylistRecommendations } from "../../hooks/useStylistRecommendations";
 import { useStylistFeedback } from "../../hooks/useStylistFeedback";
@@ -117,7 +117,7 @@ function CreateOutfitUI({
   const { user } = useUser();
   const queryClient = useQueryClient();
   const { credits } = useCredits();
-  const numberOfClothes = 20;
+  const numberOfClothes = WARDROBE_PAGE_SIZE;
 
   const [selectedBySlot, setSelectedBySlot] = useState<
     Partial<Record<Slot, ClothingItem[] | null>>
@@ -156,6 +156,7 @@ function CreateOutfitUI({
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState(false);
   const [activeGeneratedIndex, setActiveGeneratedIndex] = useState(0);
   const [carouselReturnNonce, setCarouselReturnNonce] = useState(0);
+  const [flashCarouselNext, setFlashCarouselNext] = useState(false);
   const [showEntryPrompt, setShowEntryPrompt] = useState(false);
 
   const {
@@ -174,7 +175,7 @@ function CreateOutfitUI({
   const { mutate: submitFeedback } = useStylistFeedback();
   const session = useStylistSession();
 
-  const { ref, inView } = useInView();
+  const { ref, inView } = useInView(WARDROBE_IN_VIEW_OPTIONS);
   React.useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -196,6 +197,16 @@ function CreateOutfitUI({
   useEffect(() => {
     setActiveGeneratedIndex(0);
   }, [session.activeGeneration?.id]);
+
+  useEffect(() => {
+    if (!flashCarouselNext) return;
+    if (activeGeneratedIndex > 0) {
+      setFlashCarouselNext(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setFlashCarouselNext(false), 8000);
+    return () => window.clearTimeout(timer);
+  }, [flashCarouselNext, activeGeneratedIndex]);
 
   useEffect(() => {
     if (!seedItem) return;
@@ -485,8 +496,7 @@ function CreateOutfitUI({
       setStylistStatus("success");
       setRefinementPrompt("");
       setPendingRefinement(null);
-      // Land on first AI look (index 1); slide 0 stays the user’s current outfit.
-      setActiveGeneratedIndex(1);
+      setFlashCarouselNext(true);
       setIsAIStylistOpen(false);
       const count = result.data.recommendations?.length || 3;
       setAppliedConfirmation(`${count} outfits generated — browse to compare`);
@@ -760,6 +770,8 @@ function CreateOutfitUI({
               saving={saving}
               canSave={canSave}
               onSave={saveOutfit}
+              flashCarouselNext={flashCarouselNext}
+              onDismissCarouselNextHint={() => setFlashCarouselNext(false)}
             />
 
             <div className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:items-start">
@@ -815,6 +827,8 @@ function CreateOutfitUI({
                 appliedConfirmation={appliedConfirmation}
                 isGenerating={isGenerating}
                 panelHeightClass={panelHeightClass}
+                flashCarouselNext={flashCarouselNext}
+                onDismissCarouselNextHint={() => setFlashCarouselNext(false)}
               />
             </div>
           </div>
