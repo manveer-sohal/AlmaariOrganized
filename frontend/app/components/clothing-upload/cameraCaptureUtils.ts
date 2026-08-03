@@ -36,6 +36,83 @@ export function isVideoReadyForCapture(video: HTMLVideoElement): boolean {
   return video.videoWidth > 0 && video.videoHeight > 0;
 }
 
+export type RectLike = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+/**
+ * Map a screen-space crop frame onto intrinsic video pixels for object-cover video.
+ * When mirror is true, matches the user-facing CSS scaleX(-1) preview.
+ */
+export function computeVideoSourceCrop(
+  videoWidth: number,
+  videoHeight: number,
+  videoRect: RectLike,
+  cropRect: RectLike,
+  mirror = false,
+): { sx: number; sy: number; sw: number; sh: number } {
+  if (!videoWidth || !videoHeight || !videoRect.width || !videoRect.height) {
+    throw new Error("Video metadata not loaded");
+  }
+
+  const scale = Math.max(
+    videoRect.width / videoWidth,
+    videoRect.height / videoHeight,
+  );
+  const renderedW = videoWidth * scale;
+  const renderedH = videoHeight * scale;
+  const renderedLeft = videoRect.left + (videoRect.width - renderedW) / 2;
+  const renderedTop = videoRect.top + (videoRect.height - renderedH) / 2;
+  const renderedRight = renderedLeft + renderedW;
+  const renderedBottom = renderedTop + renderedH;
+
+  const cropLeft = cropRect.left;
+  const cropTop = cropRect.top;
+  const cropRight = cropRect.left + cropRect.width;
+  const cropBottom = cropRect.top + cropRect.height;
+
+  const intersectLeft = Math.max(cropLeft, renderedLeft);
+  const intersectTop = Math.max(cropTop, renderedTop);
+  const intersectRight = Math.min(cropRight, renderedRight);
+  const intersectBottom = Math.min(cropBottom, renderedBottom);
+
+  const intersectW = Math.max(0, intersectRight - intersectLeft);
+  const intersectH = Math.max(0, intersectBottom - intersectTop);
+
+  if (intersectW <= 0 || intersectH <= 0) {
+    throw new Error("Crop frame does not overlap the camera preview");
+  }
+
+  const relLeft = intersectLeft - videoRect.left;
+  const relRight = intersectLeft - videoRect.left + intersectW;
+
+  let sx: number;
+  const sw = intersectW / scale;
+  const sy = (intersectTop - renderedTop) / scale;
+  const sh = intersectH / scale;
+
+  if (mirror) {
+    sx = (videoRect.width - relRight - (videoRect.width - renderedW) / 2) / scale;
+  } else {
+    sx = (relLeft - (videoRect.width - renderedW) / 2) / scale;
+  }
+
+  const clampedSx = Math.max(0, Math.min(videoWidth - 1, sx));
+  const clampedSy = Math.max(0, Math.min(videoHeight - 1, sy));
+  const clampedSw = Math.max(1, Math.min(videoWidth - clampedSx, sw));
+  const clampedSh = Math.max(1, Math.min(videoHeight - clampedSy, sh));
+
+  return {
+    sx: clampedSx,
+    sy: clampedSy,
+    sw: clampedSw,
+    sh: clampedSh,
+  };
+}
+
 export function readFacingFromStream(stream: MediaStream): CameraFacing {
   const track = stream.getVideoTracks?.()?.[0];
   const settings = track?.getSettings?.();
@@ -201,6 +278,56 @@ export async function captureVideoFrameToFile(
 
   ctx.drawImage(video, 0, 0, width, height);
 
+  return canvasToJpegFile(canvas, fileName, quality);
+}
+
+/** Capture only the region inside the on-screen crop frame overlay. */
+export async function captureVideoFrameCroppedToFile(
+  video: HTMLVideoElement,
+  cropFrameEl: HTMLElement,
+  fileName = "clothing-photo.jpg",
+  quality = 0.92,
+  mirror = false,
+): Promise<File> {
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+
+  if (!width || !height) {
+    throw new Error("Video metadata not loaded");
+  }
+
+  const videoRect = video.getBoundingClientRect();
+  const cropRect = cropFrameEl.getBoundingClientRect();
+  const { sx, sy, sw, sh } = computeVideoSourceCrop(
+    width,
+    height,
+    videoRect,
+    cropRect,
+    mirror,
+  );
+
+  const outW = Math.max(1, Math.round(sw));
+  const outH = Math.max(1, Math.round(sh));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not create canvas context");
+  }
+
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+
+  return canvasToJpegFile(canvas, fileName, quality);
+}
+
+async function canvasToJpegFile(
+  canvas: HTMLCanvasElement,
+  fileName: string,
+  quality: number,
+): Promise<File> {
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((result) => resolve(result), "image/jpeg", quality);
   });

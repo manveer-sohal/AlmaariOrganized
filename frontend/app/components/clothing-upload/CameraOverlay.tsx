@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import CropOverlayGuide from "../../dashboard/addClothes/CropOverlayGuide";
 import {
   CROP_OVERLAY_OPTIONS,
@@ -8,6 +9,7 @@ import {
 
 type CameraOverlayProps = {
   cropOverlay: CropOverlayId;
+  cropFrameRef?: RefObject<HTMLDivElement | null>;
   onClose: () => void;
   onFlipCamera?: () => void;
   showFlip?: boolean;
@@ -23,9 +25,10 @@ const overlayHint = (overlay: CropOverlayId): string => {
   return `Align the ${label.toLowerCase()} with the guide`;
 };
 
-/** HTML overlay above live camera — not captured in the photo. */
+/** Live crop frame overlay aligned with the captured region. */
 export default function CameraOverlay({
   cropOverlay,
+  cropFrameRef,
   onClose,
   onFlipCamera,
   showFlip = false,
@@ -69,7 +72,11 @@ export default function CameraOverlay({
 
       <div className="flex flex-1 flex-col items-center justify-center ">
         <div className="relative h-full w-full">
-          <div className="absolute inset-3 rounded-[1.75rem] border-2 border-dashed " />
+          <div
+            ref={cropFrameRef}
+            id="camera-crop-frame"
+            className="absolute inset-3 rounded-[1.75rem] border-2 border-dashed border-white/80"
+          />
 
           <span className="absolute left-3 top-3 h-8 w-8 rounded-tl-2xl border-l-[3px] border-t-[3px] border-white" />
           <span className="absolute right-3 top-3 h-8 w-8 rounded-tr-2xl border-r-[3px] border-t-[3px] border-white" />

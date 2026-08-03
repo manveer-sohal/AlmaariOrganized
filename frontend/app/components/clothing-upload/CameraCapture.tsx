@@ -13,6 +13,7 @@ import {
   type CameraFacing,
   type CameraState,
   captureVideoFrameToFile,
+  captureVideoFrameCroppedToFile,
   countAvailableCameras,
   flipCameraFacing,
   isGetUserMediaSupported,
@@ -42,6 +43,7 @@ export default function CameraCapture({
 }: CameraCaptureProps) {
   const reduced = usePrefersReducedMotion();
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cropFrameRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
@@ -153,8 +155,14 @@ export default function CameraCapture({
         }
       }
 
-      const file = await captureVideoFrameToFile(
+      const cropFrame = cropFrameRef.current;
+      if (!cropFrame) {
+        throw new Error("Crop frame unavailable");
+      }
+
+      const file = await captureVideoFrameCroppedToFile(
         video,
+        cropFrame,
         "clothing-photo.jpg",
         0.92,
         facingMode === "user",
@@ -277,6 +285,7 @@ export default function CameraCapture({
           {state === "live" ? (
             <CameraOverlay
               cropOverlay={cropOverlay}
+              cropFrameRef={cropFrameRef}
               onClose={handleClose}
               onFlipCamera={
                 canFlipCamera ? () => void handleFlipCamera() : undefined
