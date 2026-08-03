@@ -4,7 +4,15 @@ import { ClothingItem } from "../types/clothes";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 import { normalizeClothingItem } from "../utils/validateClothingMetadata";
 
-export const useClothesData = (numberOfClothes: number = 40) => {
+/** Wardrobe infinite-scroll page size — fewer round trips than 20. */
+export const WARDROBE_PAGE_SIZE = 40;
+
+/** Start loading the next page before the sentinel enters the viewport. */
+export const WARDROBE_IN_VIEW_OPTIONS = {
+  rootMargin: "800px 0px",
+} as const;
+
+export const useClothesData = (numberOfClothes: number = WARDROBE_PAGE_SIZE) => {
   const { user } = useUser();
 
   const {

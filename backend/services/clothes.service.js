@@ -22,6 +22,36 @@ import {
 } from "../utils/normalizeClothingAnalysisResponse.js";
 import { SAMPLE_WARDROBE_ITEMS } from "../data/sampleWardrobe.js";
 
+const USER_OBJECT_ID_CACHE_TTL = 3600;
+
+const resolveUserObjectId = async (auth0Id) => {
+  const cacheKey = `userObjectId:${auth0Id}`;
+
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return new mongoose.Types.ObjectId(cached);
+    }
+  } catch (err) {
+    console.warn("Redis userObjectId get failed:", err);
+  }
+
+  const user = await User.findOne({ auth0Id }, { _id: 1 }).lean();
+  if (!user?._id) {
+    return null;
+  }
+
+  try {
+    await redis.set(cacheKey, user._id.toString(), {
+      EX: USER_OBJECT_ID_CACHE_TTL,
+    });
+  } catch (err) {
+    console.warn("Redis userObjectId set failed:", err);
+  }
+
+  return user._id;
+};
+
 // Helper to invalidate all userClothes cache keys for a user (any page/limit)
 const invalidateUserClothesCache = async (auth0Id) => {
   try {
@@ -355,12 +385,8 @@ export const getOutfits = async ({ auth0Id }) => {
 };
 
 export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
-  console.log("List clothes");
-
-  // Redis cache key
   const redisKey = `userClothes:${auth0Id}:page:${page}:limit:${numberOfClothes}`;
 
-  // Check cache for the data (safe fallback if Redis unavailable)
   let cachedData = null;
   try {
     cachedData = await redis.get(redisKey);
@@ -368,14 +394,12 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
     console.warn("Redis get failed, continuing without cache:", err);
   }
   if (cachedData) {
-    console.log("Cache hit: Returning cached data");
-
     const parsedCache = JSON.parse(cachedData);
     const cachedClothes = Array.isArray(parsedCache)
       ? parsedCache
       : Array.isArray(parsedCache?.Clothes)
-      ? parsedCache.Clothes
-      : [];
+        ? parsedCache.Clothes
+        : [];
 
     return {
       status: 200,
@@ -387,36 +411,28 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   const skip = (page - 1) * numberOfClothes;
   const limit = numberOfClothes;
 
-  // Measure MongoDB query time
-  const startTime = Date.now();
-  console.log("auth0Id", auth0Id);
-  const userId = await User.findOne({ auth0Id }, { _id: 1 });
-  if (!userId) {
-    console.log("User Not Found");
+  const userObjectId = await resolveUserObjectId(auth0Id);
+  if (!userObjectId) {
     throw { status: 404, error: "User Not Found" };
   }
 
-  const userData = await Clothes.find({ userId: userId._id })
+  const userData = await Clothes.find({ userId: userObjectId })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .lean();
 
-  const endTime = Date.now();
-  console.log(`Query took ${endTime - startTime} ms`);
-
-  // Store the data in Redis cache with a TTL (best-effort)
   try {
     await redis.set(redisKey, JSON.stringify(userData || []), {
       EX: 600,
     });
-    console.log("Cache miss: Queried MongoDB and cached the result");
   } catch (err) {
     console.warn(
       "Redis set failed, returning Mongo result without caching:",
       err,
     );
   }
-  console.log("it worked");
+
   return {
     status: 200,
     clothes: userData || [],
