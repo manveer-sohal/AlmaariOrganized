@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import connectMongoDB from "../../libs/mongodb.js";
-import { User } from "../../models/Users.js";
+import { User, Clothes } from "../../models/Users.js";
 import {
   buildExplanation,
   canFormOutfits,
@@ -32,17 +32,35 @@ import { generateConstrainedCandidates } from "./candidateGenerator.js";
 import { validateOutfitRecommendations } from "./validator.js";
 import { rerankCandidates } from "./reranker.js";
 import { sanitizeRecommendationLayering } from "./layering/layeringValidator.js";
+import {
+  STYLIST_CLOTHING_PROJECTION,
+  assertNoImageSrc,
+} from "../../constants/stylistProjection.js";
 
 const LABELS = ["Safe Choice", "Styled Choice", "Alternative"];
 const WORKFLOW = "outfit_recommendation";
 
 const loadUserWardrobe = async (auth0Id) => {
   await connectMongoDB();
-  const user = await User.findOne({ auth0Id }).populate("clothes");
+  const user = await User.findOne({ auth0Id }).select("clothes").lean();
   if (!user) {
     throw { status: 404, message: "User not found" };
   }
-  return user.clothes || [];
+  const ids = user.clothes || [];
+  if (!ids.length) return [];
+
+  const clothes = await Clothes.find({ _id: { $in: ids } })
+    .select(STYLIST_CLOTHING_PROJECTION)
+    .lean();
+
+  assertNoImageSrc(clothes, "loadUserWardrobe");
+  logInfo("stylist_candidates_loaded", {
+    workflow: WORKFLOW,
+    userIdHash: hashUserId(auth0Id),
+    candidateCount: clothes.length,
+    projectionExcludesImageSrc: true,
+  });
+  return clothes;
 };
 
 const buildDeterministicRecommendations = (
