@@ -4,13 +4,23 @@ import { ClothingItem } from "../types/clothes";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
 import { normalizeClothingItem } from "../utils/validateClothingMetadata";
 
-/** Wardrobe infinite-scroll page size — fewer round trips than 20. */
+/** Canonical wardrobe page size — shared by home, wardrobe, and outfit builder. */
 export const WARDROBE_PAGE_SIZE = 40;
+/** Alias for shared constant naming in architecture docs. */
+export const CLOTHES_PAGE_SIZE = WARDROBE_PAGE_SIZE;
+/** Onboarding only needs existence / count signal — keep a tiny page. */
+export const ONBOARDING_CLOTHES_PAGE_SIZE = 1;
 
 /** Start loading the next page before the sentinel enters the viewport. */
 export const WARDROBE_IN_VIEW_OPTIONS = {
   rootMargin: "800px 0px",
 } as const;
+
+export const clothesQueryKeys = {
+  all: ["clothesData"] as const,
+  list: (sub: string | null | undefined, pageSize: number) =>
+    ["clothesData", sub ?? undefined, pageSize] as const,
+};
 
 export const useClothesData = (numberOfClothes: number = WARDROBE_PAGE_SIZE) => {
   const { user } = useUser();
@@ -24,7 +34,7 @@ export const useClothesData = (numberOfClothes: number = WARDROBE_PAGE_SIZE) => 
     isFetching,
     error,
   } = useInfiniteQuery({
-    queryKey: ["clothesData", user?.sub, numberOfClothes],
+    queryKey: clothesQueryKeys.list(user?.sub, numberOfClothes),
     enabled: !!user,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {

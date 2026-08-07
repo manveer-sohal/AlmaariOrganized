@@ -32,7 +32,7 @@ export default function HomeHub({
   onAddClothes,
 }: HomeHubProps) {
   const { user } = useUser();
-  const { clothes, isLoadingClothes } = useClothesData(20);
+  const { clothes, isLoadingClothes } = useClothesData();
   const { data: outfits = [], isPending: isLoadingOutfits } = useOutfits();
   const { onboarding, isLoadingOnboarding } = useOnboarding();
 

@@ -603,6 +603,7 @@ function CreateOutfitUI({
       setName("");
       setAppliedConfirmation(null);
       queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
+      queryClient.invalidateQueries({ queryKey: ["outfits", user?.sub] });
     } catch (e) {
       console.error(e);
     } finally {

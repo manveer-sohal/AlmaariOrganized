@@ -18,7 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { usePrefersReducedMotion } from "../../components/ux/motion";
-import { useClothesData } from "../../hooks/useClothesData";
+import { useClothesData, ONBOARDING_CLOTHES_PAGE_SIZE } from "../../hooks/useClothesData";
 import { useSampleWardrobe } from "../../hooks/useSampleWardrobe";
 import { completeProfileOnboarding } from "../../utils/completeProfileOnboarding";
 import AddClothesUI from "../addClothes/addClothesUI";
@@ -57,7 +57,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   const queryClient = useQueryClient();
   const reduced = usePrefersReducedMotion();
   const { seedSamples } = useSampleWardrobe();
-  const { clothes, isLoadingClothes } = useClothesData(1);
+  const { clothes, isLoadingClothes } = useClothesData(ONBOARDING_CLOTHES_PAGE_SIZE);
   const hasExistingClothes = !isLoadingClothes && clothes.length > 0;
 
   const [step, setStep] = useState<Step>("styles");
