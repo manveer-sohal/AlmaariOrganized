@@ -33,6 +33,8 @@ import {
   clearAuthTokenCache,
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
+import { createIdempotencyKey } from "../../utils/idempotencyKey";
+import { clothesQueryKeys } from "../../hooks/useClothesData";
 import StyleDetailsSection from "../components/StyleDetailsSection";
 import ClothingCropSurface from "../components/ClothingCropSurface";
 import {
@@ -190,6 +192,9 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const rembgPromiseRef = useRef<Promise<Blob | null> | null>(null);
   const rembgBlobRef = useRef<Blob | null>(null);
   const rembgGenerationRef = useRef(0);
+  const uploadIdempotencyKeyRef = useRef<string | null>(null);
+  const analyzeIdempotencyKeyRef = useRef<string | null>(null);
+  const submitInFlightRef = useRef(false);
   const previewUrlsRef = useRef<string[]>([]);
 
   const formatInput = (value: string) => {
@@ -661,9 +666,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       }
 
       const networkStart = performance.now();
+      if (!analyzeIdempotencyKeyRef.current) {
+        analyzeIdempotencyKeyRef.current = createIdempotencyKey("analyze");
+      }
       const result = await analyzeClothing({
         image,
         requestId: traceId,
+        idempotencyKey: analyzeIdempotencyKeyRef.current,
       });
       stepMs["network + backend + AI"] = performance.now() - networkStart;
 
@@ -720,10 +729,16 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     formData.append("image", framed, "cropped.png");
     formData.append("imageAlreadyCropped", "true");
 
+    if (!uploadIdempotencyKeyRef.current) {
+      uploadIdempotencyKeyRef.current = createIdempotencyKey("upload");
+    }
+
     const uploadClothes = async () =>
       fetch(`/api/clothes/upload`, {
         method: "POST",
-        headers: await getAuthHeaders(),
+        headers: await getAuthHeaders({
+          "Idempotency-Key": uploadIdempotencyKeyRef.current!,
+        }),
         body: formData,
       });
 
@@ -733,15 +748,15 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       response = await uploadClothes();
     }
 
-    console.log("response", response);
     return await response;
   };
 
   //If submit is clicked
   const handleSubmit = async (event: React.MouseEvent | React.FormEvent) => {
     event.preventDefault();
+    if (submitInFlightRef.current || loading) return;
+    submitInFlightRef.current = true;
     setLoading(true);
-    console.log("submit clicked");
 
     if (
       validateColour() &&
@@ -758,9 +773,10 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       const response = await pushDB();
 
       if (response && response.ok) {
-        console.log("picture uploaded1");
+        uploadIdempotencyKeyRef.current = null;
+        analyzeIdempotencyKeyRef.current = null;
         await queryClient.invalidateQueries({
-          queryKey: ["clothesData", user?.sub],
+          queryKey: clothesQueryKeys.all,
         });
         queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
         if (onUploadSuccess) {
@@ -780,6 +796,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       console.log("form not filled in properly");
     }
     setLoading(false);
+    submitInFlightRef.current = false;
 
     //toggleForm();
   };

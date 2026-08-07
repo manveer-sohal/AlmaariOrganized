@@ -6,10 +6,13 @@ import {
   logAnalyzeStep,
 } from "../utils/aiAnalyzeTiming";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
+import { createIdempotencyKey } from "../utils/idempotencyKey";
 
 type AnalyzeClothingInput = {
   image: string;
   requestId?: string;
+  /** Reuse across retries of the same logical analysis. */
+  idempotencyKey?: string;
 };
 
 export const useAnalyzeClothing = () => {
@@ -17,19 +20,25 @@ export const useAnalyzeClothing = () => {
   const { user } = useUser();
 
   return useMutation({
-    mutationFn: async ({ image, requestId }: AnalyzeClothingInput) => {
+    mutationFn: async ({
+      image,
+      requestId,
+      idempotencyKey,
+    }: AnalyzeClothingInput) => {
       if (!user?.sub) {
         throw new Error("You must be logged in to analyze images.");
       }
 
       const traceId = requestId ?? "unknown";
       const fetchStart = performance.now();
+      const key = idempotencyKey || createIdempotencyKey("analyze");
 
       const postAnalyze = async () =>
         fetch("/api/ai/analyze-clothing", {
           method: "POST",
           headers: await getAuthHeaders({
             "Content-Type": "application/json",
+            "Idempotency-Key": key,
             ...(requestId ? { "X-Request-Id": requestId } : {}),
           }),
           body: JSON.stringify({ image }),
@@ -53,7 +62,11 @@ export const useAnalyzeClothing = () => {
       const data: AnalyzeClothingResponse = await response.json();
 
       if (isAiAnalyzeTimingEnabled()) {
-        logAnalyzeStep(traceId, "JSON parse response", performance.now() - parseStart);
+        logAnalyzeStep(
+          traceId,
+          "JSON parse response",
+          performance.now() - parseStart,
+        );
       }
 
       if (!response.ok || !data.success) {

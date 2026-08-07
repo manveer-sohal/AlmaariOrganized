@@ -159,6 +159,44 @@ export const uploadData = async (request, response) => {
     return response.status(400).json({ error: "No file uploaded" });
   }
 
+  const {
+    beginIdempotentOperation,
+    completeIdempotentOperation,
+    failIdempotentOperation,
+    fingerprintImageBuffer,
+    validateIdempotencyKey,
+  } = await import("../services/idempotency.service.js");
+
+  const rawKey =
+    request.get("Idempotency-Key") || request.body?.idempotencyKey || null;
+  let idempotency = null;
+
+  if (rawKey) {
+    const keyCheck = validateIdempotencyKey(rawKey);
+    if (!keyCheck.ok) {
+      return response
+        .status(400)
+        .json({ error: `Invalid Idempotency-Key (${keyCheck.reason})` });
+    }
+    const fingerprint = fingerprintImageBuffer(file.buffer, {
+      type,
+      colour,
+      material,
+      fit,
+      pattern,
+      op: "clothing_upload",
+    });
+    idempotency = await beginIdempotentOperation({
+      auth0Id,
+      operationType: "clothing_upload",
+      idempotencyKey: keyCheck.value,
+      requestFingerprint: fingerprint,
+    });
+    if (idempotency.kind === "replay" || idempotency.kind === "conflict" || idempotency.kind === "in_progress") {
+      return response.status(idempotency.statusCode).json(idempotency.body);
+    }
+  }
+
   try {
     const parseColour = (() => {
       try {
@@ -220,10 +258,27 @@ export const uploadData = async (request, response) => {
       analysisSnapshot: parseAnalysisSnapshot,
     });
 
-    return response
-      .status(result.status || 200)
-      .json({ message: result.message, clothing: result.clothing });
+    const body = {
+      message: result.message,
+      clothing: result.clothing,
+    };
+
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await completeIdempotentOperation(idempotency.record._id, {
+        resultPayload: body,
+        clothingId: result.clothing?._id || null,
+      });
+    }
+
+    return response.status(result.status || 200).json(body);
   } catch (e) {
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await failIdempotentOperation(idempotency.record._id, {
+        errorCode: "upload_failed",
+        errorMessage: e.error || e.message || "Failed to add clothes",
+        terminal: (e.status || 500) < 500,
+      }).catch(() => {});
+    }
     console.error(e);
     return response.status(e.status || 500).json({
       error: e.error || e.message || "Failed to add clothes",
