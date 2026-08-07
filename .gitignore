@@ -12,6 +12,4 @@ bash
 settings.json
 s3-test.js
 .cursor/
-docs/
-.env.example
 backfillStylingMetadata.js
