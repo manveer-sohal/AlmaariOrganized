@@ -29,6 +29,7 @@ import {
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
 import { WorkflowSession, logPerfBaseline } from "../../utils/workflowTiming";
+import { tryDirectClothesUpload } from "../../utils/directClothesUpload";
 import { Sparkles, Send, ArrowLeft } from "lucide-react";
 import {
   clearAuthTokenCache,
@@ -775,8 +776,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     const framed = await exportFramedBlob();
     if (!framed) return;
 
-    formData.append("image", framed, "cropped.png");
-    formData.append("imageAlreadyCropped", "true");
+    const meta = {
+      type: usersClothType,
+      colour: usersColours,
+      material: usersClothMaterial,
+      fit: usersClothFit,
+      pattern: usersClothPattern,
+    };
 
     if (!uploadIdempotencyKeyRef.current) {
       uploadIdempotencyKeyRef.current = createIdempotencyKey("upload");
@@ -787,6 +793,30 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     if (!perfSessionRef.current) {
       perfSessionRef.current = new WorkflowSession("add_clothes", traceId);
     }
+
+    // Prefer direct S3 upload when API enables object storage.
+    try {
+      const direct = await tryDirectClothesUpload({
+        blob: framed,
+        contentType: "image/png",
+        idempotencyKey: uploadIdempotencyKeyRef.current,
+        metadata: meta,
+        clientCropVerified: true,
+        traceId,
+      });
+      if (direct) {
+        const uploadMs = 0;
+        perfSessionRef.current.mark("uploadMs", uploadMs);
+        perfSessionRef.current.logPipelineBaseline("add_clothes_pipeline");
+        return direct.response;
+      }
+    } catch (err) {
+      console.warn("Direct upload unavailable, falling back to multipart", err);
+    }
+
+    formData.append("image", framed, "cropped.png");
+    formData.append("imageAlreadyCropped", "true");
+
     const uploadStart = performance.now();
 
     const uploadClothes = async () =>

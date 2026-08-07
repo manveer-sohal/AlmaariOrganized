@@ -6,6 +6,7 @@ import { Heart, MoreHorizontal, Trash } from "lucide-react";
 import { motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
+import { resolveClothingDisplaySrc } from "../../utils/resolveClothingDisplaySrc";
 import { useFavouritesStore } from "../../store/useFavouritesStore";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
 import { softTransition, usePrefersReducedMotion } from "./motion";
@@ -31,6 +32,12 @@ export default function ClothingCard({
   const toggleClothing = useFavouritesStore((s) => s.toggleClothing);
   const deleteClothes = useDeleteClothing(item._id);
   const label = humanizeClothingSubtype(item);
+  const displaySrc = resolveClothingDisplaySrc(item, { preferThumbnail: true });
+  const isProcessing =
+    item.processingStatus &&
+    ["upload_pending", "uploaded", "crop_pending", "cropping"].includes(
+      item.processingStatus,
+    );
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -64,16 +71,29 @@ export default function ClothingCard({
       />
 
       <Image
-        src={item.imageSrc || ""}
+        src={displaySrc || ""}
         alt={label}
         fill
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
         className={`object-cover transition-[filter,opacity] duration-300 ${
           loaded ? "opacity-100 blur-0" : "opacity-70 blur-sm"
-        }`}
+        } ${isProcessing ? "opacity-60" : ""}`}
         onLoad={() => setLoaded(true)}
         loading="lazy"
+        unoptimized={
+          displaySrc.startsWith("data:") || displaySrc.startsWith("/samples/")
+        }
       />
+      {isProcessing ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-almaari-ink/50 px-2 py-1 text-center text-[10px] font-medium text-white">
+          Removing background…
+        </div>
+      ) : null}
+      {item.processingStatus === "crop_failed" ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-red-900/70 px-2 py-1 text-center text-[10px] font-medium text-white">
+          Crop failed
+        </div>
+      ) : null}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-almaari-ink/55 to-transparent px-2.5 pb-2.5 pt-10">
         <p className="truncate text-left text-sm font-semibold text-white">

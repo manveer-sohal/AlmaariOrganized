@@ -28,6 +28,12 @@ import {
 import { clothesCacheKeys, userCacheKeys } from "../utils/cacheKeys.js";
 import { summarizeImageBuffer, summarizeImageSrcMeta } from "../utils/safeImageLog.js";
 import { withResolvedImageFields } from "../utils/resolveClothingImage.js";
+import {
+  toWardrobeListItem,
+  WARDROBE_LIST_PROJECTION,
+} from "../utils/clothesDto.js";
+import { collectStorageKeys } from "../utils/objectKeyFactory.js";
+import { enqueueCleanupJob } from "./imageProcessingJob.service.js";
 import { logInfo, logWarn, hashUserId } from "../observability/logger.js";
 import { createTimer } from "../observability/timer.js";
 import { logPerfBaseline } from "../observability/perfBaseline.js";
@@ -90,6 +96,8 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       throw { status: 404, message: "Clothing item not found" };
     }
 
+    const keysToDelete = collectStorageKeys(clothingDoc.imageStorage);
+
     // Remove clothing reference from user and any outfits, then delete the doc
     await Promise.all([
       User.findOneAndUpdate(
@@ -103,6 +111,13 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       ),
       Clothes.deleteOne({ _id: clothingDoc._id }),
     ]);
+
+    if (keysToDelete.length) {
+      enqueueCleanupJob(clothingDoc._id, keysToDelete, {
+        auth0Id,
+        userId: user._id,
+      }).catch(() => {});
+    }
 
     const updatedUser = await User.findOne(
       { auth0Id },
@@ -430,7 +445,7 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
 
     return {
       status: 200,
-      clothes: cachedClothes.map((row) => withResolvedImageFields(row)),
+      clothes: cachedClothes.map((row) => toWardrobeListItem(row)),
       message: "Clothes fetched successfully",
     };
   }
@@ -444,12 +459,13 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   }
 
   const userData = await Clothes.find({ userId: userObjectId })
+    .select(WARDROBE_LIST_PROJECTION)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
 
-  const clothes = (userData || []).map((row) => withResolvedImageFields(row));
+  const clothes = (userData || []).map((row) => toWardrobeListItem(row));
 
   try {
     await redis.set(redisKey, JSON.stringify(clothes), {

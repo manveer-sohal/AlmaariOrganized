@@ -78,8 +78,8 @@ const ClothesSchema = new mongoose.Schema({
   type: { type: String, required: true, index: true },
   imageSrc: { type: String, required: true },
   /**
-   * Optional object-storage metadata for migrating off Base64-in-Mongo.
-   * Dual-read: resolveClothingImage prefers these fields when present,
+   * Object-storage + processing metadata (P2).
+   * Dual-read: resolveClothingImage prefers CDN derivatives when ready,
    * otherwise falls back to imageSrc. Do not drop imageSrc yet.
    */
   imageStorage: {
@@ -90,6 +90,63 @@ const ClothesSchema = new mongoose.Schema({
           enum: ["legacy-base64", "s3"],
           default: "legacy-base64",
         },
+        status: {
+          type: String,
+          enum: [
+            "upload_pending",
+            "uploaded",
+            "crop_pending",
+            "cropping",
+            "cropped",
+            "analyzing",
+            "ready",
+            "upload_failed",
+            "crop_failed",
+            "analysis_failed",
+            "legacy",
+            "deletion_pending",
+          ],
+          default: "legacy",
+        },
+        source: {
+          key: { type: String, default: null },
+          contentType: { type: String, default: null },
+          width: { type: Number, default: null },
+          height: { type: Number, default: null },
+          bytes: { type: Number, default: null },
+          checksum: { type: String, default: null },
+        },
+        canonical: {
+          key: { type: String, default: null },
+          contentType: { type: String, default: null },
+          width: { type: Number, default: null },
+          height: { type: Number, default: null },
+          bytes: { type: Number, default: null },
+          version: { type: Number, default: 1 },
+        },
+        display: {
+          key: { type: String, default: null },
+          contentType: { type: String, default: null },
+          width: { type: Number, default: null },
+          height: { type: Number, default: null },
+          bytes: { type: Number, default: null },
+        },
+        thumbnail: {
+          key: { type: String, default: null },
+          contentType: { type: String, default: null },
+          width: { type: Number, default: null },
+          height: { type: Number, default: null },
+          bytes: { type: Number, default: null },
+        },
+        /** True when source already passed crop/rembg (client-framed rembg). */
+        clientCropVerified: { type: Boolean, default: false },
+        cropMode: { type: String, default: null },
+        lastError: { type: String, default: null },
+        uploadedAt: { type: Date, default: null },
+        croppedAt: { type: Date, default: null },
+        analyzedAt: { type: Date, default: null },
+        migratedAt: { type: Date, default: null },
+        // P0/P1 flat fields retained for dual-read of early migrations
         originalKey: { type: String, default: null },
         displayKey: { type: String, default: null },
         thumbnailKey: { type: String, default: null },
@@ -100,7 +157,6 @@ const ClothesSchema = new mongoose.Schema({
         height: { type: Number, default: null },
         bytes: { type: Number, default: null },
         checksum: { type: String, default: null },
-        migratedAt: { type: Date, default: null },
       },
       { _id: false },
     ),

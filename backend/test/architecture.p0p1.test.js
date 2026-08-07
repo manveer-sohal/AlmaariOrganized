@@ -41,11 +41,12 @@ describe("P0/P1 architecture helpers", () => {
         imageSrc: "data:image/png;base64,abc",
         imageStorage: {
           provider: "s3",
+          status: "ready",
           displayUrl: "https://cdn.example/x.png",
           thumbnailUrl: "https://cdn.example/x-thumb.png",
         },
       });
-      expect(r.imageStatus).to.equal("object_storage");
+      expect(r.imageStatus).to.equal("ready");
       expect(r.imageUrl).to.equal("https://cdn.example/x.png");
     });
   });

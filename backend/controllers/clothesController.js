@@ -13,10 +13,73 @@ import {
 import { retryStyleEnrichmentForUser } from "../services/stylingEnrichment.service.js";
 import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
 import { cropImage, toBase64 } from "../services/image.service.js";
+import {
+  initDirectUpload,
+  completeDirectUpload,
+} from "../services/directUpload.service.js";
 
 import dotenv from "dotenv";
 import { parseStringField } from "../utils/parseClothesFields.js";
 dotenv.config();
+
+export const initClothesUpload = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const result = await initDirectUpload({
+      auth0Id,
+      contentType: request.body?.contentType,
+      contentLength: Number(request.body?.contentLength),
+      checksum: request.body?.checksum,
+      idempotencyKey:
+        request.get("Idempotency-Key") || request.body?.idempotencyKey,
+      clientCropVerified: request.body?.clientCropVerified !== false,
+      type: request.body?.type || "T-shirt",
+      colour: request.body?.colour || ["Black"],
+      material: request.body?.material || "Cotton",
+      fit: request.body?.fit || "Regular",
+      pattern: request.body?.pattern || "Solid",
+    });
+    return response.status(result.status || 200).json(result);
+  } catch (e) {
+    return response.status(e.status || 500).json({
+      error: e.message || e.error || "Upload init failed",
+      code: e.code,
+    });
+  }
+};
+
+export const completeClothesUpload = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const clothingId =
+      request.body?.clothingId || request.body?.operationId;
+    const result = await completeDirectUpload({
+      auth0Id,
+      clothingId,
+      idempotencyKey:
+        request.get("Idempotency-Key") || request.body?.idempotencyKey,
+      metadata: {
+        type: request.body?.type,
+        colour: request.body?.colour,
+        material: request.body?.material,
+        fit: request.body?.fit,
+        pattern: request.body?.pattern,
+      },
+    });
+    return response.status(result.status || 200).json(result);
+  } catch (e) {
+    return response.status(e.status || 500).json({
+      error: e.message || e.error || "Upload complete failed",
+      code: e.code,
+    });
+  }
+};
 
 export const removeData = async (request, response) => {
   const auth0Id = request.auth?.sub;

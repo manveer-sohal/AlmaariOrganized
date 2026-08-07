@@ -15,6 +15,10 @@ import { requestContextMiddleware } from "./middleware/requestContext.js";
 import { getMetricsSnapshot } from "./observability/metrics.js";
 import { assertServiceAuthConfig } from "./utils/serviceAuth.js";
 import { processDueEnrichmentJobs } from "./services/enrichmentJob.service.js";
+import {
+  processDueImagePipelineJobs,
+  processCleanupJobs,
+} from "./services/imageProcessingJob.service.js";
 import { logWarn } from "./observability/logger.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -29,13 +33,19 @@ if (process.env.NODE_ENV !== "test") {
       process.exit(1);
     }
   }
-  // Reclaim durable enrichment jobs left by prior instances (best-effort).
+  // Reclaim durable enrichment + image pipeline jobs left by prior instances.
   setTimeout(() => {
     processDueEnrichmentJobs({ limit: 10 }).catch((err) => {
       logWarn("enrichment_startup_reclaim_failed", {
         errorMessage: err?.message,
       });
     });
+    processDueImagePipelineJobs({ limit: 5 }).catch((err) => {
+      logWarn("image_pipeline_startup_reclaim_failed", {
+        errorMessage: err?.message,
+      });
+    });
+    processCleanupJobs({ limit: 5 }).catch(() => {});
   }, 2000);
 }
 //!!! unistall mongoose from front end !!!!
@@ -79,9 +89,10 @@ app.get("/ready", async (_req, res) => {
     checks.redis = false;
   }
 
-  // Opportunistic enrichment reclaim on readiness probes (bounded).
+  // Opportunistic enrichment + image pipeline reclaim on readiness probes.
   if (checks.mongodb && process.env.NODE_ENV !== "test") {
     processDueEnrichmentJobs({ limit: 2 }).catch(() => {});
+    processDueImagePipelineJobs({ limit: 2 }).catch(() => {});
   }
 
   const ready =

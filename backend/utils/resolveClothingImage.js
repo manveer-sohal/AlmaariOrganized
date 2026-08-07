@@ -1,63 +1,119 @@
 /**
- * Resolve a displayable clothing image without requiring callers to know
- * about legacy Base64 vs future object-storage fields.
+ * Resolve clothing images for API/UI.
  *
- * Dual-read order:
- * 1. Object-storage display/thumbnail URL or key (when configured)
- * 2. Legacy imageSrc (data URL or /samples/...)
- * 3. Safe placeholder
+ * S3 ready records: thumbnail → display → canonical CDN URLs.
+ * Never expose uncropped source as the normal wardrobe image.
+ * Legacy: imageSrc Base64 / samples / placeholder.
  */
 
-const PLACEHOLDER = "/samples/navy-tshirt.png";
+import { PROCESSING_IMAGE_PLACEHOLDER } from "../constants/imageProcessing.js";
+
+const PLACEHOLDER = PROCESSING_IMAGE_PLACEHOLDER;
+
+const deliveryUrlForKey = (key, storage) => {
+  if (!key) return null;
+  if (storage?.displayUrl && storage.displayKey === key) return storage.displayUrl;
+  if (storage?.thumbnailUrl && storage.thumbnailKey === key) {
+    return storage.thumbnailUrl;
+  }
+  const cdn =
+    process.env.IMAGE_CDN_BASE_URL ||
+    (process.env.AWS_CLOUDFRONT_DOMAIN
+      ? `https://${String(process.env.AWS_CLOUDFRONT_DOMAIN)
+          .replace(/^https?:\/\//, "")
+          .replace(/\/$/, "")}`
+      : "");
+  if (cdn) return `${cdn.replace(/\/$/, "")}/${key}`;
+  return null;
+};
 
 /**
- * @param {object} clothing - lean clothing document or API row
- * @param {{ preferThumbnail?: boolean }} [opts]
- * @returns {{
- *   imageSrc: string,
- *   imageUrl: string | null,
- *   thumbnailUrl: string | null,
- *   imageStatus: string,
- *   storageProvider: string
- * }}
+ * @param {object} clothing
+ * @param {{ preferThumbnail?: boolean, variant?: "thumbnail"|"display"|"canonical"|"source" }} [opts]
  */
 export const resolveClothingImage = (clothing, opts = {}) => {
-  const preferThumbnail = Boolean(opts.preferThumbnail);
+  const preferThumbnail = opts.preferThumbnail !== false;
+  const variant = opts.variant || (preferThumbnail ? "thumbnail" : "display");
   const storage = clothing?.imageStorage || null;
   const provider = storage?.provider || "legacy-base64";
+  const status = storage?.status || (provider === "s3" ? "upload_pending" : "legacy");
 
-  let imageUrl = null;
-  let thumbnailUrl = null;
+  const thumbKey = storage?.thumbnail?.key || storage?.thumbnailKey || null;
+  const displayKey = storage?.display?.key || storage?.displayKey || null;
+  const canonicalKey = storage?.canonical?.key || null;
+  const sourceKey = storage?.source?.key || storage?.originalKey || null;
 
-  if (storage && (storage.displayUrl || storage.thumbnailUrl)) {
-    imageUrl = storage.displayUrl || null;
-    thumbnailUrl = storage.thumbnailUrl || null;
-  } else if (storage && (storage.displayKey || storage.thumbnailKey)) {
-    // Keys alone are not public URLs; callers with a storage adapter may resolve.
-    imageUrl = storage.displayKey || null;
-    thumbnailUrl = storage.thumbnailKey || null;
+  let thumbnailUrl =
+    storage?.thumbnailUrl ||
+    deliveryUrlForKey(thumbKey, storage) ||
+    null;
+  let displayUrl =
+    storage?.displayUrl ||
+    deliveryUrlForKey(displayKey, storage) ||
+    deliveryUrlForKey(canonicalKey, storage) ||
+    null;
+  const canonicalUrl = deliveryUrlForKey(canonicalKey, storage);
+
+  // Processing / failed S3 records: never fall back to uncropped source for wardrobe UI.
+  const isS3 = provider === "s3";
+  const isReady = status === "ready" || status === "legacy";
+  const isFailed = ["crop_failed", "upload_failed", "analysis_failed"].includes(
+    status,
+  );
+  const isProcessing =
+    isS3 &&
+    !isReady &&
+    !isFailed &&
+    status !== "legacy";
+
+  if (isS3 && isReady) {
+    const primary =
+      variant === "canonical"
+        ? canonicalUrl || displayUrl || thumbnailUrl
+        : variant === "display"
+          ? displayUrl || canonicalUrl || thumbnailUrl
+          : thumbnailUrl || displayUrl || canonicalUrl;
+
+    if (primary) {
+      return {
+        imageSrc: primary,
+        imageUrl: displayUrl || canonicalUrl,
+        thumbnailUrl: thumbnailUrl || displayUrl || canonicalUrl,
+        imageStatus: "ready",
+        storageProvider: provider,
+        processingStatus: status,
+      };
+    }
   }
 
-  const legacy = typeof clothing?.imageSrc === "string" ? clothing.imageSrc : "";
-  const primary =
-    (preferThumbnail && thumbnailUrl) ||
-    imageUrl ||
-    thumbnailUrl ||
-    legacy ||
-    PLACEHOLDER;
+  if (isProcessing || (isS3 && isFailed && !displayUrl && !thumbnailUrl)) {
+    return {
+      imageSrc: PLACEHOLDER,
+      imageUrl: null,
+      thumbnailUrl: null,
+      imageStatus: isFailed ? status : "processing",
+      storageProvider: provider,
+      processingStatus: status,
+      // Source key never returned as wardrobe display URL
+      _sourceKeyInternal: sourceKey,
+    };
+  }
 
+  // Legacy Base64 / samples
+  const legacy = typeof clothing?.imageSrc === "string" ? clothing.imageSrc : "";
   let imageStatus = "legacy";
-  if (imageUrl || thumbnailUrl) imageStatus = "object_storage";
-  else if (legacy.startsWith("/samples/")) imageStatus = "sample";
+  if (legacy.startsWith("/samples/")) imageStatus = "sample";
   else if (legacy.startsWith("data:")) imageStatus = "legacy_base64";
+  else if (legacy.startsWith("http")) imageStatus = "url";
   else if (!legacy) imageStatus = "placeholder";
 
   return {
-    imageSrc: primary,
-    imageUrl: imageUrl || (legacy && !legacy.startsWith("data:") ? legacy : null),
-    thumbnailUrl: thumbnailUrl || null,
+    imageSrc: legacy || PLACEHOLDER,
+    imageUrl: legacy && !legacy.startsWith("data:") ? legacy : null,
+    thumbnailUrl: null,
     imageStatus,
     storageProvider: provider,
+    processingStatus: status,
   };
 };
 
@@ -73,5 +129,6 @@ export const withResolvedImageFields = (clothing, opts) => {
     imageUrl: resolved.imageUrl,
     thumbnailUrl: resolved.thumbnailUrl,
     imageStatus: resolved.imageStatus,
+    processingStatus: resolved.processingStatus,
   };
 };

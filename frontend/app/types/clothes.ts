@@ -70,6 +70,7 @@ export type ClothingItem = {
   imageUrl?: string | null;
   thumbnailUrl?: string | null;
   imageStatus?: string | null;
+  processingStatus?: string | null;
   isSample?: boolean;
   stylingMetadata?: StylingMetadata | null;
 };

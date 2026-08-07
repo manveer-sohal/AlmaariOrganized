@@ -192,15 +192,28 @@ export const processEnrichmentJob = async (job) => {
   }
 };
 
-/** Claim and process up to `limit` due jobs. */
+/** Claim and process up to `limit` due jobs with bounded concurrency. */
 export const processDueEnrichmentJobs = async ({ limit = 5 } = {}) => {
   await connectMongoDB();
+  const concurrency = Math.max(
+    1,
+    Number(process.env.ENRICHMENT_WORKER_CONCURRENCY || 2),
+  );
   const results = [];
-  for (let i = 0; i < limit; i += 1) {
-    const job = await claimNextJob();
-    if (!job) break;
-    results.push(await processEnrichmentJob(job));
-  }
+  const max = Math.min(Number(limit) || 5, 20);
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, max) },
+    async () => {
+      while (results.length < max) {
+        const job = await claimNextJob();
+        if (!job) break;
+        const outcome = await processEnrichmentJob(job);
+        results.push(outcome);
+      }
+    },
+  );
+  await Promise.all(workers);
   return results;
 };
 

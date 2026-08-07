@@ -1092,16 +1092,34 @@ Express aiClothing.service.js
 ## The 10 Most Important Things to Understand About Almaari
 
 1. **Express is the product control plane** — authZ, credits, Mongo writes, stylist orchestration live here; Python services are specialized adapters.
-2. **Images today live in Mongo as base64** — S3/CloudFront in docs are aspirational, not the live path.
+2. **Images historically lived in Mongo as base64** — P2 adds dual-read object storage + mandatory crop pipeline behind `IMAGE_STORAGE_PROVIDER` (default still legacy until S3 is provisioned).
 3. **Next.js is a BFF** — Auth0 cookies stay on Vercel; browser calls relative `/api/*` which rewrites to Cloud Run.
 4. **`req.auth.sub` is the tenancy key** — never trust body `auth0Id` on user routes.
 5. **AI clothing analysis is credit-metered with refunds** on the user path; enrichment reuses the same OpenAI-backed endpoint without charging credits.
 6. **The stylist is rules-first, LLM-optional**, and must only recommend owned item IDs.
-7. **Background enrichment is `setImmediate`, not a queue** — unsafe across Cloud Run scale-to-zero.
-8. **Redis is optional best-effort** — correctness must not depend on it; current enrichment invalidation is incomplete for paginated keys.
-9. **Upload safety is strong** (magic bytes, dimensions, rate limits), but **unauthenticated warmups / Python service URLs** weaken cost control.
-10. **Two Railway Python services:** `image_cropper` (rembg CPU) and `AI_FORM_COMPLETETION` (OpenAI vision adapter). Do not conflate them; both lack service-level auth today.
+7. **Every clothing image must be cropped** before ready (P2 ADR) — uncropped source is never the wardrobe display asset.
+8. **Redis is optional** — correctness cannot depend on cache availability.
+9. **Idempotency + durable jobs** protect upload/analyze/enrichment/image pipeline retries.
+10. **Python services require service keys** — URL secrecy is not enough.
 
 ---
 
-*End of audit. No application code was modified during this analysis; this document is the sole deliverable artifact. Addenda added after `image_cropper` and `AI_FORM_COMPLETETION` sources were attached to the workspace.*
+## Post-P2 Architecture Update
+
+| Prior finding | Status after P2 |
+|---------------|-----------------|
+| Base64-only live path | **Mitigated** — S3 dual-read + presign path implemented; default still legacy until ops enables `s3` |
+| Full Base64 wardrobe lists | **Mitigated** — thin DTO + projection; legacy items may still carry Base64 until migrated |
+| No durable image processing | **Resolved** — `ImageProcessingJob` pipeline with leases |
+| S3 adapter incomplete | **Resolved** — presign, HEAD, get/put/delete, CDN URL helper |
+| Crop optional / bypassable | **Superseded** — ready requires validated canonical crop (ADR) |
+| Regions unknown | **Still applicable** — not determinable from repo alone |
+| Production migration | **Still applicable** — dry-run only; no auto migration |
+
+See `docs/architecture/ALMAARI_P2_SCALABILITY_IMPLEMENTATION.md` for diagrams, rollout, and limitations.
+
+Original audit findings above remain historically accurate for the pre-P2 system. Where P0/P1/P2 supersede a finding, the Post-P2 table is authoritative for current status.
+
+---
+
+*Audit originally written as analysis-only; P0/P1/P2 implementation reports track subsequent code changes.*

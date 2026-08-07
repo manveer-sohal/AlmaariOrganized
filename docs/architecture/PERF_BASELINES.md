@@ -45,3 +45,23 @@ Update this table when you land a meaningful latency win (keep date + environmen
 2. Make the change; re-run the **same** flow (same wardrobe size / warm services when possible).
 3. Diff the new `PERF_BASELINE` line against the table above (or against the previous commit’s note).
 4. Prefer server workflows for backend work; prefer `*_client` / `add_clothes_pipeline` for UX-facing claims.
+
+## P2 additions (2026-08-07)
+
+New workflow names:
+
+| Workflow | Where | Meaning |
+|----------|--------|---------|
+| `clothing_image_pipeline` | API worker | Source → crop/validate → derivatives → ready |
+| `clothing_direct_upload_client` | Browser | Presign + S3 PUT + complete |
+
+### Wardrobe list payload (pending S3 staging)
+
+| Dataset | Mode | Result | Notes |
+|---------|------|--------|-------|
+| 10–250 items | legacy Base64 list | Not remeasured this session | Still default |
+| Ready S3 items | thin DTO | **Expected** large reduction vs Base64 | Measure `Content-Length` on `listClothes` after enabling `IMAGE_STORAGE_PROVIDER=s3` |
+
+Method: capture response bytes + `PERF_BASELINE` for `clothing_image_pipeline` stages (`sourceRetrievalMs`, `cropMs`, `derivativeMs`, etc.) in staging with real AWS.
+
+Do not mix localhost legacy timings with S3 staging without labeling.
