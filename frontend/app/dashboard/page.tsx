@@ -46,15 +46,16 @@ export default function Dashboard() {
     setHasLoaded(true);
   }, [user, hasLoaded]);
 
+  useEffect(() => {
+    if (!user) return;
+    if (view === "addClothes") warmupAiClothingService();
+  }, [view, user]);
+
   const onClickAddClothes = () => {
-    warmupAiClothingService();
+    if (user) warmupAiClothingService();
     setView("addClothes");
     goToNextTourStep();
   };
-
-  useEffect(() => {
-    if (view === "addClothes") warmupAiClothingService();
-  }, [view]);
 
   const openBuyCredits = () => {
     if (view !== "buyCredits") setCreditReturnView(view);
