@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { buildClothingObjectKey, collectStorageKeys } from "../utils/objectKeyFactory.js";
 import { resolveClothingImage } from "../utils/resolveClothingImage.js";
+import { resolveAnalysisImageBase64 } from "../utils/resolveAnalysisImage.js";
 import { toWardrobeListItem } from "../utils/clothesDto.js";
 import {
   IMAGE_PROCESSING_STATUSES,
@@ -127,6 +128,41 @@ describe("P2 image architecture", () => {
       expect(IMAGE_PROCESSING_STATUSES).to.include("crop_pending");
       expect(IMAGE_PROCESSING_STATUSES).to.include("ready");
       expect(IMAGE_PROCESSING_STATUSES).to.include("crop_failed");
+    });
+  });
+
+  describe("resolveAnalysisImageBase64", () => {
+    it("strips data URLs for FastAPI", async () => {
+      const b64 = await resolveAnalysisImageBase64({
+        imageSrc: "data:image/png;base64,QUJD",
+      });
+      expect(b64).to.equal("QUJD");
+    });
+
+    it("loads canonical bytes from S3 instead of CDN imageSrc", async () => {
+      let requestedKey = null;
+      const b64 = await resolveAnalysisImageBase64(
+        {
+          imageSrc: "https://cdn.example.com/users/u/clothing/c/display/v1.webp",
+          imageStorage: {
+            provider: "s3",
+            status: "ready",
+            canonical: { key: "users/u/clothing/c/canonical/v1.webp" },
+          },
+        },
+        {
+          getAdapter: async () => ({
+            provider: "s3",
+            getObjectBuffer: async (key) => {
+              requestedKey = key;
+              return Buffer.from("png-bytes");
+            },
+          }),
+        },
+      );
+
+      expect(requestedKey).to.equal("users/u/clothing/c/canonical/v1.webp");
+      expect(b64).to.equal(Buffer.from("png-bytes").toString("base64"));
     });
   });
 });

@@ -6,7 +6,7 @@ import { Heart, MoreHorizontal, Trash } from "lucide-react";
 import { motion } from "framer-motion";
 import { ClothingItem } from "../../types/clothes";
 import { humanizeClothingSubtype } from "../../utils/clothingSubtype";
-import { resolveClothingDisplaySrc } from "../../utils/resolveClothingDisplaySrc";
+import { resolveClothingDisplaySrc, isImageProcessingStatus } from "../../utils/resolveClothingDisplaySrc";
 import { useFavouritesStore } from "../../store/useFavouritesStore";
 import { useDeleteClothing } from "../../hooks/useDeleteClothing";
 import { softTransition, usePrefersReducedMotion } from "./motion";
@@ -33,11 +33,7 @@ export default function ClothingCard({
   const deleteClothes = useDeleteClothing(item._id);
   const label = humanizeClothingSubtype(item);
   const displaySrc = resolveClothingDisplaySrc(item, { preferThumbnail: true });
-  const isProcessing =
-    item.processingStatus &&
-    ["upload_pending", "uploaded", "crop_pending", "cropping"].includes(
-      item.processingStatus,
-    );
+  const isProcessing = isImageProcessingStatus(item.processingStatus);
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -81,7 +77,9 @@ export default function ClothingCard({
         onLoad={() => setLoaded(true)}
         loading="lazy"
         unoptimized={
-          displaySrc.startsWith("data:") || displaySrc.startsWith("/samples/")
+          displaySrc.startsWith("data:") ||
+          displaySrc.startsWith("blob:") ||
+          displaySrc.startsWith("/samples/")
         }
       />
       {isProcessing ? (

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { View, OccasionTag, StyleCategory } from "../../types/clothes";
+import { View, OccasionTag, StyleCategory, ClothingItem, Slot } from "../../types/clothes";
 import {
   colours_List,
   fits_List,
@@ -37,6 +37,7 @@ import {
 } from "../../utils/getAuthHeaders";
 import { createIdempotencyKey } from "../../utils/idempotencyKey";
 import { clothesQueryKeys } from "../../hooks/useClothesData";
+import type { InfiniteData } from "@tanstack/react-query";
 import StyleDetailsSection from "../components/StyleDetailsSection";
 import ClothingCropSurface from "../components/ClothingCropSurface";
 import {
@@ -874,6 +875,74 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       if (response && response.ok) {
         uploadIdempotencyKeyRef.current = null;
         analyzeIdempotencyKeyRef.current = null;
+
+        // Seed wardrobe with a stable preview (data URL) so the card shows
+        // immediately. Blob URLs are revoked when this screen unmounts.
+        const body = await response.json().catch(() => ({}));
+        const clothingPayload =
+          body?.clothing && typeof body.clothing === "object"
+            ? body.clothing
+            : null;
+        const clothingId = String(
+          clothingPayload?._id || body?.clothingId || "",
+        );
+        if (clothingId && preview) {
+          let previewSrc = preview;
+          if (preview.startsWith("blob:")) {
+            try {
+              const blob = await fetch(preview).then((r) => r.blob());
+              previewSrc = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result));
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+              });
+            } catch {
+              previewSrc = preview;
+            }
+          }
+
+          const optimistic: ClothingItem = {
+            _id: clothingId,
+            type: String(clothingPayload?.type ?? usersClothType),
+            colour: Array.isArray(clothingPayload?.colour)
+              ? clothingPayload.colour.map(String)
+              : [...usersColours],
+            material: String(
+              clothingPayload?.material ?? usersClothMaterial ?? "",
+            ),
+            fit: String(clothingPayload?.fit ?? usersClothFit ?? ""),
+            pattern: String(
+              clothingPayload?.pattern ?? usersClothPattern ?? "",
+            ),
+            slot: String(clothingPayload?.slot ?? "body") as Slot,
+            imageSrc: previewSrc,
+            processingStatus: String(
+              body?.processingStatus ||
+                clothingPayload?.processingStatus ||
+                "crop_pending",
+            ),
+            stylingMetadata: clothingPayload?.stylingMetadata ?? null,
+          };
+
+          queryClient.setQueriesData<InfiniteData<ClothingItem[]>>(
+            { queryKey: clothesQueryKeys.all },
+            (old) => {
+              if (!old?.pages?.length) {
+                return {
+                  pages: [[optimistic]],
+                  pageParams: [1],
+                };
+              }
+              const pages = old.pages.map((page) =>
+                page.filter((item) => item._id !== clothingId),
+              );
+              pages[0] = [optimistic, ...pages[0]];
+              return { ...old, pages };
+            },
+          );
+        }
+
         await queryClient.invalidateQueries({
           queryKey: clothesQueryKeys.all,
         });

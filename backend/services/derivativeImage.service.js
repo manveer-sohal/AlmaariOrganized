@@ -1,8 +1,8 @@
 /**
  * Create display/thumbnail WebP derivatives from a canonical cropped buffer.
+ * sharp is loaded lazily so legacy (non-S3) boot does not require it at import time.
  */
 
-import sharp from "sharp";
 import {
   DISPLAY_MAX_EDGE,
   THUMBNAIL_MAX_EDGE,
@@ -10,7 +10,26 @@ import {
   DERIVATIVE_FORMAT,
 } from "../constants/imageProcessing.js";
 
+let _sharpPromise;
+
+const loadSharp = async () => {
+  if (!_sharpPromise) {
+    _sharpPromise = import("sharp")
+      .then((mod) => mod.default || mod)
+      .catch((err) => {
+        _sharpPromise = undefined;
+        const wrapped = new Error(
+          "sharp is required for image derivatives — run npm ci in the API container/image",
+        );
+        wrapped.cause = err;
+        throw wrapped;
+      });
+  }
+  return _sharpPromise;
+};
+
 const resizeToWebp = async (buffer, maxEdge) => {
+  const sharp = await loadSharp();
   const image = sharp(buffer, { failOn: "none" }).rotate();
   const meta = await image.metadata();
   const width = meta.width || maxEdge;
@@ -58,6 +77,7 @@ export const validateCroppedImageBuffer = async (buffer) => {
     return { ok: false, reason: "too_large" };
   }
   try {
+    const sharp = await loadSharp();
     const meta = await sharp(buffer, { failOn: "none" }).metadata();
     if (!meta.width || !meta.height) {
       return { ok: false, reason: "undecodable" };
@@ -72,7 +92,10 @@ export const validateCroppedImageBuffer = async (buffer) => {
       format: meta.format,
       hasAlpha: Boolean(meta.hasAlpha),
     };
-  } catch {
+  } catch (err) {
+    if (err?.message?.includes("sharp is required")) {
+      return { ok: false, reason: "sharp_missing" };
+    }
     return { ok: false, reason: "undecodable" };
   }
 };

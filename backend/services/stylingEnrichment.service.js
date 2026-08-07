@@ -12,6 +12,7 @@ import {
 import { logError, logInfo } from "../observability/logger.js";
 import { fetchClothingAnalysisRaw } from "./aiClothing.service.js";
 import { invalidateClothesCacheForUserId } from "../utils/cacheInvalidation.js";
+import { resolveAnalysisImageBase64 } from "../utils/resolveAnalysisImage.js";
 
 const WORKFLOW = "clothing_styling_enrichment";
 
@@ -340,11 +341,22 @@ export const enrichClothingStyling = async (
   }
 
   try {
-    if (!claimed.imageSrc) {
+    const hasS3Image =
+      claimed.imageStorage?.provider === "s3" &&
+      Boolean(
+        claimed.imageStorage?.canonical?.key ||
+          claimed.imageStorage?.display?.key ||
+          claimed.imageStorage?.source?.key ||
+          claimed.imageStorage?.originalKey,
+      );
+    if (!claimed.imageSrc && !hasS3Image) {
       throw new Error("Missing image for enrichment");
     }
 
-    const { data: raw } = await fetchClothingAnalysisRaw(claimed.imageSrc, {
+    // FastAPI expects raw base64. After S3 ready, imageSrc is a CDN URL —
+    // resolve bytes from canonical object (or URL fallback), never send the URL.
+    const analysisImage = await resolveAnalysisImageBase64(claimed);
+    const { data: raw } = await fetchClothingAnalysisRaw(analysisImage, {
       workflow: WORKFLOW,
     });
 
