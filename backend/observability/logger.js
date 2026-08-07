@@ -10,6 +10,7 @@ const SENSITIVE_KEYS = new Set([
   "secret",
   "password",
   "image",
+  "imagesrc",
   "base64",
   "prompt",
   "response",
@@ -18,6 +19,8 @@ const SENSITIVE_KEYS = new Set([
   "card",
   "stripe",
   "apikey",
+  "servickey",
+  "x-almaari-service-key",
 ]);
 
 export const hashUserId = (userId) => {
