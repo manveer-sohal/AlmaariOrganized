@@ -4,7 +4,7 @@
 |------|--------|
 | **Date** | 2026-08-07 |
 | **Almaari branch** | `refactor/security-and-latency` |
-| **Almaari HEAD** | `a1131575c5437be13beb1f218f38ed7080f6b807` |
+| **Almaari HEAD** | `1ee149a2be41bc7e54a7fcbd3ff234b733b083f9` |
 | **Almaari baseline (pre-work)** | `18f097c917083c5d588c1d1676d5af11c2860529` |
 | **Cropper** | `/Users/manveersohal/image_cropper` · `staging` · `5bf7a4d` (service auth at `97ed773` + `.env.example`) |
 | **AI analyze** | `/Users/manveersohal/AI_FORM_COMPLETETION` · `feature/richer-clothing-metadata` · `487ccf8` (service auth at `715bc49` + `.env.example`) |
