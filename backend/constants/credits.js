@@ -1,1 +1,1 @@
-export const DEFAULT_CREDIT_BALANCE = 5;
+export const DEFAULT_CREDIT_BALANCE = 10;
