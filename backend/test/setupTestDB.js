@@ -49,6 +49,9 @@ export async function seedTestUserWithClothes() {
       imageSrc: "https://example.com/shirt.png",
       colour: ["blue"],
       slot: "body",
+      material: "Cotton",
+      fit: "Regular",
+      pattern: "Solid",
     },
     {
       userId: user._id,
@@ -57,6 +60,9 @@ export async function seedTestUserWithClothes() {
       imageSrc: "https://example.com/pants.png",
       colour: ["black"],
       slot: "legs",
+      material: "Cotton",
+      fit: "Regular",
+      pattern: "Solid",
     },
   ]);
 

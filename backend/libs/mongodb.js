@@ -54,6 +54,11 @@ if (!cached) {
 }
 
 async function connectMongoDB() {
+  // Reuse an already-open mongoose connection (e.g. mongodb-memory-server in tests).
+  if (mongoose.connection.readyState === 1) {
+    cached.conn = mongoose;
+    return cached.conn;
+  }
   //if the conenction exists in the cache, return it
   //prevents unnecessary re-connections
   if (cached.conn) {
