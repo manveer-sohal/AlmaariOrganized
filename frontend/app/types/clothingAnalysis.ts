@@ -40,4 +40,5 @@ export type AnalyzeClothingResponse = {
   creditsDeducted?: number;
   creditBalance?: number;
   message?: string;
+  timing?: { totalMs: number; workflow: string };
 };

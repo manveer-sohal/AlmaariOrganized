@@ -261,6 +261,7 @@ export const uploadData = async (request, response) => {
     const body = {
       message: result.message,
       clothing: result.clothing,
+      timing: result.timing,
     };
 
     if (idempotency?.kind === "execute" && idempotency.record?._id) {

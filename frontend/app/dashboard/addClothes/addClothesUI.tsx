@@ -28,6 +28,7 @@ import {
   logAnalyzeStep,
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
+import { WorkflowSession, logPerfBaseline } from "../../utils/workflowTiming";
 import { Sparkles, Send, ArrowLeft } from "lucide-react";
 import {
   clearAuthTokenCache,
@@ -196,6 +197,8 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
   const analyzeIdempotencyKeyRef = useRef<string | null>(null);
   const submitInFlightRef = useRef(false);
   const previewUrlsRef = useRef<string[]>([]);
+  /** Session timings for rembg → analyze → upload pipeline baselines. */
+  const perfSessionRef = useRef<WorkflowSession | null>(null);
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -407,15 +410,20 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     async (
       blob: Blob,
       mode: CropServiceMode = "rembg_only",
+      traceId?: string,
     ): Promise<Blob | null> => {
       const cropForm = new FormData();
       cropForm.append("image", blob, "working.png");
       cropForm.append("mode", mode);
+      const requestId = traceId || createClientTraceId();
+      const cropStart = performance.now();
 
       const postCrop = async () =>
         fetch("/api/clothes/crop", {
           method: "POST",
-          headers: await getAuthHeaders(),
+          headers: await getAuthHeaders({
+            "X-Request-Id": requestId,
+          }),
           body: cropForm,
         });
 
@@ -426,7 +434,20 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
           response = await postCrop();
         }
         if (!response.ok) return null;
-        return await response.blob();
+        const result = await response.blob();
+        const cropMs = performance.now() - cropStart;
+        const session = perfSessionRef.current;
+        if (session) {
+          session.logStageBaseline("image_crop_processing_client", "rembgMs", cropMs);
+        } else {
+          logPerfBaseline({
+            workflow: "image_crop_processing_client",
+            totalMs: cropMs,
+            stages: { rembgMs: cropMs },
+            traceId: requestId,
+          });
+        }
+        return result;
       } catch {
         return null;
       }
@@ -457,6 +478,12 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
 
     (async () => {
       try {
+        const sessionTraceId = createClientTraceId();
+        perfSessionRef.current = new WorkflowSession(
+          "add_clothes",
+          sessionTraceId,
+        );
+
         const working = await createWorkingImageBlob(file);
         if (cancelled || generation !== rembgGenerationRef.current) return;
 
@@ -466,7 +493,11 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         setPreview(workingUrl);
         resetCropState();
 
-        const rembgPromise = removeBackground(working.blob, "rembg_only");
+        const rembgPromise = removeBackground(
+          working.blob,
+          "rembg_only",
+          sessionTraceId,
+        );
         rembgPromiseRef.current = rembgPromise;
         const rembgBlob = await rembgPromise;
         if (cancelled || generation !== rembgGenerationRef.current) return;
@@ -650,7 +681,11 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       return;
     }
 
-    const traceId = createClientTraceId();
+    const traceId =
+      perfSessionRef.current?.traceId || createClientTraceId();
+    if (!perfSessionRef.current) {
+      perfSessionRef.current = new WorkflowSession("add_clothes", traceId);
+    }
     const flowStart = performance.now();
     const stepMs: Record<string, number> = {};
 
@@ -682,7 +717,21 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       }
       setAnalyzeMessage(result.message ?? "Analysis completed");
 
-      stepMs["total frontend"] = performance.now() - flowStart;
+      const analyzeTotalMs = performance.now() - flowStart;
+      stepMs["total frontend"] = analyzeTotalMs;
+      perfSessionRef.current?.mark("analyzeMs", analyzeTotalMs);
+      logPerfBaseline({
+        workflow: "clothing_metadata_generation_client",
+        totalMs: analyzeTotalMs,
+        stages: {
+          prepMs: stepMs["image prep (crop + optimize + base64)"],
+          networkAndAiMs: stepMs["network + backend + AI"],
+          ...(typeof result.timing?.totalMs === "number"
+            ? { serverTotalMs: result.timing.totalMs }
+            : {}),
+        },
+        traceId,
+      });
       if (isAiAnalyzeTimingEnabled()) {
         logAnalyzeGroup(traceId, "frontend analyze breakdown", stepMs);
         logAnalyzeTotal(traceId, "total analyze click → response", flowStart);
@@ -733,11 +782,19 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       uploadIdempotencyKeyRef.current = createIdempotencyKey("upload");
     }
 
+    const traceId =
+      perfSessionRef.current?.traceId || createClientTraceId();
+    if (!perfSessionRef.current) {
+      perfSessionRef.current = new WorkflowSession("add_clothes", traceId);
+    }
+    const uploadStart = performance.now();
+
     const uploadClothes = async () =>
       fetch(`/api/clothes/upload`, {
         method: "POST",
         headers: await getAuthHeaders({
           "Idempotency-Key": uploadIdempotencyKeyRef.current!,
+          "X-Request-Id": traceId,
         }),
         body: formData,
       });
@@ -746,6 +803,18 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     if (response.status === 401) {
       clearAuthTokenCache();
       response = await uploadClothes();
+    }
+
+    const uploadMs = performance.now() - uploadStart;
+    if (response.ok) {
+      perfSessionRef.current.mark("uploadMs", uploadMs);
+      logPerfBaseline({
+        workflow: "clothing_upload_persist_client",
+        totalMs: uploadMs,
+        stages: { uploadMs },
+        traceId,
+      });
+      perfSessionRef.current.logPipelineBaseline("add_clothes_pipeline");
     }
 
     return await response;

@@ -6,6 +6,8 @@ import {
   StylistRecommendationResponse,
 } from "../types/aiStylist";
 import { clearAuthTokenCache, getAuthHeaders } from "../utils/getAuthHeaders";
+import { createClientTraceId } from "../utils/aiAnalyzeTiming";
+import { logPerfBaseline } from "../utils/workflowTiming";
 
 export const useStylistRecommendations = () => {
   const queryClient = useQueryClient();
@@ -19,11 +21,16 @@ export const useStylistRecommendations = () => {
       }
 
       const currentRequestId = ++requestIdRef.current;
+      const traceId = createClientTraceId();
+      const clientStart = performance.now();
 
       const postRecommendations = async () =>
         fetch("/api/ai-stylist/recommendations", {
           method: "POST",
-          headers: await getAuthHeaders({ "Content-Type": "application/json" }),
+          headers: await getAuthHeaders({
+            "Content-Type": "application/json",
+            "X-Request-Id": traceId,
+          }),
           body: JSON.stringify(payload),
         });
 
@@ -34,6 +41,7 @@ export const useStylistRecommendations = () => {
       }
 
       const data = (await response.json()) as StylistRecommendationResponse;
+      const clientTotalMs = performance.now() - clientStart;
 
       if (currentRequestId !== requestIdRef.current) {
         throw new Error("STALE_REQUEST");
@@ -52,6 +60,23 @@ export const useStylistRecommendations = () => {
         error.status = response.status;
         throw error;
       }
+
+      logPerfBaseline({
+        workflow: "outfit_recommendation_client",
+        totalMs: clientTotalMs,
+        stages: {
+          clientRoundTripMs: clientTotalMs,
+          ...(typeof data.timing?.totalMs === "number"
+            ? { serverTotalMs: data.timing.totalMs }
+            : {}),
+        },
+        traceId,
+        meta: {
+          generationId: data.generationId,
+          mode: data.mode,
+          recommendationCount: data.recommendations?.length,
+        },
+      });
 
       return { data, requestId: currentRequestId };
     },

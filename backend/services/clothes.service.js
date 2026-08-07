@@ -30,6 +30,7 @@ import { summarizeImageBuffer, summarizeImageSrcMeta } from "../utils/safeImageL
 import { withResolvedImageFields } from "../utils/resolveClothingImage.js";
 import { logInfo, logWarn, hashUserId } from "../observability/logger.js";
 import { createTimer } from "../observability/timer.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
 const USER_OBJECT_ID_CACHE_TTL = 3600;
 
@@ -271,16 +272,27 @@ export const uploadData = async ({
     }
 
     const refreshed = await Clothes.findById(clothingDoc._id);
+    const uploadMs = uploadTimer.elapsedMs();
     logInfo("clothing_upload_completed", {
       userIdHash: hashUserId(auth0Id),
       clothingId: String(clothingDoc._id),
-      durationMs: uploadTimer.elapsedMs(),
+      durationMs: uploadMs,
       imageMeta: summarizeImageSrcMeta(imageSrc),
+    });
+    logPerfBaseline({
+      workflow: "clothing_upload_persist",
+      totalMs: uploadMs,
+      meta: {
+        clothingId: String(clothingDoc._id),
+        imageAlreadyCropped: Boolean(imageAlreadyCropped),
+        type,
+      },
     });
 
     return {
       status: 200,
       message: "Clothes added successfully",
+      timing: { totalMs: uploadMs, workflow: "clothing_upload_persist" },
       clothing: refreshed
         ? withResolvedImageFields(refreshed.toObject?.() || refreshed)
         : withResolvedImageFields(clothingDoc.toObject?.() || clothingDoc),

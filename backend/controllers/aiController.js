@@ -15,6 +15,7 @@ import { classifyAiError } from "../observability/errors.js";
 import { updateRequestContext } from "../observability/requestContext.js";
 import { createTimer } from "../observability/timer.js";
 import { observeMs } from "../observability/metrics.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
 const WORKFLOW = "clothing_metadata_generation";
 
@@ -148,6 +149,14 @@ export const analyzeClothing = async (req, res) => {
       creditsDeducted: result.creditsDeducted,
       success: true,
     });
+    logPerfBaseline({
+      workflow: WORKFLOW,
+      totalMs,
+      meta: {
+        validTagCount: result.validTagCount,
+        creditsDeducted: result.creditsDeducted,
+      },
+    });
 
     const body = {
       success: true,
@@ -155,6 +164,7 @@ export const analyzeClothing = async (req, res) => {
       validTagCount: result.validTagCount,
       creditsDeducted: result.creditsDeducted,
       creditBalance: result.creditBalance,
+      timing: { totalMs, workflow: WORKFLOW },
       message:
         result.validTagCount >= 1
           ? "Analysis completed"

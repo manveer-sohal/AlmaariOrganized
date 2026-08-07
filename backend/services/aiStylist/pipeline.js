@@ -23,6 +23,7 @@ import { updateRequestContext } from "../../observability/requestContext.js";
 import { createTimer, measureAsync } from "../../observability/timer.js";
 import { classifyAiError } from "../../observability/errors.js";
 import { incMetric, observeMs } from "../../observability/metrics.js";
+import { logPerfBaseline } from "../../observability/perfBaseline.js";
 import {
   resolveStylistMode,
   validateModeRequirements,
@@ -459,6 +460,23 @@ export const runStylistPipeline = async ({ auth0Id, requestBody }) => {
       dressPathHint: Boolean(bySlot.body?.some(isDress)),
     });
 
+    logPerfBaseline({
+      workflow: WORKFLOW,
+      totalMs,
+      stages: {
+        candidatesMs: candidateTimed.durationMs,
+        scoringMs: scoringTimed.durationMs,
+      },
+      meta: {
+        generationId,
+        mode: resolved.mode,
+        wardrobeItemCount: wardrobe.length,
+        candidateCount: combinations.length,
+        rerankUsed,
+        fallbackUsed,
+      },
+    });
+
     return {
       generationId,
       mode: resolved.mode,
@@ -467,6 +485,7 @@ export const runStylistPipeline = async ({ auth0Id, requestBody }) => {
       recommendations: validated,
       creditsDeducted: deduction.creditsDeducted,
       creditBalance: deduction.creditBalance,
+      timing: { totalMs, workflow: WORKFLOW },
     };
   } catch (error) {
     try {
