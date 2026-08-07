@@ -77,6 +77,35 @@ const ClothesSchema = new mongoose.Schema({
   uniqueId: { type: String, required: true, unique: true },
   type: { type: String, required: true, index: true },
   imageSrc: { type: String, required: true },
+  /**
+   * Optional object-storage metadata for migrating off Base64-in-Mongo.
+   * Dual-read: resolveClothingImage prefers these fields when present,
+   * otherwise falls back to imageSrc. Do not drop imageSrc yet.
+   */
+  imageStorage: {
+    type: new mongoose.Schema(
+      {
+        provider: {
+          type: String,
+          enum: ["legacy-base64", "s3"],
+          default: "legacy-base64",
+        },
+        originalKey: { type: String, default: null },
+        displayKey: { type: String, default: null },
+        thumbnailKey: { type: String, default: null },
+        displayUrl: { type: String, default: null },
+        thumbnailUrl: { type: String, default: null },
+        contentType: { type: String, default: null },
+        width: { type: Number, default: null },
+        height: { type: Number, default: null },
+        bytes: { type: Number, default: null },
+        checksum: { type: String, default: null },
+        migratedAt: { type: Date, default: null },
+      },
+      { _id: false },
+    ),
+    default: undefined,
+  },
   favourite: { type: Boolean, default: false },
   /** Demo wardrobe items seeded for trying AI outfits */
   isSample: { type: Boolean, default: false, index: true },

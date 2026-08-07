@@ -66,6 +66,10 @@ export type ClothingItem = {
   pattern?: string;
   slot: Slot;
   imageSrc: string;
+  /** Thin URL when object storage is configured (optional dual-read). */
+  imageUrl?: string | null;
+  thumbnailUrl?: string | null;
+  imageStatus?: string | null;
   isSample?: boolean;
   stylingMetadata?: StylingMetadata | null;
 };
