@@ -8,3 +8,9 @@ changes.txt
 .gitignore
 env.yaml
 runs
+bash
+settings.json
+s3-test.js
+.cursor/
+docs/
+.env.example
