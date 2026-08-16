@@ -76,6 +76,8 @@ type MobilePreviewCarouselProps = {
   onReplaceSlot?: (slot: Slot) => void;
   previewHighlight?: boolean;
   dotsBottomClass?: string;
+  flashNextArrow?: boolean;
+  onDismissNextHint?: () => void;
 };
 
 /**
@@ -99,6 +101,8 @@ export default function MobilePreviewCarousel({
   onReplaceSlot,
   previewHighlight = false,
   dotsBottomClass = "bottom-3",
+  flashNextArrow = false,
+  onDismissNextHint,
 }: MobilePreviewCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const ignoreScrollSyncRef = useRef(false);
@@ -169,10 +173,14 @@ export default function MobilePreviewCarousel({
   };
 
   const go = (delta: number) => {
+    if (delta > 0 && flashNextArrow) onDismissNextHint?.();
     onActiveIndexChange(
       Math.min(totalSlides - 1, Math.max(0, activeIndex + delta)),
     );
   };
+
+  const showNextHint =
+    flashNextArrow && activeIndex === 0 && totalSlides > 1;
 
   const headerLabel = onCurrentSlide
     ? "Your look"
@@ -251,12 +259,23 @@ export default function MobilePreviewCarousel({
       </button>
       <button
         type="button"
+        id="carousel-next-arrow"
         onClick={() => go(1)}
         disabled={activeIndex >= totalSlides - 1}
-        aria-label="Next outfit"
-        className="absolute right-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-almaari-border/80 bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40"
+        aria-label={
+          showNextHint
+            ? "Next outfit — browse AI looks"
+            : "Next outfit"
+        }
+        className={`absolute right-2 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white/95 text-almaari-ink shadow-md backdrop-blur-sm disabled:opacity-40 ${
+          showNextHint
+            ? "carousel-next-hint border-almaari-accent bg-almaari-accent-soft"
+            : "border-almaari-border/80"
+        }`}
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight
+          className={`h-5 w-5 ${showNextHint ? "animate-pulse" : ""}`}
+        />
       </button>
 
       <div

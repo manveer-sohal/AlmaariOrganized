@@ -13,10 +13,73 @@ import {
 import { retryStyleEnrichmentForUser } from "../services/stylingEnrichment.service.js";
 import { validateClothingUpdatePayload } from "../utils/clothingValidation.utils.js";
 import { cropImage, toBase64 } from "../services/image.service.js";
+import {
+  initDirectUpload,
+  completeDirectUpload,
+} from "../services/directUpload.service.js";
 
 import dotenv from "dotenv";
 import { parseStringField } from "../utils/parseClothesFields.js";
 dotenv.config();
+
+export const initClothesUpload = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const result = await initDirectUpload({
+      auth0Id,
+      contentType: request.body?.contentType,
+      contentLength: Number(request.body?.contentLength),
+      checksum: request.body?.checksum,
+      idempotencyKey:
+        request.get("Idempotency-Key") || request.body?.idempotencyKey,
+      clientCropVerified: request.body?.clientCropVerified !== false,
+      type: request.body?.type || "T-shirt",
+      colour: request.body?.colour || ["Black"],
+      material: request.body?.material || "Cotton",
+      fit: request.body?.fit || "Regular",
+      pattern: request.body?.pattern || "Solid",
+    });
+    return response.status(result.status || 200).json(result);
+  } catch (e) {
+    return response.status(e.status || 500).json({
+      error: e.message || e.error || "Upload init failed",
+      code: e.code,
+    });
+  }
+};
+
+export const completeClothesUpload = async (request, response) => {
+  const auth0Id = request.auth?.sub;
+  if (!auth0Id) {
+    return response.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const clothingId =
+      request.body?.clothingId || request.body?.operationId;
+    const result = await completeDirectUpload({
+      auth0Id,
+      clothingId,
+      idempotencyKey:
+        request.get("Idempotency-Key") || request.body?.idempotencyKey,
+      metadata: {
+        type: request.body?.type,
+        colour: request.body?.colour,
+        material: request.body?.material,
+        fit: request.body?.fit,
+        pattern: request.body?.pattern,
+      },
+    });
+    return response.status(result.status || 200).json(result);
+  } catch (e) {
+    return response.status(e.status || 500).json({
+      error: e.message || e.error || "Upload complete failed",
+      code: e.code,
+    });
+  }
+};
 
 export const removeData = async (request, response) => {
   const auth0Id = request.auth?.sub;
@@ -159,6 +222,44 @@ export const uploadData = async (request, response) => {
     return response.status(400).json({ error: "No file uploaded" });
   }
 
+  const {
+    beginIdempotentOperation,
+    completeIdempotentOperation,
+    failIdempotentOperation,
+    fingerprintImageBuffer,
+    validateIdempotencyKey,
+  } = await import("../services/idempotency.service.js");
+
+  const rawKey =
+    request.get("Idempotency-Key") || request.body?.idempotencyKey || null;
+  let idempotency = null;
+
+  if (rawKey) {
+    const keyCheck = validateIdempotencyKey(rawKey);
+    if (!keyCheck.ok) {
+      return response
+        .status(400)
+        .json({ error: `Invalid Idempotency-Key (${keyCheck.reason})` });
+    }
+    const fingerprint = fingerprintImageBuffer(file.buffer, {
+      type,
+      colour,
+      material,
+      fit,
+      pattern,
+      op: "clothing_upload",
+    });
+    idempotency = await beginIdempotentOperation({
+      auth0Id,
+      operationType: "clothing_upload",
+      idempotencyKey: keyCheck.value,
+      requestFingerprint: fingerprint,
+    });
+    if (idempotency.kind === "replay" || idempotency.kind === "conflict" || idempotency.kind === "in_progress") {
+      return response.status(idempotency.statusCode).json(idempotency.body);
+    }
+  }
+
   try {
     const parseColour = (() => {
       try {
@@ -220,10 +321,28 @@ export const uploadData = async (request, response) => {
       analysisSnapshot: parseAnalysisSnapshot,
     });
 
-    return response
-      .status(result.status || 200)
-      .json({ message: result.message, clothing: result.clothing });
+    const body = {
+      message: result.message,
+      clothing: result.clothing,
+      timing: result.timing,
+    };
+
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await completeIdempotentOperation(idempotency.record._id, {
+        resultPayload: body,
+        clothingId: result.clothing?._id || null,
+      });
+    }
+
+    return response.status(result.status || 200).json(body);
   } catch (e) {
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await failIdempotentOperation(idempotency.record._id, {
+        errorCode: "upload_failed",
+        errorMessage: e.error || e.message || "Failed to add clothes",
+        terminal: (e.status || 500) < 500,
+      }).catch(() => {});
+    }
     console.error(e);
     return response.status(e.status || 500).json({
       error: e.error || e.message || "Failed to add clothes",

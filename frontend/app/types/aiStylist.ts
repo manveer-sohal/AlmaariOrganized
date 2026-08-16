@@ -107,6 +107,7 @@ export type StylistRecommendationResponse = {
   requiredItemIds?: string[];
   message?: string;
   code?: string;
+  timing?: { totalMs: number; workflow: string };
 };
 
 export type StylistFeedback = {

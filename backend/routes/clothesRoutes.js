@@ -12,6 +12,8 @@ import {
   retryStyleEnrichment,
   seedSampleWardrobe,
   clearSampleWardrobe,
+  initClothesUpload,
+  completeClothesUpload,
 } from "../controllers/clothesController.js";
 import uploadMiddleware from "../middleware/upload.middleware.js";
 import { validateImageFile } from "../middleware/validateImageFile.js";
@@ -29,6 +31,8 @@ router.post("/getOutfits", getOutfits);
 router.post("/listClothes", getData);
 router.post("/seedSamples", seedSampleWardrobe);
 router.post("/clearSamples", clearSampleWardrobe);
+router.post("/upload/init", uploadRateLimiter, initClothesUpload);
+router.post("/upload/complete", uploadRateLimiter, completeClothesUpload);
 router.post(
   "/upload",
   uploadRateLimiter,

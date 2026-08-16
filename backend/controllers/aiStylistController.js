@@ -26,6 +26,7 @@ export const getRecommendations = async (req, res) => {
       generationId: result.generationId,
       mode: result.mode,
       requiredItemIds: result.requiredItemIds,
+      timing: result.timing,
     });
   } catch (error) {
     const status = error.status || 500;

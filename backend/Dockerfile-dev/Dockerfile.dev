@@ -1,5 +1,5 @@
-# Select a base image
-FROM  node:18
+# Select a base image (Node 20 required by sharp / modern AWS SDK)
+FROM node:20
 
 # Create a directory  and go to the directory 
 WORKDIR /app

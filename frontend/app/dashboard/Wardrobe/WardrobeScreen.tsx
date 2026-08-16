@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Filter, Plus, Search, Sparkles, X } from "lucide-react";
 import { ClothingItem } from "../../types/clothes";
 import { useClothesStore } from "../../store/useClothesStore";
-import { useClothesData } from "../../hooks/useClothesData";
+import { useClothesData, WARDROBE_IN_VIEW_OPTIONS, WARDROBE_PAGE_SIZE } from "../../hooks/useClothesData";
 import { useSampleWardrobe } from "../../hooks/useSampleWardrobe";
 import { useInView } from "react-intersection-observer";
 import ClothingGrid from "../../components/ux/ClothingGrid";
@@ -56,9 +56,9 @@ export default function WardrobeScreen({
     isFetchingNextPage,
     isLoadingClothes,
     error,
-  } = useClothesData(20);
+  } = useClothesData(WARDROBE_PAGE_SIZE);
   const { seedSamples, clearSamples } = useSampleWardrobe();
-  const { ref, inView } = useInView();
+  const { ref, inView } = useInView(WARDROBE_IN_VIEW_OPTIONS);
   const didSyncSamples = useRef(false);
 
   useEffect(() => {

@@ -10,8 +10,6 @@ export const TYPE_TO_SLOT = {
   Beanie: "head",
   Scarf: "head",
   Gloves: "head",
-  Tie: "head",
-  "Bow Tie": "head",
   Headband: "head",
   Sunglasses: "head",
   Earrings: "head",
@@ -76,6 +74,8 @@ export const TYPE_TO_SLOT = {
   Overshirt: "body",
   Shacket: "body",
   Flannel: "body",
+  Tie: "body",
+  "Bow Tie": "body",
 
   // Bottoms (legs)
   Jeans: "legs",
@@ -217,7 +217,6 @@ export const mapTypeToSlot = (type) => {
     t.includes("purse") ||
     t.includes("clutch") ||
     t.includes("headband") ||
-    t.includes("bow tie") ||
     t.includes("hat") ||
     (t.includes("cap") && !t.includes("cape") && !t.includes("capri")) ||
     t === "bag" ||
@@ -250,8 +249,9 @@ export const mapTypeToSlot = (type) => {
     t.includes("bodysuit") ||
     t.includes("jersey") ||
     t.includes("kimono") ||
-    t.includes("tie") ||
-    t.includes("polo shirt")
+    t.includes("polo shirt") ||
+    t.includes("bow tie") ||
+    (t.includes("tie") && !t.includes("hoodie"))
   ) {
     return "body";
   }

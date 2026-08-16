@@ -16,6 +16,24 @@ const BACKEND_API_SEGMENTS = [
 
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    // CloudFront / CDN hosts for object-storage derivatives.
+    // Data URLs and /samples remain unoptimized at the component level.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.cloudfront.net",
+      },
+      {
+        protocol: "https",
+        hostname: "images.almaari.app",
+      },
+      {
+        protocol: "https",
+        hostname: "**.amazonaws.com",
+      },
+    ],
+  },
   async redirects() {
     return [
       {

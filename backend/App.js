@@ -7,16 +7,46 @@ import aiStylistRoutes from "./routes/aiStylistRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
+import internalRoutes from "./routes/internalRoutes.js";
 import { stripeWebhook } from "./controllers/billingController.js";
 import connectMongoDB from "./libs/mongodb.js";
 import { redis } from "./libs/redis.client.js";
 import { requestContextMiddleware } from "./middleware/requestContext.js";
 import { getMetricsSnapshot } from "./observability/metrics.js";
+import { assertServiceAuthConfig } from "./utils/serviceAuth.js";
+import { processDueEnrichmentJobs } from "./services/enrichmentJob.service.js";
+import {
+  processDueImagePipelineJobs,
+  processCleanupJobs,
+} from "./services/imageProcessingJob.service.js";
+import { logWarn } from "./observability/logger.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 if (process.env.NODE_ENV !== "test") {
   await connectMongoDB();
+  try {
+    assertServiceAuthConfig();
+  } catch (err) {
+    console.error("[startup] service auth config:", err.message);
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
+  }
+  // Reclaim durable enrichment + image pipeline jobs left by prior instances.
+  setTimeout(() => {
+    processDueEnrichmentJobs({ limit: 10 }).catch((err) => {
+      logWarn("enrichment_startup_reclaim_failed", {
+        errorMessage: err?.message,
+      });
+    });
+    processDueImagePipelineJobs({ limit: 5 }).catch((err) => {
+      logWarn("image_pipeline_startup_reclaim_failed", {
+        errorMessage: err?.message,
+      });
+    });
+    processCleanupJobs({ limit: 5 }).catch(() => {});
+  }, 2000);
 }
 //!!! unistall mongoose from front end !!!!
 const app = express();
@@ -57,6 +87,12 @@ app.get("/ready", async (_req, res) => {
   } catch {
     // Cache is optional; API continues without Redis.
     checks.redis = false;
+  }
+
+  // Opportunistic enrichment + image pipeline reclaim on readiness probes.
+  if (checks.mongodb && process.env.NODE_ENV !== "test") {
+    processDueEnrichmentJobs({ limit: 2 }).catch(() => {});
+    processDueImagePipelineJobs({ limit: 2 }).catch(() => {});
   }
 
   const ready =
@@ -103,5 +139,6 @@ app.use("/api/ai-stylist", aiStylistRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/billing", billingRoutes);
+app.use("/api/internal", internalRoutes);
 
 export default app;

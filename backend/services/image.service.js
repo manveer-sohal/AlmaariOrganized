@@ -5,6 +5,7 @@ import { updateRequestContext, getRequestId } from "../observability/requestCont
 import { observeMs, incMetric } from "../observability/metrics.js";
 import { createTimer } from "../observability/timer.js";
 import { classifyAiError } from "../observability/errors.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
 dotenv.config();
 
@@ -57,6 +58,12 @@ export const cropImage = async (
       durationMs: totalMs,
       downstreamMs: durationMs,
       success: true,
+    });
+    logPerfBaseline({
+      workflow: WORKFLOW,
+      totalMs,
+      stages: { downstreamMs: durationMs },
+      meta: { mode: cropMode },
     });
     incMetric("ai.workflow.image_crop_processing.success");
 

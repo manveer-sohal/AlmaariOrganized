@@ -4,10 +4,12 @@ import { observeMs, incMetric } from "./metrics.js";
 import { classifyAiError } from "./errors.js";
 import { getRequestId, REQUEST_ID_HEADER } from "./requestContext.js";
 import { measureAsync } from "./timer.js";
+import { serviceAuthHeaders } from "../utils/serviceAuth.js";
 
 /**
  * Instrumented outbound HTTP call used for FastAPI / crop services.
  * Does not log request/response bodies.
+ * Attaches X-Almaari-Service-Key when configured for the destination service.
  */
 export const callDownstream = async ({
   service,
@@ -20,6 +22,7 @@ export const callDownstream = async ({
 }) => {
   const requestId = getRequestId();
   const attempt = 1;
+  const authHeaders = serviceAuthHeaders(service);
 
   logInfo("ai.downstream.started", {
     workflow,
@@ -28,6 +31,7 @@ export const callDownstream = async ({
     method,
     attempt,
     timeoutMs: timeout,
+    hasServiceAuth: Boolean(authHeaders["X-Almaari-Service-Key"]),
   });
 
   const { result, error, durationMs, ok } = await measureAsync(() =>
@@ -37,6 +41,7 @@ export const callDownstream = async ({
       data,
       timeout,
       headers: {
+        ...authHeaders,
         ...headers,
         ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
       },

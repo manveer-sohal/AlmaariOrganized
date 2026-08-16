@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.use(aiRateLimiter);
 
-router.get("/warmup", warmupAiClothing);
+router.get("/warmup", requireAuth, warmupAiClothing);
 router.post(
   "/analyze-clothing",
   aiAnalyzeRateLimiter,

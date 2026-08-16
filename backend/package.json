@@ -5,8 +5,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "test": "NODE_ENV=test dotenv -e .env.test mocha test/app.test.js test/clothes.list.test.js test/clothes.upload.test.js test/billing.auth.test.js test/stylist.preference.test.js test/stylist.modes.test.js test/stylist.layering.test.js test/stylist.openability.belt.test.js test/stylist.jacket.base.test.js test/observability.test.js test/styling.metadata.test.js test/styling.backfill.test.js",
-    "backfill:styling": "node scripts/backfillStylingMetadata.js"
+    "test": "NODE_ENV=test dotenv -e .env.test mocha test/app.test.js test/clothes.list.test.js test/clothes.upload.test.js test/clothingTypeInferences.test.js test/billing.auth.test.js test/stylist.preference.test.js test/stylist.modes.test.js test/stylist.layering.test.js test/stylist.openability.belt.test.js test/stylist.jacket.base.test.js test/observability.test.js test/styling.metadata.test.js test/styling.backfill.test.js test/architecture.p0p1.test.js test/architecture.p2.test.js test/ai.warmup.auth.test.js",
+    "backfill:styling": "node scripts/backfillStylingMetadata.js",
+    "migrate:images": "node scripts/migrateImagesToObjectStorage.js"
   },
   "keywords": [],
   "author": "Manveer Sohal",
@@ -14,6 +15,8 @@
   "type": "module",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1105.0",
+    "@aws-sdk/s3-request-presigner": "^3.1105.0",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
@@ -28,6 +31,7 @@
     "node-fetch": "^3.3.2",
     "query-string": "^9.1.1",
     "redis": "^4.7.1",
+    "sharp": "^0.35.3",
     "sinon": "^21.0.1",
     "stripe": "^22.2.0"
   },

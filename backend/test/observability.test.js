@@ -20,6 +20,7 @@ import {
 import { requestContextMiddleware } from "../middleware/requestContext.js";
 import { callDownstream } from "../observability/downstream.js";
 import { instrumentedOpenAiChat } from "../observability/openaiInstrumented.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
 describe("AI observability", () => {
   let logStub;
@@ -154,6 +155,32 @@ describe("AI observability", () => {
     expect(
       snap.timings["ai.clothing_metadata_generation.ms"].avgMs,
     ).to.be.at.least(0);
+  });
+
+  it("emits greppable PERF_BASELINE lines for workflow totals", () => {
+    logPerfBaseline({
+      workflow: "outfit_recommendation",
+      totalMs: 477.51,
+      stages: { candidatesMs: 27.3 },
+    });
+    const lines = logStub.getCalls().map((c) => String(c.args[0]));
+    expect(
+      lines.some((line) =>
+        line.includes("[PERF_BASELINE] workflow=outfit_recommendation"),
+      ),
+    ).to.equal(true);
+    expect(
+      lines.some(
+        (line) =>
+          typeof line === "string" &&
+          line.includes('"event":"perf.baseline"') &&
+          line.includes('"totalMs":477.51'),
+      ),
+    ).to.equal(true);
+    const snap = getMetricsSnapshot();
+    expect(snap.timings["perf.baseline.outfit_recommendation.ms"].count).to.equal(
+      1,
+    );
   });
 
   it("records OpenAI token usage when available without logging prompts", async () => {

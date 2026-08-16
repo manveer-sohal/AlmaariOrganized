@@ -21,25 +21,51 @@ import {
   clampFormalityToStyleCategory,
 } from "../utils/normalizeClothingAnalysisResponse.js";
 import { SAMPLE_WARDROBE_ITEMS } from "../data/sampleWardrobe.js";
+import {
+  invalidateUserClothesCache,
+  invalidateUserOutfitsCache,
+} from "../utils/cacheInvalidation.js";
+import { clothesCacheKeys, userCacheKeys } from "../utils/cacheKeys.js";
+import { summarizeImageBuffer, summarizeImageSrcMeta } from "../utils/safeImageLog.js";
+import { withResolvedImageFields } from "../utils/resolveClothingImage.js";
+import {
+  toWardrobeListItem,
+  WARDROBE_LIST_PROJECTION,
+} from "../utils/clothesDto.js";
+import { collectStorageKeys } from "../utils/objectKeyFactory.js";
+import { enqueueCleanupJob } from "./imageProcessingJob.service.js";
+import { logInfo, logWarn, hashUserId } from "../observability/logger.js";
+import { createTimer } from "../observability/timer.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
-// Helper to invalidate all userClothes cache keys for a user (any page/limit)
-const invalidateUserClothesCache = async (auth0Id) => {
+const USER_OBJECT_ID_CACHE_TTL = 3600;
+
+const resolveUserObjectId = async (auth0Id) => {
+  const cacheKey = userCacheKeys.objectId(auth0Id);
+
   try {
-    const matchingKeys = [];
-    for await (const key of redis.scanIterator({
-      MATCH: `userClothes:${auth0Id}:*`,
-      COUNT: 100,
-    })) {
-      matchingKeys.push(key);
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return new mongoose.Types.ObjectId(cached);
     }
-    if (matchingKeys.length > 0) {
-      await redis.del(matchingKeys);
-    }
-    // Remove the pre-pagination legacy key as well.
-    await redis.del(`userClothes:${auth0Id}`);
   } catch (err) {
-    console.warn("Redis clothes cache invalidation failed:", err);
+    logWarn("redis_user_object_id_get_failed", { errorMessage: err?.message });
   }
+
+  const user = await User.findOne({ auth0Id }, { _id: 1 }).lean();
+  if (!user?._id) {
+    return null;
+  }
+
+  try {
+    await redis.set(cacheKey, user._id.toString(), {
+      EX: USER_OBJECT_ID_CACHE_TTL,
+    });
+  } catch (err) {
+    logWarn("redis_user_object_id_set_failed", { errorMessage: err?.message });
+  }
+
+  return user._id;
 };
 
 const resolveClothingDoc = async ({ clothingId, uniqueId }) => {
@@ -70,6 +96,8 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       throw { status: 404, message: "Clothing item not found" };
     }
 
+    const keysToDelete = collectStorageKeys(clothingDoc.imageStorage);
+
     // Remove clothing reference from user and any outfits, then delete the doc
     await Promise.all([
       User.findOneAndUpdate(
@@ -84,13 +112,20 @@ export const removeData = async ({ auth0Id, uniqueId, clothingId }) => {
       Clothes.deleteOne({ _id: clothingDoc._id }),
     ]);
 
+    if (keysToDelete.length) {
+      enqueueCleanupJob(clothingDoc._id, keysToDelete, {
+        auth0Id,
+        userId: user._id,
+      }).catch(() => {});
+    }
+
     const updatedUser = await User.findOne(
       { auth0Id },
       { _id: 0, clothes: 1 },
     ).populate("clothes");
 
     await invalidateUserClothesCache(auth0Id);
-    await redis.del("userOutfits:" + auth0Id);
+    await invalidateUserOutfitsCache(auth0Id);
     return {
       message: "Clothing item removed successfully",
       Clothes: updatedUser?.clothes || [],
@@ -129,13 +164,25 @@ export const uploadData = async ({
     }
 
     let imageSrc = await toBase64(file.buffer);
-    console.log("imageSrc", imageSrc);
+    const uploadTimer = createTimer();
+    logInfo("clothing_upload_started", {
+      userIdHash: hashUserId(auth0Id),
+      ...summarizeImageBuffer(file.buffer, file.mimetype),
+      imageAlreadyCropped: Boolean(imageAlreadyCropped),
+      type,
+    });
 
     if (!imageAlreadyCropped) {
       try {
         imageSrc = await cropImage(imageSrc);
         imageSrc = "data:image/png;base64," + imageSrc;
       } catch (e) {
+        logWarn("clothing_upload_failed", {
+          userIdHash: hashUserId(auth0Id),
+          stage: "crop",
+          errorMessage: e.message,
+          durationMs: uploadTimer.elapsedMs(),
+        });
         throw {
           status: 500,
           message: "Error cropping image",
@@ -218,7 +265,9 @@ export const uploadData = async ({
     try {
       await invalidateUserClothesCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after clothing upload:", err);
+      logWarn("Redis delete failed after clothing upload", {
+        errorMessage: err?.message,
+      });
     }
 
     // Reuse the pre-upload FastAPI analysis when present — never charge credits twice.
@@ -238,11 +287,30 @@ export const uploadData = async ({
     }
 
     const refreshed = await Clothes.findById(clothingDoc._id);
+    const uploadMs = uploadTimer.elapsedMs();
+    logInfo("clothing_upload_completed", {
+      userIdHash: hashUserId(auth0Id),
+      clothingId: String(clothingDoc._id),
+      durationMs: uploadMs,
+      imageMeta: summarizeImageSrcMeta(imageSrc),
+    });
+    logPerfBaseline({
+      workflow: "clothing_upload_persist",
+      totalMs: uploadMs,
+      meta: {
+        clothingId: String(clothingDoc._id),
+        imageAlreadyCropped: Boolean(imageAlreadyCropped),
+        type,
+      },
+    });
 
     return {
       status: 200,
       message: "Clothes added successfully",
-      clothing: refreshed || clothingDoc,
+      timing: { totalMs: uploadMs, workflow: "clothing_upload_persist" },
+      clothing: refreshed
+        ? withResolvedImageFields(refreshed.toObject?.() || refreshed)
+        : withResolvedImageFields(clothingDoc.toObject?.() || clothingDoc),
     };
   } catch (e) {
     if (e.status) throw e;
@@ -281,9 +349,11 @@ export const deleteOutfit = async ({ auth0Id, uniqueId }) => {
     ]);
 
     try {
-      await redis.del("userOutfits:" + auth0Id);
+      await invalidateUserOutfitsCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after outfit delete:", err);
+      logWarn("Redis delete failed after outfit delete", {
+        errorMessage: err?.message,
+      });
     }
 
     return {
@@ -310,14 +380,14 @@ export const getOutfits = async ({ auth0Id }) => {
     try {
       cachedData = await redis.get(redisKey);
     } catch (err) {
-      console.warn("Redis get failed, continuing without cache:", err);
+      logWarn("Redis get failed, continuing without cache", {
+        errorMessage: err?.message,
+      });
     }
     if (cachedData) {
-      console.log("Cache hit: Returning cached data");
-      return { status: 200, outfits: JSON.parse(cachedData) }; // Send cached data
+      return { status: 200, outfits: JSON.parse(cachedData) };
     }
 
-    // Measure MongoDB query time
     const startTime = Date.now();
     const userData = await User.findOne(
       { auth0Id },
@@ -327,25 +397,25 @@ export const getOutfits = async ({ auth0Id }) => {
       populate: { path: "outfit_items", model: "Clothes" },
     });
     const endTime = Date.now();
-    console.log(`Query took ${endTime - startTime} ms`);
+    logInfo("outfits_query_completed", {
+      durationMs: endTime - startTime,
+      userIdHash: hashUserId(auth0Id),
+    });
 
     if (!userData) {
       throw { status: 404, message: "User Not Found" };
     }
 
-    // Store the data in Redis cache with a TTL (best-effort)
     try {
       await redis.set(redisKey, JSON.stringify(userData), { EX: 600 });
-      console.log("Cache miss: Queried MongoDB and cached the result");
     } catch (err) {
-      console.warn(
-        "Redis set failed, returning Mongo result without caching:",
-        err,
-      );
+      logWarn("Redis set failed, returning Mongo result without caching", {
+        errorMessage: err?.message,
+      });
     }
     return { status: 200, outfits: userData };
   } catch (e) {
-    console.error(e);
+    if (e.status) throw e;
     throw {
       status: 500,
       message: "Failed to fetch user data",
@@ -355,31 +425,27 @@ export const getOutfits = async ({ auth0Id }) => {
 };
 
 export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
-  console.log("List clothes");
+  const redisKey = clothesCacheKeys.page(auth0Id, page, numberOfClothes);
 
-  // Redis cache key
-  const redisKey = `userClothes:${auth0Id}:page:${page}:limit:${numberOfClothes}`;
-
-  // Check cache for the data (safe fallback if Redis unavailable)
   let cachedData = null;
   try {
     cachedData = await redis.get(redisKey);
   } catch (err) {
-    console.warn("Redis get failed, continuing without cache:", err);
+    logWarn("Redis get failed, continuing without cache", {
+      errorMessage: err?.message,
+    });
   }
   if (cachedData) {
-    console.log("Cache hit: Returning cached data");
-
     const parsedCache = JSON.parse(cachedData);
     const cachedClothes = Array.isArray(parsedCache)
       ? parsedCache
       : Array.isArray(parsedCache?.Clothes)
-      ? parsedCache.Clothes
-      : [];
+        ? parsedCache.Clothes
+        : [];
 
     return {
       status: 200,
-      clothes: cachedClothes,
+      clothes: cachedClothes.map((row) => toWardrobeListItem(row)),
       message: "Clothes fetched successfully",
     };
   }
@@ -387,39 +453,33 @@ export const getData = async ({ auth0Id, numberOfClothes = 40, page = 1 }) => {
   const skip = (page - 1) * numberOfClothes;
   const limit = numberOfClothes;
 
-  // Measure MongoDB query time
-  const startTime = Date.now();
-  console.log("auth0Id", auth0Id);
-  const userId = await User.findOne({ auth0Id }, { _id: 1 });
-  if (!userId) {
-    console.log("User Not Found");
+  const userObjectId = await resolveUserObjectId(auth0Id);
+  if (!userObjectId) {
     throw { status: 404, error: "User Not Found" };
   }
 
-  const userData = await Clothes.find({ userId: userId._id })
+  const userData = await Clothes.find({ userId: userObjectId })
+    .select(WARDROBE_LIST_PROJECTION)
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .lean();
 
-  const endTime = Date.now();
-  console.log(`Query took ${endTime - startTime} ms`);
+  const clothes = (userData || []).map((row) => toWardrobeListItem(row));
 
-  // Store the data in Redis cache with a TTL (best-effort)
   try {
-    await redis.set(redisKey, JSON.stringify(userData || []), {
+    await redis.set(redisKey, JSON.stringify(clothes), {
       EX: 600,
     });
-    console.log("Cache miss: Queried MongoDB and cached the result");
   } catch (err) {
-    console.warn(
-      "Redis set failed, returning Mongo result without caching:",
-      err,
-    );
+    logWarn("Redis set failed, returning Mongo result without caching", {
+      errorMessage: err?.message,
+    });
   }
-  console.log("it worked");
+
   return {
     status: 200,
-    clothes: userData || [],
+    clothes,
     message: "Clothes fetched successfully",
   };
 };
@@ -479,9 +539,9 @@ export const updateClothing = async ({
 
     try {
       await invalidateUserClothesCache(auth0Id);
-      await redis.del("userOutfits:" + auth0Id);
+      await invalidateUserOutfitsCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after clothing update:", err);
+      logWarn("Redis delete failed after clothing update", { errorMessage: err?.message });
     }
 
     return {
@@ -559,9 +619,9 @@ export const replaceClothingImage = async ({
 
     try {
       await invalidateUserClothesCache(auth0Id);
-      await redis.del("userOutfits:" + auth0Id);
+      await invalidateUserOutfitsCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after clothing image replace:", err);
+      logWarn("Redis delete failed after clothing image replace", { errorMessage: err?.message });
     }
 
     return {
@@ -667,9 +727,9 @@ export const createOutfit = async ({
     }
 
     try {
-      await redis.del("userOutfits:" + auth0Id);
+      await invalidateUserOutfitsCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after outfit create:", err);
+      logWarn("Redis delete failed after outfit create", { errorMessage: err?.message });
     }
 
     return {
@@ -843,9 +903,9 @@ export const clearSampleWardrobe = async ({ auth0Id }) => {
 
     await invalidateUserClothesCache(auth0Id);
     try {
-      await redis.del("userOutfits:" + auth0Id);
+      await invalidateUserOutfitsCache(auth0Id);
     } catch (err) {
-      console.warn("Redis delete failed after clearing samples:", err);
+      logWarn("Redis delete failed after clearing samples", { errorMessage: err?.message });
     }
 
     return {

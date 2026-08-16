@@ -28,6 +28,9 @@ type DesktopPreviewCarouselProps = {
   previewHighlight?: boolean;
   /** Extra bottom inset for slide dots when a parent overlay sits below them. */
   dotsBottomClass?: string;
+  /** Pulse the next-arrow control after AI looks are generated. */
+  flashNextArrow?: boolean;
+  onDismissNextHint?: () => void;
 };
 
 /**
@@ -50,6 +53,8 @@ export default function DesktopPreviewCarousel({
   onReplaceSlot,
   previewHighlight = false,
   dotsBottomClass = "bottom-3",
+  flashNextArrow = false,
+  onDismissNextHint,
 }: DesktopPreviewCarouselProps) {
   const totalSlides = 1 + recommendations.length;
 
@@ -67,10 +72,14 @@ export default function DesktopPreviewCarousel({
     activeIndex > 0 ? aiSlides[activeIndex - 1]?.recommendation : null;
 
   const go = (delta: number) => {
+    if (delta > 0 && flashNextArrow) onDismissNextHint?.();
     onActiveIndexChange(
       Math.min(totalSlides - 1, Math.max(0, activeIndex + delta)),
     );
   };
+
+  const showNextHint =
+    flashNextArrow && activeIndex === 0 && totalSlides > 1;
 
   const headerLabel = onCurrentSlide
     ? "Your look"
@@ -130,12 +139,23 @@ export default function DesktopPreviewCarousel({
       </button>
       <button
         type="button"
+        id="carousel-next-arrow"
         onClick={() => go(1)}
         disabled={activeIndex >= totalSlides - 1}
-        aria-label="Next outfit"
-        className="absolute right-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-indigo-200/80 bg-white/95 text-indigo-900 shadow-md backdrop-blur-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label={
+          showNextHint
+            ? "Next outfit — browse AI looks"
+            : "Next outfit"
+        }
+        className={`absolute right-2 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border bg-white/95 text-indigo-900 shadow-md backdrop-blur-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 ${
+          showNextHint
+            ? "carousel-next-hint border-indigo-500 bg-indigo-50"
+            : "border-indigo-200/80"
+        }`}
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight
+          className={`h-5 w-5 ${showNextHint ? "animate-pulse" : ""}`}
+        />
       </button>
 
       <div

@@ -8,7 +8,8 @@ export type CropOverlayId =
   | "skirt"
   | "dress"
   | "shoes"
-  | "accessory";
+  | "accessory"
+  | "tie";
 
 export const CROP_OVERLAY_OPTIONS: {
   id: CropOverlayId;
@@ -16,6 +17,7 @@ export const CROP_OVERLAY_OPTIONS: {
 }[] = [
   { id: "none", label: "No overlay" },
   { id: "top", label: "T-shirt" },
+  { id: "tie", label: "Tie" },
   { id: "pants", label: "Pants" },
   { id: "shorts", label: "Shorts" },
   { id: "skirt", label: "Skirt" },
@@ -34,11 +36,10 @@ export function cropOverlayFromClothingType(
   if (!type?.trim()) return "none";
   const t = type.trim().toLowerCase();
 
-  if (
-    t.includes("short") ||
-    t.includes("hot pant") ||
-    t.includes("bermuda")
-  ) {
+  if (t.includes("tie")) {
+    return "tie";
+  }
+  if (t.includes("short") || t.includes("hot pant") || t.includes("bermuda")) {
     return "shorts";
   }
   if (t.includes("skirt") || t.includes("kilt") || t.includes("sarong")) {

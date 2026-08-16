@@ -43,6 +43,8 @@ type DesktopOutfitBuilderShellProps = {
   appliedConfirmation: string | null;
   isGenerating: boolean;
   panelHeightClass: string;
+  flashCarouselNext?: boolean;
+  onDismissCarouselNextHint?: () => void;
 };
 
 const PREVIEW_MIN_H = "min-h-[420px]";
@@ -73,6 +75,8 @@ export default function DesktopOutfitBuilderShell({
   appliedConfirmation,
   isGenerating,
   panelHeightClass,
+  flashCarouselNext = false,
+  onDismissCarouselNextHint,
 }: DesktopOutfitBuilderShellProps) {
   const hasAiResults = recommendations.length > 0;
   const viewingAiLook = hasAiResults && activeGeneratedIndex > 0;
@@ -149,6 +153,8 @@ export default function DesktopOutfitBuilderShell({
             onReplaceSlot={(slot) => onReplaceSlot(slot)}
             previewHighlight={previewHighlight}
             dotsBottomClass={viewingAiLook ? "bottom-12" : "bottom-3"}
+            flashNextArrow={flashCarouselNext}
+            onDismissNextHint={onDismissCarouselNextHint}
           />
         ) : (
           <BuilderOutfitPreview

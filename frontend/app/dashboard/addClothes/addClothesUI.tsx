@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useQueryClient } from "@tanstack/react-query"; // or "react-query" if you're on v3
-import { View, OccasionTag, StyleCategory } from "../../types/clothes";
+import { View, OccasionTag, StyleCategory, ClothingItem, Slot } from "../../types/clothes";
 import {
   colours_List,
   fits_List,
@@ -28,29 +28,31 @@ import {
   logAnalyzeStep,
   logAnalyzeTotal,
 } from "../../utils/aiAnalyzeTiming";
+import { WorkflowSession, logPerfBaseline } from "../../utils/workflowTiming";
+import { tryDirectClothesUpload } from "../../utils/directClothesUpload";
 import { Sparkles, Send, ArrowLeft } from "lucide-react";
 import {
   clearAuthTokenCache,
   getAuthHeaders,
 } from "../../utils/getAuthHeaders";
+import { createIdempotencyKey } from "../../utils/idempotencyKey";
+import { clothesQueryKeys } from "../../hooks/useClothesData";
+import type { InfiniteData } from "@tanstack/react-query";
 import StyleDetailsSection from "../components/StyleDetailsSection";
+import ClothingCropSurface from "../components/ClothingCropSurface";
 import {
-  CROP_OUTPUT_SIZE,
-  canvasToPngBlob,
-  clampCropOffset,
   createWorkingImageBlob,
+  CropRotation,
   CropServiceMode,
-  drawSquareCrop,
-  frameImageBlob,
-  getDrawScale,
-  getMinUserZoom,
+  ABSOLUTE_MIN_USER_ZOOM,
 } from "../../utils/clientImageCrop";
+import { getCroppedClothingBlob } from "../../utils/getCroppedClothingBlob";
+import type { Area, Point } from "react-easy-crop";
 import {
   CROP_OVERLAY_OPTIONS,
   CropOverlayId,
   cropOverlayFromClothingType,
 } from "../../utils/cropOverlays";
-import CropOverlayGuide from "./CropOverlayGuide";
 import { warmupAiClothingService } from "../../utils/warmupAiService";
 import ImageUploadFlow, {
   UploadStage,
@@ -58,6 +60,7 @@ import ImageUploadFlow, {
 import InlineSuccessState from "../../components/ux/InlineSuccessState";
 import ClothingImageSourcePicker from "../../components/clothing-upload/ClothingImageSourcePicker";
 import ClothingOptionAutocomplete from "../components/ClothingOptionAutocomplete";
+import CropAdjustControls from "../components/CropAdjustControls";
 
 const DEFAULT_CLOTHING_TYPE = "T-shirt";
 
@@ -179,23 +182,25 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
 
   const { user } = useUser();
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const croppedAreaPixelsRef = useRef<Area | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [minZoom, setMinZoom] = useState(0.2);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [cropOverlay, setCropOverlay] = useState<CropOverlayId>(() =>
     cropOverlayFromClothingType(DEFAULT_CLOTHING_TYPE),
   );
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const lastPosRef = useRef({ x: 0, y: 0 });
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [rotation, setRotation] = useState<CropRotation>(0);
   /** Working (downscaled) PNG used for framing + rembg input. */
   const workingBlobRef = useRef<Blob | null>(null);
   /** In-flight or completed rembg-only result for the current generation. */
   const rembgPromiseRef = useRef<Promise<Blob | null> | null>(null);
   const rembgBlobRef = useRef<Blob | null>(null);
   const rembgGenerationRef = useRef(0);
+  const uploadIdempotencyKeyRef = useRef<string | null>(null);
+  const analyzeIdempotencyKeyRef = useRef<string | null>(null);
+  const submitInFlightRef = useRef(false);
   const previewUrlsRef = useRef<string[]>([]);
+  /** Session timings for rembg → analyze → upload pipeline baselines. */
+  const perfSessionRef = useRef<WorkflowSession | null>(null);
 
   const formatInput = (value: string) => {
     const spaceValue = value.indexOf(" ");
@@ -387,58 +392,16 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     }
   };
 
-  const drawCropPreview = useCallback(
-    (
-      imageSrc: string,
-      zoomLevel: number,
-      drawOffset: { x: number; y: number },
-    ) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+  const resetCropState = useCallback(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setRotation(0);
+    croppedAreaPixelsRef.current = null;
+  }, []);
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      let img = imageRef.current;
-
-      if (!img || img.src !== imageSrc) {
-        img = new window.Image();
-        img.src = imageSrc;
-        imageRef.current = img;
-      }
-
-      if (!img.complete || img.naturalWidth === 0) {
-        img.onload = () => {
-          const nextMin = getMinUserZoom(img!.naturalWidth, img!.naturalHeight);
-          setMinZoom(nextMin);
-          setZoom((prev) => Math.max(nextMin, prev));
-          drawCropPreview(imageSrc, Math.max(nextMin, zoomLevel), drawOffset);
-        };
-        return;
-      }
-
-      canvas.width = CROP_OUTPUT_SIZE;
-      canvas.height = CROP_OUTPUT_SIZE;
-
-      const nextMin = getMinUserZoom(img.naturalWidth, img.naturalHeight);
-      const clampedZoom = Math.max(nextMin, zoomLevel);
-      const scale = getDrawScale(
-        img.naturalWidth,
-        img.naturalHeight,
-        clampedZoom,
-      );
-      const clampedOffset = clampCropOffset(
-        drawOffset.x,
-        drawOffset.y,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      );
-
-      drawSquareCrop(ctx, img, clampedZoom, clampedOffset);
-    },
-    [],
-  );
+  const handleCropComplete = useCallback((_area: Area, pixels: Area) => {
+    croppedAreaPixelsRef.current = pixels;
+  }, []);
 
   useEffect(() => {
     warmupAiClothingService();
@@ -449,15 +412,20 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
     async (
       blob: Blob,
       mode: CropServiceMode = "rembg_only",
+      traceId?: string,
     ): Promise<Blob | null> => {
       const cropForm = new FormData();
       cropForm.append("image", blob, "working.png");
       cropForm.append("mode", mode);
+      const requestId = traceId || createClientTraceId();
+      const cropStart = performance.now();
 
       const postCrop = async () =>
         fetch("/api/clothes/crop", {
           method: "POST",
-          headers: await getAuthHeaders(),
+          headers: await getAuthHeaders({
+            "X-Request-Id": requestId,
+          }),
           body: cropForm,
         });
 
@@ -468,7 +436,20 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
           response = await postCrop();
         }
         if (!response.ok) return null;
-        return await response.blob();
+        const result = await response.blob();
+        const cropMs = performance.now() - cropStart;
+        const session = perfSessionRef.current;
+        if (session) {
+          session.logStageBaseline("image_crop_processing_client", "rembgMs", cropMs);
+        } else {
+          logPerfBaseline({
+            workflow: "image_crop_processing_client",
+            totalMs: cropMs,
+            stages: { rembgMs: cropMs },
+            traceId: requestId,
+          });
+        }
+        return result;
       } catch {
         return null;
       }
@@ -499,6 +480,12 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
 
     (async () => {
       try {
+        const sessionTraceId = createClientTraceId();
+        perfSessionRef.current = new WorkflowSession(
+          "add_clothes",
+          sessionTraceId,
+        );
+
         const working = await createWorkingImageBlob(file);
         if (cancelled || generation !== rembgGenerationRef.current) return;
 
@@ -506,15 +493,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         revokeTrackedUrls();
         const workingUrl = trackUrl(URL.createObjectURL(working.blob));
         setPreview(workingUrl);
+        resetCropState();
 
-        imageRef.current = null;
-        const initialOffset = { x: 0, y: 0 };
-        setZoom(1);
-        setMinZoom(0.2);
-        setOffset(initialOffset);
-        drawCropPreview(workingUrl, 1, initialOffset);
-
-        const rembgPromise = removeBackground(working.blob, "rembg_only");
+        const rembgPromise = removeBackground(
+          working.blob,
+          "rembg_only",
+          sessionTraceId,
+        );
         rembgPromiseRef.current = rembgPromise;
         const rembgBlob = await rembgPromise;
         if (cancelled || generation !== rembgGenerationRef.current) return;
@@ -523,17 +508,15 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
         if (!rembgBlob) return;
 
         const rembgUrl = trackUrl(URL.createObjectURL(rembgBlob));
-        // Soft-swap to transparent PNG; re-fit zoom/offset to the new dimensions.
-        imageRef.current = null;
         setPreview(rembgUrl);
-        drawCropPreview(rembgUrl, zoom, offset);
+        resetCropState();
       } catch (err) {
         console.error("Failed to prepare image for rembg:", err);
         if (cancelled || generation !== rembgGenerationRef.current) return;
         const fallbackUrl = trackUrl(URL.createObjectURL(file));
         workingBlobRef.current = file;
         setPreview(fallbackUrl);
-        drawCropPreview(fallbackUrl, 1, { x: 0, y: 0 });
+        resetCropState();
       }
     })();
 
@@ -541,95 +524,43 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       cancelled = true;
       revokeTrackedUrls();
     };
-    // Intentionally omits zoom/offset — file pick resets crop state above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, drawCropPreview, removeBackground]);
+  }, [file, removeBackground, resetCropState]);
 
   useEffect(() => {
-    if (preview) {
-      drawCropPreview(preview, zoom, offset);
+    setCrop({ x: 0, y: 0 });
+  }, [rotation]);
+
+  const exportFramedBlob = async (): Promise<Blob | null> => {
+    if (!croppedAreaPixelsRef.current) return null;
+
+    let rembgBlob = rembgBlobRef.current;
+    if (!rembgBlob && rembgPromiseRef.current) {
+      rembgBlob = await rembgPromiseRef.current;
+      rembgBlobRef.current = rembgBlob;
     }
-  }, [zoom, preview, offset, drawCropPreview]);
 
-  const generateCroppedImage = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !preview) return null;
+    let exportUrl = preview;
+    let tempUrl: string | null = null;
+    if (rembgBlob) {
+      tempUrl = URL.createObjectURL(rembgBlob);
+      exportUrl = tempUrl;
+    }
+    if (!exportUrl) return null;
 
-    // Ensure the canvas reflects the latest zoom/offset before export.
-    drawCropPreview(preview, zoom, offset);
-    return canvasToPngBlob(canvas);
+    try {
+      return await getCroppedClothingBlob(
+        exportUrl,
+        croppedAreaPixelsRef.current,
+        rotation,
+      );
+    } finally {
+      if (tempUrl) URL.revokeObjectURL(tempUrl);
+    }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isDraggingRef.current = true;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current || !preview || !imageRef.current) return;
-
-    const dx = e.clientX - lastPosRef.current.x;
-    const dy = e.clientY - lastPosRef.current.y;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-
-    const img = imageRef.current;
-    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
-
-    setOffset((prev) =>
-      clampCropOffset(
-        prev.x + dx,
-        prev.y + dy,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      ),
-    );
-  };
-
-  const getTouchPoint = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    return { x: t.clientX, y: t.clientY };
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    isDraggingRef.current = true;
-    lastPosRef.current = getTouchPoint(e);
-  };
-
-  const handleTouchEnd = () => {
-    isDraggingRef.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current || !preview || !imageRef.current) return;
-
-    const { x, y } = getTouchPoint(e);
-    const dx = x - lastPosRef.current.x;
-    const dy = y - lastPosRef.current.y;
-    lastPosRef.current = { x, y };
-
-    const img = imageRef.current;
-    const scale = getDrawScale(img.naturalWidth, img.naturalHeight, zoom);
-
-    setOffset((prev) =>
-      clampCropOffset(
-        prev.x + dx,
-        prev.y + dy,
-        img.naturalWidth,
-        img.naturalHeight,
-        scale,
-      ),
-    );
-  };
-
-  /** Source blob for AI — always the user-framed canvas crop when available. */
+  /** Source blob for AI — always the user-framed crop when available. */
   const getAnalysisSourceBlob = async (): Promise<Blob | null> => {
-    const cropped = await generateCroppedImage();
+    const cropped = await exportFramedBlob();
     if (cropped) return cropped;
     if (file) return file;
     return null;
@@ -752,7 +683,11 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       return;
     }
 
-    const traceId = createClientTraceId();
+    const traceId =
+      perfSessionRef.current?.traceId || createClientTraceId();
+    if (!perfSessionRef.current) {
+      perfSessionRef.current = new WorkflowSession("add_clothes", traceId);
+    }
     const flowStart = performance.now();
     const stepMs: Record<string, number> = {};
 
@@ -768,9 +703,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       }
 
       const networkStart = performance.now();
+      if (!analyzeIdempotencyKeyRef.current) {
+        analyzeIdempotencyKeyRef.current = createIdempotencyKey("analyze");
+      }
       const result = await analyzeClothing({
         image,
         requestId: traceId,
+        idempotencyKey: analyzeIdempotencyKeyRef.current,
       });
       stepMs["network + backend + AI"] = performance.now() - networkStart;
 
@@ -780,7 +719,21 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       }
       setAnalyzeMessage(result.message ?? "Analysis completed");
 
-      stepMs["total frontend"] = performance.now() - flowStart;
+      const analyzeTotalMs = performance.now() - flowStart;
+      stepMs["total frontend"] = analyzeTotalMs;
+      perfSessionRef.current?.mark("analyzeMs", analyzeTotalMs);
+      logPerfBaseline({
+        workflow: "clothing_metadata_generation_client",
+        totalMs: analyzeTotalMs,
+        stages: {
+          prepMs: stepMs["image prep (crop + optimize + base64)"],
+          networkAndAiMs: stepMs["network + backend + AI"],
+          ...(typeof result.timing?.totalMs === "number"
+            ? { serverTotalMs: result.timing.totalMs }
+            : {}),
+        },
+        traceId,
+      });
       if (isAiAnalyzeTimingEnabled()) {
         logAnalyzeGroup(traceId, "frontend analyze breakdown", stepMs);
         logAnalyzeTotal(traceId, "total analyze click → response", flowStart);
@@ -817,29 +770,63 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       formData.append("analysisSnapshot", JSON.stringify(analysisSnapshot));
     }
 
-    // Await early rembg_only (started on file pick). Then apply local pan/zoom framing.
+    // Await rembg if still running, then export the user's crop locally.
     // Do not call the crop service again on submit.
-    let rembgBlob = rembgBlobRef.current;
-    if (!rembgBlob && rembgPromiseRef.current) {
-      rembgBlob = await rembgPromiseRef.current;
-      rembgBlobRef.current = rembgBlob;
+    if (!preview) return;
+
+    const framed = await exportFramedBlob();
+    if (!framed) return;
+
+    const meta = {
+      type: usersClothType,
+      colour: usersColours,
+      material: usersClothMaterial,
+      fit: usersClothFit,
+      pattern: usersClothPattern,
+    };
+
+    if (!uploadIdempotencyKeyRef.current) {
+      uploadIdempotencyKeyRef.current = createIdempotencyKey("upload");
     }
 
-    const sourceForFrame = rembgBlob ?? workingBlobRef.current ?? file;
-    if (!sourceForFrame) return;
+    const traceId =
+      perfSessionRef.current?.traceId || createClientTraceId();
+    if (!perfSessionRef.current) {
+      perfSessionRef.current = new WorkflowSession("add_clothes", traceId);
+    }
 
-    const framed =
-      (await frameImageBlob(sourceForFrame, zoom, offset)) ??
-      (await generateCroppedImage());
-    if (!framed) return;
+    // Prefer direct S3 upload when API enables object storage.
+    try {
+      const direct = await tryDirectClothesUpload({
+        blob: framed,
+        contentType: "image/png",
+        idempotencyKey: uploadIdempotencyKeyRef.current,
+        metadata: meta,
+        clientCropVerified: true,
+        traceId,
+      });
+      if (direct) {
+        const uploadMs = 0;
+        perfSessionRef.current.mark("uploadMs", uploadMs);
+        perfSessionRef.current.logPipelineBaseline("add_clothes_pipeline");
+        return direct.response;
+      }
+    } catch (err) {
+      console.warn("Direct upload unavailable, falling back to multipart", err);
+    }
 
     formData.append("image", framed, "cropped.png");
     formData.append("imageAlreadyCropped", "true");
 
+    const uploadStart = performance.now();
+
     const uploadClothes = async () =>
       fetch(`/api/clothes/upload`, {
         method: "POST",
-        headers: await getAuthHeaders(),
+        headers: await getAuthHeaders({
+          "Idempotency-Key": uploadIdempotencyKeyRef.current!,
+          "X-Request-Id": traceId,
+        }),
         body: formData,
       });
 
@@ -849,15 +836,27 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       response = await uploadClothes();
     }
 
-    console.log("response", response);
+    const uploadMs = performance.now() - uploadStart;
+    if (response.ok) {
+      perfSessionRef.current.mark("uploadMs", uploadMs);
+      logPerfBaseline({
+        workflow: "clothing_upload_persist_client",
+        totalMs: uploadMs,
+        stages: { uploadMs },
+        traceId,
+      });
+      perfSessionRef.current.logPipelineBaseline("add_clothes_pipeline");
+    }
+
     return await response;
   };
 
   //If submit is clicked
   const handleSubmit = async (event: React.MouseEvent | React.FormEvent) => {
     event.preventDefault();
+    if (submitInFlightRef.current || loading) return;
+    submitInFlightRef.current = true;
     setLoading(true);
-    console.log("submit clicked");
 
     if (
       validateColour() &&
@@ -874,9 +873,78 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       const response = await pushDB();
 
       if (response && response.ok) {
-        console.log("picture uploaded1");
+        uploadIdempotencyKeyRef.current = null;
+        analyzeIdempotencyKeyRef.current = null;
+
+        // Seed wardrobe with a stable preview (data URL) so the card shows
+        // immediately. Blob URLs are revoked when this screen unmounts.
+        const body = await response.json().catch(() => ({}));
+        const clothingPayload =
+          body?.clothing && typeof body.clothing === "object"
+            ? body.clothing
+            : null;
+        const clothingId = String(
+          clothingPayload?._id || body?.clothingId || "",
+        );
+        if (clothingId && preview) {
+          let previewSrc = preview;
+          if (preview.startsWith("blob:")) {
+            try {
+              const blob = await fetch(preview).then((r) => r.blob());
+              previewSrc = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result));
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+              });
+            } catch {
+              previewSrc = preview;
+            }
+          }
+
+          const optimistic: ClothingItem = {
+            _id: clothingId,
+            type: String(clothingPayload?.type ?? usersClothType),
+            colour: Array.isArray(clothingPayload?.colour)
+              ? clothingPayload.colour.map(String)
+              : [...usersColours],
+            material: String(
+              clothingPayload?.material ?? usersClothMaterial ?? "",
+            ),
+            fit: String(clothingPayload?.fit ?? usersClothFit ?? ""),
+            pattern: String(
+              clothingPayload?.pattern ?? usersClothPattern ?? "",
+            ),
+            slot: String(clothingPayload?.slot ?? "body") as Slot,
+            imageSrc: previewSrc,
+            processingStatus: String(
+              body?.processingStatus ||
+                clothingPayload?.processingStatus ||
+                "crop_pending",
+            ),
+            stylingMetadata: clothingPayload?.stylingMetadata ?? null,
+          };
+
+          queryClient.setQueriesData<InfiniteData<ClothingItem[]>>(
+            { queryKey: clothesQueryKeys.all },
+            (old) => {
+              if (!old?.pages?.length) {
+                return {
+                  pages: [[optimistic]],
+                  pageParams: [1],
+                };
+              }
+              const pages = old.pages.map((page) =>
+                page.filter((item) => item._id !== clothingId),
+              );
+              pages[0] = [optimistic, ...pages[0]];
+              return { ...old, pages };
+            },
+          );
+        }
+
         await queryClient.invalidateQueries({
-          queryKey: ["clothesData", user?.sub],
+          queryKey: clothesQueryKeys.all,
         });
         queryClient.invalidateQueries({ queryKey: ["user", user?.sub] });
         if (onUploadSuccess) {
@@ -896,6 +964,7 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
       console.log("form not filled in properly");
     }
     setLoading(false);
+    submitInFlightRef.current = false;
 
     //toggleForm();
   };
@@ -1000,22 +1069,18 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                     className="relative flex h-[min(220px,42vh)] w-full items-center justify-center overflow-hidden rounded-almaari-lg border border-almaari-border bg-almaari-warm sm:h-[260px] md:h-[300px]"
                   >
                     <div className="relative flex h-full w-full items-center justify-center">
-                      <div className="relative aspect-square h-full max-h-full w-auto max-w-full shrink-0">
-                        <canvas
-                          ref={canvasRef}
-                          onMouseDown={handleMouseDown}
-                          onMouseMove={handleMouseMove}
-                          onMouseUp={handleMouseUp}
-                          onMouseLeave={handleMouseUp}
-                          onTouchStart={handleTouchStart}
-                          onTouchMove={handleTouchMove}
-                          onTouchEnd={handleTouchEnd}
-                          className="block h-full w-full cursor-grab touch-none active:cursor-grabbing"
-                        />
-                        <div className="pointer-events-none absolute inset-0">
-                          <CropOverlayGuide overlay={cropOverlay} />
-                        </div>
-                      </div>
+                      <ClothingCropSurface
+                        imageUrl={preview}
+                        crop={crop}
+                        zoom={zoom}
+                        rotation={rotation}
+                        minZoom={ABSOLUTE_MIN_USER_ZOOM}
+                        cropOverlay={cropOverlay}
+                        onCropChange={setCrop}
+                        onZoomChange={setZoom}
+                        onRotationChange={setRotation}
+                        onCropComplete={handleCropComplete}
+                      />
 
                       <button
                         type="button"
@@ -1029,10 +1094,10 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                       </button>
                       <p className="absolute bottom-2 left-1/2 z-10 max-w-[90%] -translate-x-1/2 rounded-lg bg-white/90 px-2 py-1 text-center text-[11px] text-almaari-muted backdrop-blur-sm sm:text-xs">
                         <span className="sm:hidden">
-                          Drag to reposition · slider to zoom
+                          Drag · dial to rotate · zoom
                         </span>
                         <span className="hidden sm:inline">
-                          Drag to reposition · use slider to zoom
+                          Drag to reposition · use dial and slider to rotate and zoom
                         </span>
                       </p>
                     </div>
@@ -1072,43 +1137,13 @@ function AddClothesUI({ setView, onUploadSuccess, onBack }: addClothesUIProm) {
                 </div>
 
                 {preview ? (
-                  <div className="space-y-1.5">
-                    <input
-                      type="range"
-                      min={minZoom}
-                      max={3}
-                      step="0.01"
-                      value={zoom}
-                      onChange={(e) => {
-                        const nextZoom = Number(e.target.value);
-                        setZoom(nextZoom);
-                        if (imageRef.current) {
-                          const img = imageRef.current;
-                          const scale = getDrawScale(
-                            img.naturalWidth,
-                            img.naturalHeight,
-                            nextZoom,
-                          );
-                          setOffset((prev) =>
-                            clampCropOffset(
-                              prev.x,
-                              prev.y,
-                              img.naturalWidth,
-                              img.naturalHeight,
-                              scale,
-                            ),
-                          );
-                        }
-                      }}
-                      className="min-h-8 w-full touch-manipulation accent-almaari-accent"
-                      aria-label="Zoom image for crop"
-                    />
-                    <div className="flex items-center justify-between text-xs text-almaari-muted">
-                      <span>Zoom out</span>
-                      <span>Adjust crop</span>
-                      <span>Zoom in</span>
-                    </div>
-                  </div>
+                  <CropAdjustControls
+                    zoom={zoom}
+                    minZoom={ABSOLUTE_MIN_USER_ZOOM}
+                    rotation={rotation}
+                    onZoomChange={setZoom}
+                    onRotationChange={setRotation}
+                  />
                 ) : null}
               </FormSection>
 

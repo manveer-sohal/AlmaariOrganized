@@ -15,6 +15,7 @@ import { classifyAiError } from "../observability/errors.js";
 import { updateRequestContext } from "../observability/requestContext.js";
 import { createTimer } from "../observability/timer.js";
 import { observeMs } from "../observability/metrics.js";
+import { logPerfBaseline } from "../observability/perfBaseline.js";
 
 const WORKFLOW = "clothing_metadata_generation";
 
@@ -22,6 +23,9 @@ export const warmupAiClothing = async (req, res) => {
   const requestId = resolveAnalyzeRequestId(req);
   updateRequestContext({ workflow: "ai_warmup", requestId });
 
+  // Crop/rembg warmup is the valuable part (loads ONNX into memory).
+  // Analysis /warmup only constructs an OpenAI client — still invoked for
+  // process wake on Railway, but we do not claim it reduces model TTFT.
   const [aiResult, cropResult] = await Promise.allSettled([
     warmupAiClothingService(requestId),
     warmupCropService(requestId),
@@ -31,13 +35,10 @@ export const warmupAiClothing = async (req, res) => {
   const cropWarmedUp = cropResult.status === "fulfilled";
 
   return res.status(200).json({
-    success: aiWarmedUp && cropWarmedUp,
+    status: "accepted",
+    success: aiWarmedUp || cropWarmedUp,
     aiWarmedUp,
     cropWarmedUp,
-    message:
-      aiWarmedUp && cropWarmedUp
-        ? "AI and crop services warmed up"
-        : "One or more warmups skipped or unavailable",
   });
 };
 
@@ -51,6 +52,7 @@ export const analyzeClothing = async (req, res) => {
     method: req.method,
   });
   const timer = createTimer();
+  let idempotency = null;
 
   try {
     const validationStart = performance.now();
@@ -93,37 +95,97 @@ export const analyzeClothing = async (req, res) => {
       `request validation (image ~${imageKb} KB base64)`,
       performance.now() - validationStart,
     );
+    logInfo("analysis_request_started", {
+      workflow: WORKFLOW,
+      userIdHash: hashUserId(auth0Id),
+      imageKb,
+    });
+
+    const {
+      beginIdempotentOperation,
+      completeIdempotentOperation,
+      failIdempotentOperation,
+      fingerprintImageBuffer,
+      validateIdempotencyKey,
+    } = await import("../services/idempotency.service.js");
+
+    const rawKey =
+      req.get("Idempotency-Key") || req.body?.idempotencyKey || null;
+    if (rawKey) {
+      const keyCheck = validateIdempotencyKey(rawKey);
+      if (!keyCheck.ok) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid Idempotency-Key (${keyCheck.reason})`,
+        });
+      }
+      const fingerprint = fingerprintImageBuffer(image, {
+        op: "clothing_analyze",
+      });
+      idempotency = await beginIdempotentOperation({
+        auth0Id,
+        operationType: "clothing_analyze",
+        idempotencyKey: keyCheck.value,
+        requestFingerprint: fingerprint,
+      });
+      if (
+        idempotency.kind === "replay" ||
+        idempotency.kind === "conflict" ||
+        idempotency.kind === "in_progress"
+      ) {
+        return res.status(idempotency.statusCode).json(idempotency.body);
+      }
+    }
 
     const result = await analyzeClothingForUser({ auth0Id, image, requestId });
 
     const totalMs = timer.elapsedMs();
     observeMs("ai.analyze.controller.ms", totalMs);
     logAnalyzeTotal(requestId, "total controller", timer.start);
-    logInfo("ai.request.completed", {
+    logInfo("analysis_request_completed", {
       workflow: WORKFLOW,
       durationMs: totalMs,
       validTagCount: result.validTagCount,
       creditsDeducted: result.creditsDeducted,
       success: true,
     });
+    logPerfBaseline({
+      workflow: WORKFLOW,
+      totalMs,
+      meta: {
+        validTagCount: result.validTagCount,
+        creditsDeducted: result.creditsDeducted,
+      },
+    });
 
-    return res.status(200).json({
+    const body = {
       success: true,
       tags: result.tags,
       validTagCount: result.validTagCount,
       creditsDeducted: result.creditsDeducted,
       creditBalance: result.creditBalance,
+      timing: { totalMs, workflow: WORKFLOW },
       message:
         result.validTagCount >= 1
           ? "Analysis completed"
           : "Analysis completed with no confident tags",
-    });
+    };
+
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await completeIdempotentOperation(idempotency.record._id, {
+        resultPayload: body,
+        creditsDeducted: result.creditsDeducted,
+        creditBalance: result.creditBalance,
+      });
+    }
+
+    return res.status(200).json(body);
   } catch (error) {
     const classified = classifyAiError(error);
     const totalMs = timer.elapsedMs();
     observeMs("ai.analyze.controller.ms", totalMs);
     logAnalyzeTotal(requestId, "total controller (error)", timer.start);
-    logError("ai.request.failed", {
+    logError("analysis_request_failed", {
       workflow: WORKFLOW,
       durationMs: totalMs,
       classification: error.classification || classified.classification,
@@ -131,6 +193,14 @@ export const analyzeClothing = async (req, res) => {
       status: error.status || classified.status,
       errorMessage: error.message,
     });
+
+    if (idempotency?.kind === "execute" && idempotency.record?._id) {
+      await failIdempotentOperation(idempotency.record._id, {
+        errorCode: classified.classification || "analyze_failed",
+        errorMessage: error.message || "Failed to analyze clothing image",
+        terminal: !classified.retryable,
+      }).catch(() => {});
+    }
 
     const status = error.status || classified.status || 500;
     return res.status(status).json({

@@ -1,5 +1,4 @@
 import { Clothes, User } from "../models/Users.js";
-import { redis } from "../libs/redis.client.js";
 import {
   clampFormalityToStyleCategory,
   defaultStylingMetadata,
@@ -12,6 +11,8 @@ import {
 } from "../constants/clothingMetadata.js";
 import { logError, logInfo } from "../observability/logger.js";
 import { fetchClothingAnalysisRaw } from "./aiClothing.service.js";
+import { invalidateClothesCacheForUserId } from "../utils/cacheInvalidation.js";
+import { resolveAnalysisImageBase64 } from "../utils/resolveAnalysisImage.js";
 
 const WORKFLOW = "clothing_styling_enrichment";
 
@@ -44,15 +45,7 @@ export const ensureStylingMetadata = (doc) => {
 };
 
 const invalidateClothesCache = async (userId) => {
-  try {
-    const user = await User.findById(userId).select("auth0Id");
-    if (user?.auth0Id) {
-      await redis.del("userClothes:" + user.auth0Id);
-      await redis.del("userOutfits:" + user.auth0Id);
-    }
-  } catch (err) {
-    console.warn("Redis delete failed after styling enrichment:", err);
-  }
+  await invalidateClothesCacheForUserId(userId);
 };
 
 export const isEnrichmentStale = (meta, now = new Date()) => {
@@ -348,11 +341,22 @@ export const enrichClothingStyling = async (
   }
 
   try {
-    if (!claimed.imageSrc) {
+    const hasS3Image =
+      claimed.imageStorage?.provider === "s3" &&
+      Boolean(
+        claimed.imageStorage?.canonical?.key ||
+          claimed.imageStorage?.display?.key ||
+          claimed.imageStorage?.source?.key ||
+          claimed.imageStorage?.originalKey,
+      );
+    if (!claimed.imageSrc && !hasS3Image) {
       throw new Error("Missing image for enrichment");
     }
 
-    const { data: raw } = await fetchClothingAnalysisRaw(claimed.imageSrc, {
+    // FastAPI expects raw base64. After S3 ready, imageSrc is a CDN URL —
+    // resolve bytes from canonical object (or URL fallback), never send the URL.
+    const analysisImage = await resolveAnalysisImageBase64(claimed);
+    const { data: raw } = await fetchClothingAnalysisRaw(analysisImage, {
       workflow: WORKFLOW,
     });
 
@@ -438,35 +442,21 @@ export const enrichClothingStyling = async (
 };
 
 /**
- * Fire-and-forget schedule. All promise rejections are logged and persisted.
+ * Enqueue a durable MongoDB enrichment job (survives Cloud Run restarts).
+ * Dynamic import avoids a circular dependency with enrichmentJob.service.
  */
 export const scheduleStylingEnrichment = (clothingId, options = {}) => {
-  setImmediate(() => {
-    Promise.resolve()
-      .then(() => enrichClothingStyling(clothingId, options))
-      .catch(async (error) => {
-        logError("styling.enrichment.unhandled", {
-          workflow: WORKFLOW,
-          clothingId: String(clothingId),
-          errorMessage: error?.message,
-        });
-        try {
-          const exists = await Clothes.findById(clothingId).select("_id");
-          if (exists) {
-            await markEnrichmentFailed(
-              clothingId,
-              "Style analysis unavailable",
-            );
-          }
-        } catch (persistError) {
-          logError("styling.enrichment.persist_failed", {
-            workflow: WORKFLOW,
-            clothingId: String(clothingId),
-            errorMessage: persistError?.message,
-          });
-        }
+  import("./enrichmentJob.service.js")
+    .then(({ scheduleDurableEnrichment }) =>
+      scheduleDurableEnrichment(clothingId, options),
+    )
+    .catch((error) => {
+      logError("styling.enrichment.schedule_failed", {
+        workflow: WORKFLOW,
+        clothingId: String(clothingId),
+        errorMessage: error?.message,
       });
-  });
+    });
 };
 
 /**

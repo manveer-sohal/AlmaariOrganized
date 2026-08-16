@@ -332,22 +332,28 @@ describe("Styling metadata", function () {
     );
   });
 
-  it("handles async rejection from scheduleStylingEnrichment and sets failed", async () => {
+  it("enqueues a durable enrichment job from scheduleStylingEnrichment", async () => {
     const user = await User.create({
       auth0Id: "auth0|style-async",
       email: "async@example.com",
     });
     const clothing = await seedClothing(user, {
-      imageSrc: "data:image/png;base64,",
+      imageSrc: "data:image/png;base64,abc",
     });
 
-    await new Promise((resolve) => {
-      scheduleStylingEnrichment(clothing._id);
-      setTimeout(resolve, 200);
+    const { scheduleDurableEnrichment } = await import(
+      "../services/enrichmentJob.service.js"
+    );
+    const result = await scheduleDurableEnrichment(clothing._id, {
+      auth0Id: user.auth0Id,
     });
+    expect(result.enqueued || result.reason === "already_queued").to.equal(
+      true,
+    );
 
-    const reloaded = await Clothes.findById(clothing._id);
-    expect(reloaded.stylingMetadata.enrichmentStatus).to.equal("failed");
+    const { EnrichmentJob } = await import("../models/EnrichmentJob.js");
+    const job = await EnrichmentJob.findOne({ clothingId: clothing._id });
+    expect(job).to.exist;
   });
 
   it("exits safely when clothing is missing during apply or enrichment", async () => {

@@ -12,8 +12,6 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   Beanie: "head",
   Scarf: "head",
   Gloves: "head",
-  Tie: "head",
-  "Bow Tie": "head",
   Headband: "head",
   Sunglasses: "head",
   Earrings: "head",
@@ -78,6 +76,8 @@ export const TYPE_TO_SLOT: Record<string, Slot> = {
   Overshirt: "body",
   Shacket: "body",
   Flannel: "body",
+  Tie: "body",
+  "Bow Tie": "body",
 
   // Bottoms (legs)
   Jeans: "legs",
@@ -219,8 +219,6 @@ export function mapTypeToSlot(type: string): Slot {
     t.includes("purse") ||
     t.includes("clutch") ||
     t.includes("headband") ||
-    t.includes("bow tie") ||
-    (t.includes("tie") && !t.includes("hoodie")) ||
     t.includes("hat") ||
     (t.includes("cap") && !t.includes("cape") && !t.includes("capri")) ||
     t === "bag" ||
@@ -253,7 +251,9 @@ export function mapTypeToSlot(type: string): Slot {
     t.includes("bodysuit") ||
     t.includes("jersey") ||
     t.includes("kimono") ||
-    t.includes("polo shirt")
+    t.includes("polo shirt") ||
+    t.includes("bow tie") ||
+    (t.includes("tie") && !t.includes("hoodie"))
   ) {
     return "body";
   }
